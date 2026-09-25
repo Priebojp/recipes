@@ -12,11 +12,13 @@ export default defineConfig({
                 'resources/js/passkeys.js',
             ],
             refresh: true,
-            fonts: [
-                bunny('Instrument Sans', {
-                    weights: [400, 500, 600],
-                }),
-            ],
+            fonts: process.env.VITE_SKIP_FONTS
+                ? []
+                : [
+                      bunny('Instrument Sans', {
+                          weights: [400, 500, 600],
+                      }),
+                  ],
         }),
         tailwindcss(),
     ]),

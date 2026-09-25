@@ -1,5 +1,9 @@
 <?php
 
+use App\Models\Household;
+use App\Models\Person;
+use App\Models\User;
+use App\Support\CurrentHousehold;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -44,7 +48,19 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+/**
+ * A logged-in user with their own household and diner profile.
+ *
+ * @return array{user: User, household: Household, person: Person}
+ */
+function household(): array
 {
-    // ..
+    $user = User::factory()->create();
+    $household = CurrentHousehold::createFor($user);
+    $person = $household->people()->firstOrFail();
+
+    test()->actingAs($user);
+    app(CurrentHousehold::class)->set($household);
+
+    return ['user' => $user, 'household' => $household, 'person' => $person];
 }

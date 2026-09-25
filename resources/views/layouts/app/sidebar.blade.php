@@ -4,38 +4,50 @@
         @include('partials.head')
     </head>
     <body class="min-h-screen bg-white dark:bg-zinc-800">
+        @php
+            $nav = [
+                ['route' => 'cook.index', 'label' => 'Čo variť', 'icon' => 'sparkles', 'match' => 'cook.*'],
+                ['route' => 'recipes.index', 'label' => 'Recepty', 'icon' => 'book-open', 'match' => 'recipes.*'],
+                ['route' => 'plan.index', 'label' => 'Plán', 'icon' => 'calendar-days', 'match' => 'plan.*'],
+                ['route' => 'family.index', 'label' => 'Rodina', 'icon' => 'users', 'match' => 'family.*'],
+            ];
+        @endphp
+
         <flux:sidebar sticky collapsible="mobile" class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
             <flux:sidebar.header>
-                <x-app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
+                <x-app-logo :sidebar="true" href="{{ route('cook.index') }}" wire:navigate />
                 <flux:sidebar.collapse class="lg:hidden" />
             </flux:sidebar.header>
 
             <flux:sidebar.nav>
-                <flux:sidebar.group :heading="__('Platform')" class="grid">
-                    <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
-                        {{ __('Dashboard') }}
-                    </flux:sidebar.item>
+                <flux:sidebar.group :heading="__('Domácnosť')" class="grid">
+                    @foreach ($nav as $item)
+                        <flux:sidebar.item :icon="$item['icon']" :href="route($item['route'])" :current="request()->routeIs($item['match'])" wire:navigate>
+                            {{ $item['label'] }}
+                        </flux:sidebar.item>
+                    @endforeach
                 </flux:sidebar.group>
             </flux:sidebar.nav>
 
             <flux:spacer />
 
             <flux:sidebar.nav>
-                <flux:sidebar.item icon="folder-git-2" href="https://github.com/laravel/livewire-starter-kit" target="_blank">
-                    {{ __('Repository') }}
+                <flux:sidebar.item icon="clock" :href="route('plan.history')" :current="request()->routeIs('plan.history')" wire:navigate>
+                    História varenia
                 </flux:sidebar.item>
-
-                <flux:sidebar.item icon="book-open-text" href="https://laravel.com/docs/starter-kits#livewire" target="_blank">
-                    {{ __('Documentation') }}
+                <flux:sidebar.item icon="cog-6-tooth" :href="route('household.edit')" :current="request()->routeIs('household.edit')" wire:navigate>
+                    Nastavenia domácnosti
                 </flux:sidebar.item>
             </flux:sidebar.nav>
 
             <x-desktop-user-menu class="hidden lg:block" :name="auth()->user()->name" />
         </flux:sidebar>
 
-        <!-- Mobile User Menu -->
+        <!-- Mobile header -->
         <flux:header class="lg:hidden">
             <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
+
+            <flux:heading class="truncate">{{ $title ?? config('app.name') }}</flux:heading>
 
             <flux:spacer />
 
@@ -65,6 +77,9 @@
                     <flux:menu.separator />
 
                     <flux:menu.radio.group>
+                        <flux:menu.item :href="route('household.edit')" icon="home" wire:navigate>
+                            Domácnosť
+                        </flux:menu.item>
                         <flux:menu.item :href="route('profile.edit')" icon="cog" wire:navigate>
                             {{ __('Settings') }}
                         </flux:menu.item>
@@ -88,7 +103,22 @@
             </flux:dropdown>
         </flux:header>
 
-        {{ $slot }}
+        <div class="pb-20 lg:pb-0">
+            {{ $slot }}
+        </div>
+
+        <!-- Mobile bottom navigation -->
+        <nav class="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-zinc-200 bg-white/95 backdrop-blur lg:hidden dark:border-zinc-700 dark:bg-zinc-900/95" aria-label="Hlavná navigácia">
+            @foreach ($nav as $item)
+                @php($active = request()->routeIs($item['match']))
+                <a href="{{ route($item['route']) }}" wire:navigate
+                   class="flex flex-col items-center gap-1 py-2 text-xs {{ $active ? 'text-accent font-semibold' : 'text-zinc-500 dark:text-zinc-400' }}"
+                   @if($active) aria-current="page" @endif>
+                    <flux:icon :name="$item['icon']" class="size-6" />
+                    <span>{{ $item['label'] }}</span>
+                </a>
+            @endforeach
+        </nav>
 
         @persist('toast')
             <flux:toast.group>
