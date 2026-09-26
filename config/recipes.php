@@ -65,6 +65,20 @@ return [
         'enabled' => (bool) env('RECIPES_AI_ENABLED', true),
     ],
 
+    /*
+     * Ledger of AI uses (v2 stage 2). When enforced, every AI job reserves one use from a household grant
+     * (trial → monthly → purchased) and settles it once the result is delivered or definitively failed.
+     * Set enforce=false to keep the pre-ledger behaviour (daily limits only) during a staged rollout.
+     */
+    'usage' => [
+        'enforce' => (bool) env('RECIPES_USAGE_ENFORCE', true),
+        // One-time trial per verified user and per household; never re-granted by the rollout or a new household.
+        'trial' => [
+            'text' => (int) env('RECIPES_USAGE_TRIAL_TEXT', 3),
+            'image_standard' => (int) env('RECIPES_USAGE_TRIAL_IMAGES', 1),
+        ],
+    ],
+
     'export' => [
         'schema_version' => 1,
     ],

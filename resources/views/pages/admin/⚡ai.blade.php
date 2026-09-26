@@ -28,7 +28,7 @@ new #[Layout('layouts::admin')] #[Title('AI použitie a náklady')] class extend
         if ($property === 'kind' && ! in_array($this->kind, ['', 'text', 'image'], true)) {
             $this->kind = '';
         }
-        if ($property === 'status' && ! in_array($this->status, ['', 'succeeded', 'failed', 'queued', 'running'], true)) {
+        if ($property === 'status' && ! in_array($this->status, ['', 'succeeded', 'failed', 'queued', 'running', 'reconciling'], true)) {
             $this->status = '';
         }
     }
@@ -115,6 +115,7 @@ new #[Layout('layouts::admin')] #[Title('AI použitie a náklady')] class extend
             <flux:select.option value="failed">Chyba</flux:select.option>
             <flux:select.option value="queued">Vo fronte</flux:select.option>
             <flux:select.option value="running">Beží</flux:select.option>
+            <flux:select.option value="reconciling">Overuje sa</flux:select.option>
         </flux:select>
     </div>
 
@@ -243,7 +244,7 @@ new #[Layout('layouts::admin')] #[Title('AI použitie a náklady')] class extend
                         <td class="py-1.5 pe-2 text-right">{{ Money::microUsd($job->estimated_cost_micro_usd) }}</td>
                         <td class="py-1.5 pe-2 text-right">{{ $job->duration_ms !== null ? number_format($job->duration_ms / 1000, 1, ',', ' ').' s' : '–' }}</td>
                         <td class="py-1.5 pe-2">
-                            @php($color = match ($job->status->value) { 'succeeded' => 'green', 'failed' => 'red', 'running' => 'blue', default => 'zinc' })
+                            @php($color = match ($job->status->value) { 'succeeded' => 'green', 'failed' => 'red', 'running' => 'blue', 'reconciling' => 'amber', default => 'zinc' })
                             <flux:badge size="sm" :color="$color">{{ $job->status->value }}</flux:badge>
                             @if ($job->error)
                                 <div class="mt-1 max-w-xs truncate text-xs text-red-600" title="{{ $job->error }}">{{ \Illuminate\Support\Str::limit($job->error, 80) }}</div>

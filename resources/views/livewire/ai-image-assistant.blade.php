@@ -1,4 +1,4 @@
-<div class="space-y-2" @if ($this->job && ! $this->job->status->isFinished()) wire:poll.4s="refreshStatus" @endif>
+<div class="space-y-2" @if ($this->job && $this->job->status->isActive()) wire:poll.4s="refreshStatus" @endif>
     <flux:button size="sm" variant="ghost" icon="sparkles" wire:click="$toggle('open')" data-test="ai-image-toggle">Vygenerovať obrázok pomocou AI…</flux:button>
 
     @if ($open || $this->job)
@@ -8,8 +8,14 @@
             @endif
 
             @if ($job = $this->job)
-                @if (! $job->status->isFinished())
+                @if ($job->status->isActive())
                     <div class="flex items-center gap-2 text-sm text-zinc-500"><flux:icon name="arrow-path" class="size-4 animate-spin" /> Generujem obrázok… recept môžeš ďalej používať.</div>
+                @elseif ($job->status->value === 'reconciling')
+                    <flux:callout icon="clock" variant="warning">
+                        <flux:callout.heading>Výsledok sa overuje</flux:callout.heading>
+                        <flux:callout.text>Spojenie s AI vypršalo a nevieme, či obrázok vznikol. Použitie zostáva rezervované, kým to overíme – nebude odpočítané dvakrát. Existujúca fotografia zostáva.</flux:callout.text>
+                        <x-slot name="actions"><flux:button size="sm" wire:click="discard">Zavrieť</flux:button></x-slot>
+                    </flux:callout>
                 @elseif ($job->status->value === 'failed')
                     <flux:callout icon="exclamation-triangle" variant="warning">
                         <flux:callout.heading>Generovanie zlyhalo</flux:callout.heading>
@@ -50,6 +56,13 @@
                 @endif
 
                 <flux:button size="sm" variant="primary" icon="sparkles" wire:click="generate" :disabled="$preview['needs_description'] || (bool) $this->unavailable" data-test="ai-image-generate">Vygenerovať obrázok</flux:button>
+                @if ($balance = $this->balance)
+                    <flux:text class="text-xs text-zinc-500" data-test="ai-image-balance">
+                        Spotrebuje 1 použitie ({{ $balance->kind->unitLabel() }} Standard) · zostáva {{ $balance->available() }}
+                        @if ($balance->includedTotal > 0) – {{ $balance->includedSourceLabel }}: {{ $balance->includedAvailable }}/{{ $balance->includedTotal }}@endif
+                        @if ($balance->purchasedAvailable > 0), dokúpené: {{ $balance->purchasedAvailable }}@endif
+                    </flux:text>
+                @endif
             @endif
         </div>
     @endif

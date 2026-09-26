@@ -4,15 +4,19 @@ namespace App\Services\Ai;
 
 use App\Enums\AiJobKind;
 use App\Enums\AiJobStatus;
+use App\Enums\UsageKind;
 use App\Models\AiJob;
 use App\Models\Household;
+use App\Services\Usage\TrialGrants;
+use App\Services\Usage\UsageBalance;
+use App\Services\Usage\UsageLedger;
 
 /**
  * Tells the UI whether AI is configured and whether the household still has budget for another run.
  */
 class AiAvailability
 {
-    public function __construct(private AiSettings $settings) {}
+    public function __construct(private AiSettings $settings, private UsageLedger $ledger, private TrialGrants $trials) {}
 
     public function textProvider(): string
     {
@@ -56,6 +60,16 @@ class AiAvailability
             return 'AI funkcie sú dočasne nedostupné. Recepty môžeš ďalej upravovať ručne.';
         }
 
+        // The ledger decides whether the household has a use left; a verified owner's trial is granted lazily here
+        // so accounts verified before the ledger existed get it exactly once.
+        if ($this->ledger->enforced()) {
+            $this->trials->ensureFor($household);
+            if ($this->ledger->available($household, UsageKind::fromAiJobKind($kind)) < 1) {
+                return $this->ledger->exhaustedMessage(UsageKind::fromAiJobKind($kind));
+            }
+        }
+
+        // Daily limits remain as a frequency cap (abuse protection), not as the paid quota.
         $limit = $kind === AiJobKind::Text ? $this->settings->dailyTextLimit() : $this->settings->dailyImageLimit();
         $used = AiJob::query()
             ->where('household_id', $household->id)
@@ -77,6 +91,20 @@ class AiAvailability
         }
 
         return null;
+    }
+
+    /**
+     * Uses left for the household, or null when the ledger is not enforced (nothing to show).
+     */
+    public function balance(Household $household, AiJobKind $kind): ?UsageBalance
+    {
+        if (! $this->ledger->enforced()) {
+            return null;
+        }
+
+        $this->trials->ensureFor($household);
+
+        return $this->ledger->balance($household, UsageKind::fromAiJobKind($kind));
     }
 
     private function providerHasKey(string $provider): bool

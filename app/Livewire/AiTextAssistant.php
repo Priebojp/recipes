@@ -10,6 +10,7 @@ use App\Services\Ai\AiAvailability;
 use App\Services\Ai\AiConflictException;
 use App\Services\Ai\AiTextService;
 use App\Services\Ai\AiUnavailableException;
+use App\Services\Usage\UsageBalance;
 use App\Support\CurrentHousehold;
 use Illuminate\Contracts\View\View;
 use InvalidArgumentException;
@@ -20,6 +21,7 @@ use Livewire\Component;
  * @property-read Recipe $recipe
  * @property-read AiJob|null $job
  * @property-read string|null $unavailable
+ * @property-read UsageBalance|null $balance
  * @property-read bool $isStale
  * @property-read list<int> $photoSteps
  */
@@ -67,6 +69,13 @@ class AiTextAssistant extends Component
         return app(AiAvailability::class)->reasonUnavailable($this->recipe->household, AiJobKind::Text);
     }
 
+    /** Uses left for text operations; null when the ledger is not enforced. */
+    #[Computed]
+    public function balance(): ?UsageBalance
+    {
+        return app(AiAvailability::class)->balance($this->recipe->household, AiJobKind::Text);
+    }
+
     #[Computed]
     public function isStale(): bool
     {
@@ -98,12 +107,12 @@ class AiTextAssistant extends Component
         }
 
         $this->jobId = $job->id;
-        unset($this->job, $this->photoSteps);
+        unset($this->job, $this->photoSteps, $this->balance, $this->unavailable);
     }
 
     public function refreshStatus(): void
     {
-        unset($this->job, $this->photoSteps);
+        unset($this->job, $this->photoSteps, $this->balance, $this->unavailable);
     }
 
     public function apply(AiTextService $service): void

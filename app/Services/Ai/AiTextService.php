@@ -12,6 +12,7 @@ use App\Models\RecipeRevision;
 use App\Models\RecipeStep;
 use App\Models\User;
 use App\Services\RecipeService;
+use App\Services\Usage\InsufficientUsageException;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -26,6 +27,7 @@ class AiTextService
         private AiAvailability $availability,
         private AiSettings $settings,
         private AiCostCalculator $costs,
+        private AiJobLifecycle $lifecycle,
     ) {}
 
     /**
@@ -37,11 +39,6 @@ class AiTextService
             throw new InvalidArgumentException('Neznámy rozsah úpravy.');
         }
 
-        $household = $recipe->household;
-        if ($reason = $this->availability->reasonUnavailable($household, AiJobKind::Text)) {
-            throw new AiUnavailableException($reason);
-        }
-
         $recipe->load(['ingredients', 'steps', 'mealTypes']);
         $revision = $recipe->active_revision_id
             ? RecipeRevision::find($recipe->active_revision_id)
@@ -51,25 +48,35 @@ class AiTextService
         $version = (string) config('recipes.ai.text_prompt_version');
         $key = hash('sha256', implode('|', ['text', $recipe->id, $revision->id, $scope, $version, $fresh ? microtime(true) : '']));
 
+        // A retry of identical input returns the existing job first: it never needs a second use.
         $existing = AiJob::query()->where('request_key', $key)->first();
         if ($existing !== null) {
             return $existing;
         }
 
-        $job = AiJob::create([
-            'household_id' => $recipe->household_id,
-            'recipe_id' => $recipe->id,
-            'kind' => AiJobKind::Text,
-            'input_revision_id' => $revision->id,
-            'status' => AiJobStatus::Queued,
-            'request_key' => $key,
-            'provider' => $this->availability->textProvider(),
-            'model' => $this->settings->textModel(),
-            'profile' => $this->settings->textProfile(),
-            'prompt_version' => $version,
-            'input' => ['scope' => $scope, 'recipe' => $this->payload($revision->snapshot)],
-            'created_by' => $by?->id,
-        ]);
+        if ($reason = $this->availability->reasonUnavailable($recipe->household, AiJobKind::Text)) {
+            throw new AiUnavailableException($reason);
+        }
+
+        try {
+            // Job and its reserved use are created together; without a free use nothing is created.
+            $job = $this->lifecycle->create([
+                'household_id' => $recipe->household_id,
+                'recipe_id' => $recipe->id,
+                'kind' => AiJobKind::Text,
+                'input_revision_id' => $revision->id,
+                'status' => AiJobStatus::Queued,
+                'request_key' => $key,
+                'provider' => $this->availability->textProvider(),
+                'model' => $this->settings->textModel(),
+                'profile' => $this->settings->textProfile(),
+                'prompt_version' => $version,
+                'input' => ['scope' => $scope, 'recipe' => $this->payload($revision->snapshot)],
+                'created_by' => $by?->id,
+            ], AiJobKind::Text);
+        } catch (InsufficientUsageException $e) {
+            throw new AiUnavailableException($e->getMessage(), previous: $e);
+        }
 
         RunRecipeTextJob::dispatch($job->id);
 
@@ -104,11 +111,10 @@ class AiTextService
      */
     public function run(AiJob $job): void
     {
-        if ($job->status !== AiJobStatus::Queued) {
+        if (! $this->lifecycle->start($job)) {
             return;
         }
         $startedAt = now();
-        $job->update(['status' => AiJobStatus::Running, 'started_at' => $startedAt]);
 
         try {
             $prompt = (string) json_encode([
@@ -134,21 +140,15 @@ class AiTextService
 
             $output = $this->validateOutput(is_array($structured) ? $structured : [], $job->input['recipe']);
 
-            $job->update([
-                'status' => AiJobStatus::Succeeded,
+            // Result and consumption are stored in one transaction: a delivered suggestion costs exactly one use.
+            $this->lifecycle->succeed($job, [
                 'output' => $output,
-                'finished_at' => now(),
                 'duration_ms' => $this->elapsedMs($startedAt),
                 ...$this->costs->attributesFor($job, $response->usage),
             ]);
         } catch (\Throwable $e) {
             report($e);
-            $job->update([
-                'status' => AiJobStatus::Failed,
-                'error' => mb_substr($e->getMessage(), 0, 1000),
-                'finished_at' => now(),
-                'duration_ms' => $this->elapsedMs($startedAt),
-            ]);
+            $this->lifecycle->fail($job, $e, ['duration_ms' => $this->elapsedMs($startedAt)]);
         }
     }
 
