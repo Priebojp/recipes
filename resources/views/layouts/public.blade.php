@@ -14,9 +14,9 @@
                     @auth
                         <flux:button :href="route('cook.index')" wire:navigate variant="primary" icon="sparkles" size="sm">Otvoriť aplikáciu</flux:button>
                     @else
-                        <flux:button :href="route('login')" wire:navigate variant="ghost" size="sm">Prihlásiť sa</flux:button>
+                        <flux:button :href="route('login')" wire:navigate variant="ghost" size="sm">Prihlás sa</flux:button>
                         @if (Route::has('register'))
-                            <flux:button :href="route('register')" wire:navigate variant="primary" size="sm">Vytvoriť účet</flux:button>
+                            <flux:button :href="route('register')" wire:navigate variant="primary" size="sm">Založ si domácnosť</flux:button>
                         @endif
                     @endauth
                 </nav>

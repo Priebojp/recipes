@@ -22,7 +22,7 @@ it('shows only published, non-archived recipes on the public home page', functio
         ->assertDontSee('Archivovaný koláč');
 
     $this->get(route('home', ['q' => 'guláš']))->assertOk()->assertSee('Verejný guláš');
-    $this->get(route('home', ['q' => 'xyz']))->assertOk()->assertSee('Nič sa nenašlo');
+    $this->get(route('home', ['q' => 'xyz']))->assertOk()->assertSee('Nič sme nenašli');
 });
 
 it('renders a public recipe page for guests and hides private ones', function () {
