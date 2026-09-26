@@ -102,4 +102,20 @@ return [
     'export' => [
         'schema_version' => 1,
     ],
+
+    /*
+     * Legal pages, consent and privacy (v2 stage 5). Product settings, not statements about statutory periods.
+     */
+    'legal' => [
+        // Statutory withdrawal window shown to customers; the online form accepts later requests too (reviewed manually).
+        'withdrawal_days' => 14,
+    ],
+    'consent' => [
+        // How long a cookie decision is remembered before the banner asks again (specification: 6 months proposal).
+        'lifetime_days' => (int) env('RECIPES_CONSENT_LIFETIME_DAYS', 180),
+    ],
+    'privacy' => [
+        // Internal deadline for answering a data-subject request.
+        'request_deadline_days' => 30,
+    ],
 ];

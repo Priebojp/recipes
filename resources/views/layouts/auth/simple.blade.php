@@ -16,7 +16,9 @@
                     {{ $slot }}
                 </flux:card>
             </div>
+            @include('partials.footer', ['class' => 'pb-0 pt-2'])
         </div>
+        @include('partials.consent')
 
         @persist('toast')
             <flux:toast.group>

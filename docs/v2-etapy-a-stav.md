@@ -10,7 +10,7 @@ a bezpečná administrácia, potom ledger a Cashier, potom právne stránky, sú
 | 2 | **Ledger a granty použití** | ✅ hotové (PR #2) | `UsageGrant`, `UsageReservation`, `UsageLedgerEntry`, rezervácia pod zámkom, spotreba/uvoľnenie, skúšobné granty, `reconciling`, súbežné testy (akceptačné testy 6, 7, 22, 23) |
 | 3 | **Cashier a Stripe** | ✅ hotové (vetva `v2-etapa-3-cashier`) | `BillingAccount`, katalóg `PlanVersion`/`AddonVersion`, Checkout, webhook inbox, `PaidEntitlement`, mesačné granty pri ročnej platbe, portal, refund workflow (testy 1–5, 8–12, 14) |
 | 4 | **Admin – finančné moduly** | ✅ hotové (vetva `v2-etapa-4-admin-financie`) | Dashboard MRR/inkaso/refundácie/príspevok, detail domácnosti s kompenzáciami a blokovaním, predplatné so synchronizáciou, objednávky s refund workflow, posúdenie refundácií zo Stripe, ledger použití, verzovaný katalóg, inbox Stripe udalostí (test 13, 14) |
-| 5 | Právne stránky, cookies, súkromie | ⬜ | `/vop`, `/ochrana-osobnych-udajov`, `/cookies`, `/odstupenie-od-zmluvy`, verzie a akceptácie, registrácia služieb, **cookie lišta podľa kap. 10 tohto zadania** (nie z iného projektu), consent receipt, export/výmaz, žiadosti (testy 15–21) |
+| 5 | **Právne stránky, cookies, súkromie** | ✅ hotové (vetva `v2-etapa-5-pravne-sukromie`) | `/vop`, `/ochrana-osobnych-udajov`, `/cookies`, `/odstupenie-od-zmluvy`, `/kontakt`, verzie a akceptácie, identita prevádzkovateľa a blokovanie checkoutu, register služieb, cookie lišta podľa kap. 10, consent receipt, zhrnutie pred platbou a e-mail s VOP, online odstúpenie, export/výmaz účtu, žiadosti (testy 15–21) |
 | 6 | Plus funkcie | ⬜ | Týždenný jedálniček, nákupný zoznam, uložené skupiny a filtre – bez platenej AI, ak stačí existujúci algoritmus |
 | 7 | Staging a launch | ⬜ | Test clock, doklady, identita prevádzkovateľa, meranie 30+30 AI úloh, potvrdenie cien, produkčné secrets a webhook |
 
@@ -266,6 +266,140 @@ StripeEventsAdminTest}.php` (13 testov) s falošnou bránou (`FakeStripeGateway:
 
 `php artisan migrate` (stĺpce blokovania), voliteľne `RECIPES_BILLING_USD_EUR_RATE`. Synchronizácia predplatného volá
 Stripe API – na reálnom účte sa overí v etape 7.
+
+## Etapa 5 – čo je hotové
+
+### Právne dokumenty (`LegalDocumentVersion`, `/admin/legal`)
+
+- Štyri typy (`terms` → `/vop`, `privacy` → `/ochrana-osobnych-udajov`, `cookies` → `/cookies`, `withdrawal` →
+  `/odstupenie-od-zmluvy`), Markdown obsah, verzia, checksum, stav `draft → published → archived`, `effective_at`,
+  kto a s akou poznámkou schválil. Publikovaná verzia je nemenná; zmena = nová verzia (kópia poslednej), publikovanie
+  v jednej transakcii archivuje predchádzajúcu. Archív `/{slug}/archiv`, konkrétna verzia `/{slug}/{n}`.
+- `LegalDocumentSeeder` nahrá **pracovné texty zo zadania (kap. 10) ako návrhy** s placeholdermi
+  `[OBCHODNÉ MENO, SÍDLO, IČO, REGISTER]`, `[EMAIL]`, `[PRIVACY EMAIL]`, `[ARS]`, `[DOPRACOVAŤ PRED PUBLIKÁCIOU …]`.
+  Publikovanie textu s placeholderom je odmietnuté; „Doplniť údaje prevádzkovateľa“ nahradí známe placeholdery
+  z identity, zvyšné musí administrátor dopísať. Verejná stránka bez publikovanej verzie hlási „Dokument sa
+  pripravuje“; návrh vidí len administrátor s výrazným banerom. Audit `legal.document.{draft_created|draft_updated|published|archived}`.
+- **Identita prevádzkovateľa** (`OperatorIdentity`, `app_settings` kľúče `operator.*`): obchodné meno, právna forma,
+  sídlo, IČO, register, DIČ/IČ DPH, e-maily podpory / reklamácií / súkromia, telefón, ARS, cieľové krajiny, daňový
+  režim. Nič sa nevymýšľa – prázdne polia sú blokerom. Zobrazuje sa v pätičke, na `/kontakt`, v zhrnutí objednávky
+  a v e-mailoch.
+- **Blokovanie checkoutu** (`CheckoutReadiness`, test 20): kým chýba povinná identita alebo publikované VOP,
+  informácie o súkromí a odstúpenie, `CheckoutService` odmietne nákup, cenník a nastavenia ukazujú „Platby ešte nie
+  sú zapnuté“ (tlačidlá vypnuté). Recepty a bezplatné funkcie to neobmedzuje. Stav a blokery sú na `/admin/legal`.
+
+### Registrácia, objednávka a akceptácie (`LegalAcceptance`, testy 18, 20)
+
+- Registrácia vyžaduje **samostatné prijatie publikovaných VOP** (checkbox s verziou), nič iné – žiadny „súhlas
+  s GDPR“ ani marketing; informácie o súkromí sú odkazom pri formulári. Kým VOP nie sú publikované, checkbox sa
+  nezobrazuje a akceptácia sa nezapisuje (blokovaný je len platený checkout).
+- **Zhrnutie pred platbou** `checkout/review?plan=…|addon=…`: identita predávajúceho, obsah balíka, konečná suma,
+  periodicita a automatická obnova, spôsob zrušenia, odkaz na odstúpenie, verzia VOP s odkazom; tlačidlo
+  „Objednať s povinnosťou platby“. Formulár posiela `terms` + `terms_version` (musí sedieť s aktuálnou verziou, inak
+  chyba) a **samostatnú** voľbu „žiadam o začatie plnenia pred uplynutím lehoty na odstúpenie“, ktorá sa ukladá ako
+  `acknowledgements.early_performance_requested` – oddelene od marketingu a cookies.
+- Objednávka má `terms_version_id` (snímka); neskoršia verzia VOP ju nemení. Po zaplatení (`OrderConfirmations`,
+  volané z webhook procesora po prechode do `paid`) ide **e-mail s potvrdením objednávky a priloženým textom VOP**
+  (`vop-v{n}.md`) – trvalé médium, nie iba odkaz; odosiela sa raz (`orders.confirmation_sent_at`), zlyhanie odoslania
+  neblokuje spracovanie webhooku a pri ďalšom pokuse sa pošle znova.
+
+### Cookies a súhlas (`ConsentService`, `ConsentReceipt`, `ConsentPolicy`, testy 15–17)
+
+- **Register služieb** `/admin/services`: kľúč, názov, poskytovateľ, kategória (`necessary`/`analytics`/`marketing`),
+  účel, uchovanie, miesto/prenos, inventár cookies a úložísk (názov, druh, doména, trvanie, účel), loader
+  (`{"type":"ga4","measurement_id":…}` alebo `{"type":"script","src":…}`), zapnutá/vypnutá, `consent_version`.
+  `ConsentServiceSeeder` nahrá overený inventár (session cookie, `XSRF-TOKEN`, `remember_web_*`, `mr_consent`,
+  `flux.appearance`, Stripe Checkout bez skriptu) a **vypnutú šablónu GA4** – poskytovateľ analytiky nie je vybraný,
+  integrácia je vypnutá; zapnutie je rozhodnutie prevádzkovateľa v administrácii (audit `consent.service.*`).
+- Stránka `/cookies` generuje tabuľku z registra (iba zapnuté služby). Lišta podľa kap. 10 (text, tri rovnocenné
+  tlačidlá **Prijať voliteľné / Odmietnuť voliteľné / Nastavenia**, žiadny vopred zapnutý prepínač) sa zobrazí **len
+  keď existuje zapnutá voliteľná služba**; bez nej sa prázdny súhlas nežiada a odkaz „Nastavenia cookies“ v pätičke
+  vedie na `/cookies`. Marketing sa ponúka až keď má konkrétnu službu.
+- **Gating na serveri**: stránka vloží loader voliteľnej služby (`#mr-consent-config`) iba pre kategórie, ktoré
+  návštevník povolil pod **aktuálnou verziou účelov** (hash zapnutých služieb + `consent_version` + verzia dokumentu
+  cookies). Bez rozhodnutia, po odmietnutí a po odvolaní nie je v HTML žiadny analytický kód ani požiadavka;
+  zatvorenie lišty nie je súhlas. Zmena účelu / nová služba = nová verzia → stará voľba neplatí a lišta sa pýta znova.
+  `resources/js/consent.js` načíta služby až po súhlase, pri `wire:navigate` neinicializuje dvakrát, neodosiela
+  udalosti nazbierané pred súhlasom, pri odvolaní zmaže spravované cookies/localStorage a vypne GA (`ga-disable-*`).
+  GA4 beží s `send_page_view:false`; `page_view` posiela cestu bez ID a query (`/recipes/:id`).
+- V administrácii, na právnych stránkach, v checkoute, nastaveniach predplatného/súkromia a auth formulároch je
+  voliteľná analytika **potlačená** (`ConsentPolicy::SUPPRESSED_ROUTES`) aj so súhlasom; admin layout lištu vôbec
+  nevkladá. Bez session replay a pixelov.
+- **Consent receipt**: pseudonymné `visitor_id` (UUID v cookie), verzia účelov, verzia dokumentu cookies, akcia
+  (`accept_all|reject_all|custom|withdraw`), kategórie, čas; bez IP. Funguje aj bez prihlásenia; prihlásený má
+  `user_id`. Cookie `mr_consent` má životnosť `RECIPES_CONSENT_LIFETIME_DAYS` (180 dní – produktové nastavenie).
+  Endpoint `POST /consent` (JSON alebo obyčajný formulár, throttle).
+- **Allowlist udalostí** `AnalyticsEvents` (`recipe_created`, `selection_started`, `meal_planned`,
+  `checkout_started`, `subscription_started`, `addon_purchased`) s enumerovanými hodnotami – žiadne názvy receptov,
+  e-maily, mená ani sumy. Na strane klienta `window.mrAnalytics.track(name, props)` s rovnakým zoznamom; stránka
+  úspešnej platby vyšle `subscription_started`/`addon_purchased` raz na objednávku. Ostatné udalosti sú pripravené,
+  ale v receptovom module zatiaľ nevolané (modul sa neprerábal).
+
+### Odstúpenie od zmluvy (`WithdrawalRequest`, `WithdrawalService`, test 19)
+
+- Verejný formulár `/odstupenie-od-zmluvy/formular` (aj bez prihlásenia): e-mail, číslo objednávky (prihlásený
+  vlastník vyberá zo svojich zaplatených objednávok), správa, potvrdenie úmyslu. Ihneď vznikne žiadosť s číslom
+  `ODS-RRRR-XXXXXX` a odíde **e-mail s potvrdením prijatia** (trvalé médium). Objednávka sa páruje podľa čísla +
+  domácnosti prihláseného alebo e-mailu platcu; nespárované žiadosti vidí administrátor a objednávku priradí ručne.
+  Nič sa zákazníkovi neprezrádza. Odstúpenie je oddelené od „Zrušiť obnovovanie“ (to zostáva v nastaveniach).
+- Administrácia `/admin/privacy`: „Vrátiť celú sumu“ volá `RefundService::request()` s druhom `withdrawal`, celou
+  zostávajúcou sumou, odobratím **všetkých nevyužitých** jednotiek a Plus obdobia, idempotentným kľúčom
+  `withdrawal-{id}`; zlyhanie v Stripe zostane viditeľné a žiadosť otvorená. Zamietnutie vyžaduje odôvodnenie.
+  Obe rozhodnutia posielajú e-mail a majú audit `legal.withdrawal.{refunded|rejected|order_attached}`.
+
+### Súkromie: export, výmaz, žiadosti (`PrivacyRequest`, `AccountErasure`, test 21)
+
+- Nastavenia → **Súkromie** (`/settings/privacy`): dokumenty a vlastné akceptácie, stav voľby cookies (zmena /
+  odvolanie), export domácnosti (ZIP, existujúci) a **export účtu** (JSON: profil, členstvá, akceptácie, consent
+  receipts, žiadosti), vlastné žiadosti s lehotou, **vymazanie účtu** s dopadom pred potvrdením (Plus do kedy,
+  nevyužité dokúpené jednotky, ďalší členovia, účtovné doklady) a voľbou pre vlastnenú domácnosť s členmi:
+  zrušiť alebo **previesť na člena**. Potvrdenie heslom.
+- `AccountErasure::erase()`: obsah domácnosti (recepty s obrázkami, profily, plány, história, AI úlohy, pozvánky,
+  členstvá) sa zmaže; domácnosť s objednávkami/refundáciami sa **anonymizuje** (`erased_at`, názov „Zrušená
+  domácnosť #id“) a účet sa anonymizuje (e-mail `erased-{id}@erased.invalid`, meno, náhodné heslo, MFA, passkeys,
+  relácie) – FK `households.owner_user_id` kaskáduje, preto sa riadok účtu pri účtovných záznamoch nezmaže;
+  bez finančných záznamov sa účet aj domácnosť zmažú úplne. Aktívne obnovovanie predplatného sa vypne cez bránu.
+  Člen bez vlastníctva: členstvo skončí, profil stravníka sa anonymizuje, recepty ostávajú vlastníkovi. Vznikne
+  `PrivacyRequest` (`erasure`, `completed`, evidencia čo sa zmazalo), audit `privacy.account.erased`, e-mail
+  o vybavení. Pôvodný dialóg v profile smeruje na stránku súkromia; `delete-user-modal` používa tú istú službu.
+- **Zálohy** (test 21): `php artisan app:privacy-reapply-erasures` prejde vybavené žiadosti o výmaz a domácnosti,
+  ktorým sa po obnove zálohy vrátil obsah alebo meno, znova vyčistí (audit `privacy.erasure.reapplied`). Do runbooku
+  obnovy patrí ako povinný krok po každom restore.
+- `/admin/privacy` eviduje žiadosti (export / výmaz / oprava / iné) s lehotou 30 dní
+  (`recipes.privacy.request_deadline_days`), stavmi `received → in_progress → completed | rejected`, dôkazom
+  vybavenia a auditom `privacy.request.updated`. Iné než samoobslužné žiadosti (e-mailom) zakladá administrátor
+  cez `PrivacyRequests::open()` – UI na ručné založenie zatiaľ nie je.
+
+### Vedomé rozhodnutia a hranice
+
+- Consent UI je malý Alpine komponent + vanilla JS bez knižnice (zadanie kap. 13: podstatné je blokovanie
+  a evidencia). Sieťové blokovanie garantuje server tým, že loader nevloží; klient navyše nič nespúšťa bez
+  konfigurácie. Pokrytie e2e (skutočná neprítomnosť požiadaviek v prehliadači) sa overí ručne v etape 7.
+- Právne texty sú **pracovné návrhy v stave draft**; aplikácia ich neoznačuje za schválené. Publikuje ich
+  administrátor s poznámkou o schválení až po právnej kontrole. Retencia akceptácií, consent receiptov a žiadostí je
+  otvorená politika (kap. 11) – zatiaľ sa neuchovávajú „nekonečne“ iba v zmysle, že nemajú automatický výmaz;
+  doplniť po schválení lehôt.
+- Stripe zákazník sa pri výmaze účtu v Stripe neruší (účtovné záznamy, refundácie); fakturačný e-mail na
+  `billing_accounts` ostáva ako súčasť dokladov. Prenos do etapy 7: overiť s účtovníkom.
+- Objednávka posiela VOP e-mailom; registrácia (bezplatná zmluva) samostatný e-mail s VOP neposiela – link a verzia
+  sú v Nastavenia → Súkromie.
+
+### Testy
+
+`tests/Feature/Legal/{LegalPagesTest, WithdrawalTest}`, `tests/Feature/Auth/RegistrationTermsTest`,
+`tests/Feature/Billing/CheckoutLegalTest`, `tests/Feature/Consent/ConsentTest`, `tests/Unit/Consent/AnalyticsEventsTest`,
+`tests/Feature/Privacy/AccountErasureTest`, `tests/Feature/Admin/{LegalAdminTest, ServicesAdminTest, PrivacyAdminTest}`
+pokrývajú akceptačné testy 15, 16, 17, 18, 19, 20, 21 (a 13 pre nové moduly). `Tests\Support\LegalScenario::ready()`
+identifikuje prevádzkovateľa a publikuje seedované texty; `BillingScenario::start()` ju volá, lebo bez toho je
+checkout zablokovaný (test 20). Celá sada: 221 testov.
+
+### Nasadenie a lokálny vývoj
+
+`php artisan migrate`, `php artisan db:seed --class=LegalDocumentSeeder`, `php artisan db:seed --class=ConsentServiceSeeder`
+(obe sú aj v `db:seed`), `npm run build` (nový `resources/js/consent.js`). Potom v `/admin/legal` vyplniť
+prevádzkovateľa a publikovať dokumenty – **bez toho je platený checkout aj lokálne vypnutý**. E-maily sú
+`ShouldQueue`: pri `QUEUE_CONNECTION=database` ich odošle až `php artisan queue:work` (lokálne do Mailpitu).
+Voliteľná analytika: až po výbere poskytovateľa zapnúť službu v `/admin/services` s loaderom.
 
 ## Otvorené vstupy pre launch (nezmenené zo zadania, kap. 18)
 

@@ -32,14 +32,14 @@ it('lets only the household owner start a checkout or open the billing portal', 
 it('rejects client-side prices and unknown offers; the amount always comes from the catalogue', function () {
     $h = BillingScenario::start();
 
-    $this->post(route('checkout.plan'), ['plan' => 'plus_monthly', 'price_id' => 'price_cheap', 'amount' => 1])->assertRedirectContains('checkout.stripe.test');
+    $this->post(route('checkout.plan'), ['plan' => 'plus_monthly', 'price_id' => 'price_cheap', 'amount' => 1, ...BillingScenario::termsInput()])->assertRedirectContains('checkout.stripe.test');
     expect(Order::sole()->amount_cents)->toBe(249)->and($h['stripe']->checkouts[0]['price'])->toBe('price_plus_monthly');
 
-    $this->from(route('pricing'))->post(route('checkout.plan'), ['plan' => 'plus_free'])->assertSessionHasErrors('plan');
-    $this->from(route('pricing'))->post(route('checkout.addon'), ['addon' => 'images_high'])->assertSessionHasErrors('addon');
+    $this->from(route('pricing'))->post(route('checkout.plan'), ['plan' => 'plus_free', ...BillingScenario::termsInput()])->assertSessionHasErrors('plan');
+    $this->from(route('pricing'))->post(route('checkout.addon'), ['addon' => 'images_high', ...BillingScenario::termsInput()])->assertSessionHasErrors('addon');
 
     PlanVersion::query()->where('code', 'plus_yearly')->update(['stripe_price_id' => null]);
-    $this->from(route('pricing'))->post(route('checkout.plan'), ['plan' => 'plus_yearly'])->assertSessionHasErrors('plan');
+    $this->from(route('pricing'))->post(route('checkout.plan'), ['plan' => 'plus_yearly', ...BillingScenario::termsInput()])->assertSessionHasErrors('plan');
     expect(Order::count())->toBe(1);
 });
 
@@ -52,7 +52,7 @@ it('refuses a second subscription while one is alive and shows the return page w
 
     BillingScenario::paySubscription($order, now()->timestamp, now()->addMonth()->timestamp);
 
-    $this->from(route('pricing'))->post(route('checkout.plan'), ['plan' => 'plus_yearly'])->assertSessionHasErrors('plan');
+    $this->from(route('pricing'))->post(route('checkout.plan'), ['plan' => 'plus_yearly', ...BillingScenario::termsInput()])->assertSessionHasErrors('plan');
     $this->get(route('checkout.success', ['session_id' => $order->stripe_checkout_session_id]))->assertOk()->assertSee('Zaplatené');
 });
 

@@ -76,3 +76,44 @@ select:focus[data-flux-control] {
 .pb-safe {
     padding-bottom: env(safe-area-inset-bottom);
 }
+
+/* Rendered Markdown of the legal documents (no typography plugin installed). */
+.legal-prose {
+    @apply text-[15px] leading-relaxed text-zinc-800 dark:text-zinc-200;
+}
+.legal-prose h2 {
+    @apply mt-8 mb-3 font-display text-xl font-semibold text-zinc-900 dark:text-white;
+}
+.legal-prose h3 {
+    @apply mt-6 mb-2 font-display text-lg font-semibold text-zinc-900 dark:text-white;
+}
+.legal-prose p {
+    @apply my-3;
+}
+.legal-prose ul, .legal-prose ol {
+    @apply my-3 ps-6;
+}
+.legal-prose ul {
+    @apply list-disc;
+}
+.legal-prose ol {
+    @apply list-decimal;
+}
+.legal-prose li {
+    @apply my-1;
+}
+.legal-prose a {
+    @apply underline;
+}
+.legal-prose table {
+    @apply my-4 w-full text-sm;
+}
+.legal-prose th, .legal-prose td {
+    @apply border-b border-zinc-200 px-2 py-1.5 text-left align-top dark:border-zinc-700;
+}
+.legal-prose th {
+    @apply text-xs uppercase text-zinc-500;
+}
+.legal-prose strong {
+    @apply font-semibold;
+}

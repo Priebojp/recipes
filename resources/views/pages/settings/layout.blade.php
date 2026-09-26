@@ -6,6 +6,7 @@
             <flux:navlist.item :href="route('appearance.edit')" wire:navigate>{{ __('Appearance') }}</flux:navlist.item>
             <flux:navlist.item :href="route('subscription.edit')" wire:navigate>Predplatné</flux:navlist.item>
             <flux:navlist.item :href="route('usage.index')" wire:navigate>AI použitia</flux:navlist.item>
+            <flux:navlist.item :href="route('privacy.edit')" wire:navigate>Súkromie</flux:navlist.item>
         </flux:navlist>
     </div>
 

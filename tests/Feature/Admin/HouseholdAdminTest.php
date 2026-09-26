@@ -100,8 +100,8 @@ it('blocks a household from new AI jobs and purchases, keeps its data and lifts 
 
     $this->actingAs($h['user']);
     app(CurrentHousehold::class)->set($household);
-    $this->from(route('pricing'))->post(route('checkout.plan'), ['plan' => 'plus_monthly'])->assertSessionHasErrors('plan');
-    $this->from(route('pricing'))->post(route('checkout.addon'), ['addon' => 'text_100'])->assertSessionHasErrors('addon');
+    $this->from(route('pricing'))->post(route('checkout.plan'), ['plan' => 'plus_monthly', ...BillingScenario::termsInput()])->assertSessionHasErrors('plan');
+    $this->from(route('pricing'))->post(route('checkout.addon'), ['addon' => 'text_100', ...BillingScenario::termsInput()])->assertSessionHasErrors('addon');
     expect(Order::count())->toBe(0);
 
     actingAsPlatformAdmin();

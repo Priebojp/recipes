@@ -27,9 +27,8 @@
             {{ $slot }}
         </main>
 
-        <footer class="mx-auto max-w-6xl px-4 pb-10 pt-6 text-center text-sm text-zinc-500 sm:px-6">
-            {{ config('app.name') }} · rodinná kuchárka
-        </footer>
+        @include('partials.footer')
+        @include('partials.consent')
 
         @persist('toast')
             <flux:toast.group>

@@ -2,6 +2,7 @@
 
 use App\Concerns\PasswordValidationRules;
 use App\Livewire\Actions\Logout;
+use App\Services\Privacy\AccountErasure;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
@@ -13,13 +14,15 @@ new class extends Component {
     /**
      * Delete the currently authenticated user.
      */
-    public function deleteUser(Logout $logout): void
+    public function deleteUser(Logout $logout, AccountErasure $erasure): void
     {
         $this->validate([
             'password' => $this->currentPasswordRules(),
         ]);
 
-        tap(Auth::user(), $logout(...))->delete();
+        $user = Auth::user();
+        $logout();
+        $erasure->erase($user);
 
         $this->redirect('/', navigate: true);
     }

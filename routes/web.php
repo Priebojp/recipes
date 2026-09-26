@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\BillingPortalController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\ConsentController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\MediaController;
@@ -12,6 +13,13 @@ use Laravel\Cashier\Http\Controllers\PaymentController;
 Route::livewire('/', 'pages::home.index')->name('home');
 Route::livewire('recept/{recipe}', 'pages::home.recipe')->name('public.recipe');
 Route::livewire('cennik', 'pages::billing.pricing')->name('pricing');
+
+// Legal pages (public, versioned, with an archive), contact, online withdrawal and the cookie decision endpoint.
+Route::livewire('kontakt', 'pages::legal.contact')->name('legal.contact');
+Route::livewire('odstupenie-od-zmluvy/formular', 'pages::legal.withdrawal-form')->middleware('throttle:10,1')->name('legal.withdrawal.form');
+Route::livewire('{slug}/archiv', 'pages::legal.archive')->where('slug', 'vop|ochrana-osobnych-udajov|cookies|odstupenie-od-zmluvy')->name('legal.archive');
+Route::livewire('{slug}/{version?}', 'pages::legal.show')->where(['slug' => 'vop|ochrana-osobnych-udajov|cookies|odstupenie-od-zmluvy', 'version' => '[0-9]+'])->name('legal.show');
+Route::post('consent', [ConsentController::class, 'store'])->middleware('throttle:30,1')->name('consent.store');
 
 // Cashier routes registered here (Cashier::ignoreRoutes) so the webhook goes through the inbox controller.
 Route::prefix(config('cashier.path'))->name('cashier.')->group(function () {
@@ -43,6 +51,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('export', ExportController::class)->name('export');
 
     // Purchases: the owner picks an offer code, Stripe hosts the payment, webhooks grant the result.
+    Route::livewire('checkout/review', 'pages::billing.checkout-review')->name('checkout.review');
     Route::post('checkout/plan', [CheckoutController::class, 'subscribe'])->name('checkout.plan');
     Route::post('checkout/addon', [CheckoutController::class, 'addon'])->name('checkout.addon');
     Route::livewire('checkout/success', 'pages::billing.checkout-success')->name('checkout.success');

@@ -2,12 +2,16 @@
 
 namespace App\Services\Billing;
 
+use App\Enums\LegalAcceptanceAction;
+use App\Enums\LegalDocumentType;
 use App\Enums\OrderKind;
 use App\Enums\OrderStatus;
 use App\Models\Household;
 use App\Models\Order;
 use App\Models\User;
 use App\Services\Billing\Gateway\StripeGateway;
+use App\Services\Legal\CheckoutReadiness;
+use App\Services\Legal\LegalDocuments;
 
 /**
  * Starts hosted Stripe Checkout for an offer code. Price and product come from the catalogue snapshot;
@@ -20,14 +24,19 @@ class CheckoutService
         private BillingAccounts $accounts,
         private PlanStatus $plans,
         private StripeGateway $gateway,
+        private CheckoutReadiness $readiness,
+        private LegalDocuments $documents,
     ) {}
 
     /**
+     * @param  array<string, mixed>  $acknowledgements  e.g. ['early_performance_requested' => true]
+     *
      * @throws CheckoutException
      */
-    public function startSubscription(Household $household, User $by, string $planCode): StartedCheckout
+    public function startSubscription(Household $household, User $by, string $planCode, array $acknowledgements = []): StartedCheckout
     {
         $this->assertNotBlocked($household);
+        $this->assertReady();
         $plan = $this->catalog->plan($planCode);
         if ($plan === null || ! $plan->stripe_price_id) {
             throw new CheckoutException('Táto ponuka momentálne nie je dostupná.');
@@ -38,6 +47,7 @@ class CheckoutService
         }
 
         $account = $this->accounts->forHousehold($household, $by);
+        $terms = $this->documents->current(LegalDocumentType::Terms);
 
         $order = Order::create([
             'household_id' => $household->id,
@@ -49,7 +59,9 @@ class CheckoutService
             'amount_cents' => $plan->final_price_cents,
             'currency' => $plan->currency,
             'status' => OrderStatus::Pending,
+            'terms_version_id' => $terms?->id,
         ]);
+        $this->recordAcceptance($order, $by, $acknowledgements);
 
         $session = $this->gateway->createSubscriptionCheckout(
             $account,
@@ -65,17 +77,21 @@ class CheckoutService
     }
 
     /**
+     * @param  array<string, mixed>  $acknowledgements
+     *
      * @throws CheckoutException
      */
-    public function startAddon(Household $household, User $by, string $addonCode): StartedCheckout
+    public function startAddon(Household $household, User $by, string $addonCode, array $acknowledgements = []): StartedCheckout
     {
         $this->assertNotBlocked($household);
+        $this->assertReady();
         $addon = $this->catalog->addon($addonCode);
         if ($addon === null || ! $addon->stripe_price_id) {
             throw new CheckoutException('Tento balík momentálne nie je dostupný.');
         }
 
         $account = $this->accounts->forHousehold($household, $by);
+        $terms = $this->documents->current(LegalDocumentType::Terms);
 
         $order = Order::create([
             'household_id' => $household->id,
@@ -87,7 +103,9 @@ class CheckoutService
             'amount_cents' => $addon->final_price_cents,
             'currency' => $addon->currency,
             'status' => OrderStatus::Pending,
+            'terms_version_id' => $terms?->id,
         ]);
+        $this->recordAcceptance($order, $by, $acknowledgements);
 
         $session = $this->gateway->createPaymentCheckout(
             $account,
@@ -108,6 +126,35 @@ class CheckoutService
         if ($order->status === OrderStatus::Pending) {
             $order->update(['status' => OrderStatus::Canceled]);
         }
+    }
+
+    /** Whether paid checkout may run at all (operator identity, published terms) – acceptance test 20. */
+    public function isReady(): bool
+    {
+        return $this->readiness->isReady();
+    }
+
+    /** @throws CheckoutException */
+    private function assertReady(): void
+    {
+        if (! $this->readiness->isReady()) {
+            throw new CheckoutException('Platby ešte nie sú zapnuté: chýba identifikácia prevádzkovateľa alebo publikované obchodné podmienky. Bezplatné funkcie fungujú ďalej.');
+        }
+    }
+
+    /**
+     * The order records the exact terms version accepted at the button with the obligation to pay; a separate
+     * acknowledgement (early performance) is stored apart from marketing and cookies.
+     *
+     * @param  array<string, mixed>  $acknowledgements
+     */
+    private function recordAcceptance(Order $order, User $by, array $acknowledgements): void
+    {
+        $terms = $order->termsVersion;
+        if ($terms === null) {
+            return;
+        }
+        $this->documents->recordAcceptance($terms, LegalAcceptanceAction::Checkout, $by, $order->household, $order, $acknowledgements);
     }
 
     /** @throws CheckoutException */

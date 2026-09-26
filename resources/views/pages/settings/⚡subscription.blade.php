@@ -61,6 +61,12 @@ new #[Title('Predplatné')] class extends Component {
     }
 
     #[Computed]
+    public function paymentsReady(): bool
+    {
+        return app(\App\Services\Billing\CheckoutService::class)->isReady();
+    }
+
+    #[Computed]
     public function plans(): Collection
     {
         return app(Catalog::class)->plans();
@@ -160,13 +166,11 @@ new #[Title('Predplatné')] class extends Component {
                     <flux:text class="text-sm">Jednorazovo, bez obnovovania a bez expirácie počas prevádzky služby. Nezakladajú Plus.</flux:text>
                     <div class="grid gap-3 sm:grid-cols-2">
                         @foreach ($this->addons as $addon)
-                            <form wire:key="addon-{{ $addon->id }}" method="POST" action="{{ route('checkout.addon') }}" class="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
-                                @csrf
-                                <input type="hidden" name="addon" value="{{ $addon->code }}">
+                            <div wire:key="addon-{{ $addon->id }}" class="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
                                 <div class="font-medium">{{ $addon->name }}</div>
                                 <div class="text-sm text-zinc-500">{{ $addon->unit_count }} × {{ $addon->unit_kind->label() }} · {{ Catalog::formatCents($addon->final_price_cents, $addon->currency) }}</div>
-                                <flux:button type="submit" size="sm" class="mt-2" :disabled="! $addon->stripe_price_id" data-test="buy-addon-{{ $addon->code }}">Kúpiť s povinnosťou platby</flux:button>
-                            </form>
+                                <flux:button :href="route('checkout.review', ['addon' => $addon->code])" wire:navigate size="sm" class="mt-2" :disabled="! $addon->stripe_price_id || ! $this->paymentsReady" data-test="buy-addon-{{ $addon->code }}">Pokračovať k objednávke</flux:button>
+                            </div>
                         @endforeach
                     </div>
                     @error('addon') <flux:text class="text-sm text-red-600">{{ $message }}</flux:text> @enderror
@@ -188,7 +192,7 @@ new #[Title('Predplatné')] class extends Component {
                             @endforeach
                         </tbody>
                     </table>
-                    <flux:text class="text-xs">Odstúpenie od zmluvy a reklamácie: napíš na e-mail podpory uvedený v obchodných podmienkach; online formulár pribudne s právnymi stránkami.</flux:text>
+                    <flux:text class="text-xs">Odstúpenie od zmluvy (do {{ config('recipes.legal.withdrawal_days') }} dní od nákupu) je iná vec než zrušenie obnovovania: <a href="{{ route('legal.withdrawal.form') }}" wire:navigate class="underline" data-test="withdrawal-link">online formulár odstúpenia</a>. Reklamácie: <a href="{{ route('legal.show', ['slug' => 'odstupenie-od-zmluvy']) }}" wire:navigate class="underline">podmienky a kontakt</a>.</flux:text>
                 </flux:card>
             @endif
 

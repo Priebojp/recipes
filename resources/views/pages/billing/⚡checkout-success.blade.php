@@ -43,6 +43,11 @@ new #[Title('Overenie platby')] class extends Component {
             <flux:callout.text>{{ $order->productName() }} · {{ App\Services\Billing\Catalog::formatCents($order->amount_cents, $order->currency) }}. Potvrdenie od platobnej brány môže trvať niekoľko sekúnd; stránka sa obnoví sama.</flux:callout.text>
         </flux:callout>
     @elseif ($order->status->isSettled())
+        @php($event = App\Services\Consent\AnalyticsEvents::sanitize($order->kind === App\Enums\OrderKind::Subscription ? 'subscription_started' : 'addon_purchased', ['offer' => (string) ($order->product_snapshot['code'] ?? '')]))
+        @if ($event && ! session('analytics_sent_order_'.$order->id))
+            @php(session(['analytics_sent_order_'.$order->id => true]))
+            <script type="application/json" id="mr-analytics-event">@json($event)</script>
+        @endif
         <flux:callout icon="check-circle" variant="success" data-test="checkout-paid">
             <flux:callout.heading>Zaplatené</flux:callout.heading>
             <flux:callout.text>{{ $order->productName() }} je aktívne. Doklad nájdeš v správe platby.</flux:callout.text>
