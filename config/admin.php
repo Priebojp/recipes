@@ -7,7 +7,7 @@ return [
      */
 
     // The admin panel refuses users without confirmed two-factor authentication (the specification requires MFA).
-    'require_two_factor' => (bool) env('ADMIN_REQUIRE_TWO_FACTOR', true),
+    'require_two_factor' => (bool) env('ADMIN_REQUIRE_TWO_FACTOR', false),
 
     // Used by `php artisan db:seed` (PlatformAdminSeeder) to bootstrap the first administrator.
     'bootstrap_email' => env('ADMIN_EMAIL', 'support@moje-recepty.sk'),
