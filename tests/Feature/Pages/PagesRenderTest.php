@@ -17,6 +17,8 @@ it('renders every main page for a household member', function () {
     $this->get(route('recipes.edit', $recipe))->assertOk()->assertSee('Upraviť recept');
     $this->get(route('plan.index'))->assertOk()->assertSee('Týždeň');
     $this->get(route('plan.history'))->assertOk();
+    $this->get(route('plan.propose'))->assertOk()->assertSee('Návrh týždenného jedálnička');
+    $this->get(route('plan.shopping'))->assertOk()->assertSee('Nákupný zoznam');
     $this->get(route('family.index'))->assertOk()->assertSee('Eva');
     $this->get(route('household.edit'))->assertOk();
 

@@ -8,6 +8,9 @@ use App\Models\MealPlan;
 use App\Models\Person;
 use App\Models\Recipe;
 use App\Models\RecipeStep;
+use App\Models\SelectionPreset;
+use App\Models\ShoppingList;
+use App\Models\ShoppingListItem;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use ZipArchive;
 
@@ -83,6 +86,17 @@ class ExportService
                 'id' => $e->id, 'recipe_id' => $e->recipe_id, 'meal_plan_id' => $e->meal_plan_id, 'cooked_on' => $e->cooked_on->toDateString(),
                 'servings' => $e->servings, 'note' => $e->note, 'recipe_title_snapshot' => $e->recipe_title_snapshot,
                 'recipe_revision_id' => $e->recipe_revision_id, 'voided_at' => $e->voided_at?->toIso8601String(), 'person_ids' => $e->people->pluck('id')->all(),
+            ])->all(),
+            // v2 stage 6 (schema 2): Plus data belongs to the household as well.
+            'selection_presets' => SelectionPreset::query()->where('household_id', $household->id)->orderBy('name')->get()->map(fn (SelectionPreset $p) => [
+                'id' => $p->id, 'name' => $p->name, 'person_ids' => $p->person_ids, 'meal_type' => $p->meal_type?->value, 'filters' => $p->filters,
+            ])->all(),
+            'shopping_lists' => ShoppingList::query()->where('household_id', $household->id)->with('items')->orderBy('week_start_date')->get()->map(fn (ShoppingList $l) => [
+                'id' => $l->id, 'week_start_date' => $l->week_start_date->toDateString(), 'generated_at' => $l->generated_at?->toIso8601String(),
+                'items' => $l->items->map(fn (ShoppingListItem $i) => [
+                    'name' => $i->name, 'unit' => $i->unit, 'numeric_amount' => $i->numeric_amount, 'text_amounts' => $i->text_amounts,
+                    'sources' => $i->sources, 'manual' => $i->manual, 'checked_at' => $i->checked_at?->toIso8601String(),
+                ])->all(),
             ])->all(),
         ];
     }

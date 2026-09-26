@@ -100,7 +100,8 @@ return [
     ],
 
     'export' => [
-        'schema_version' => 1,
+        // 2: selection_presets and shopping_lists added (v2 stage 6); older keys are unchanged.
+        'schema_version' => 2,
     ],
 
     /*
