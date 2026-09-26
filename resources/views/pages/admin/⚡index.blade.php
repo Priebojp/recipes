@@ -7,6 +7,8 @@ use App\Models\Recipe;
 use App\Models\User;
 use App\Services\Ai\AiSettings;
 use App\Services\Ai\AiUsageReport;
+use App\Services\Billing\Catalog;
+use App\Services\Billing\FinanceReport;
 use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -39,6 +41,22 @@ new #[Layout('layouts::admin')] #[Title('Administrácia – prehľad')] class ex
         ];
     }
 
+    /** @return array{recurring: array<string, mixed>, month: array<string, mixed>, previous: array<string, mixed>, attention: array<string, int>, month_label: string} */
+    #[Computed]
+    public function finance(): array
+    {
+        $report = app(FinanceReport::class);
+        $now = CarbonImmutable::now($report->timezone());
+
+        return [
+            'recurring' => $report->recurring(),
+            'month' => $report->period($now->startOfMonth(), $now->endOfMonth()),
+            'previous' => $report->period($now->subMonthNoOverflow()->startOfMonth(), $now->subMonthNoOverflow()->endOfMonth()),
+            'attention' => $report->attention(),
+            'month_label' => $now->format('n/Y'),
+        ];
+    }
+
     #[Computed]
     public function settings(): AiSettings
     {
@@ -47,9 +65,81 @@ new #[Layout('layouts::admin')] #[Title('Administrácia – prehľad')] class ex
 }; ?>
 
 <div class="space-y-6">
-    <x-page-header title="Prehľad" subtitle="Stav aplikácie, AI náklady a fronta. Finančné ukazovatele (MRR, inkaso, refundácie) pribudnú s etapou Cashier." />
+    <x-page-header title="Prehľad" subtitle="Predplatné, inkaso, refundácie, AI náklady a fronta. Tržba, inkaso a náklady sú oddelené; príspevok je odhad, nie zisk." />
 
     @php($s = $this->stats)
+    @php($f = $this->finance)
+    @php($att = $f['attention'])
+    @php($needsAttention = array_sum($att) > 0)
+
+    @if ($needsAttention)
+        <flux:callout variant="warning" icon="bell-alert">
+            <flux:callout.heading>Vyžaduje pozornosť</flux:callout.heading>
+            <flux:callout.text>
+                <ul class="list-disc space-y-0.5 ps-4">
+                    @if ($att['webhooks_failed'] > 0)<li><a href="{{ route('admin.stripe-events', ['state' => 'failed']) }}" class="underline" wire:navigate>{{ $att['webhooks_failed'] }} zlyhaných Stripe udalostí</a></li>@endif
+                    @if ($att['webhooks_received'] > 0)<li><a href="{{ route('admin.stripe-events', ['state' => 'received']) }}" class="underline" wire:navigate>{{ $att['webhooks_received'] }} Stripe udalostí čaká na spracovanie dlhšie ako hodinu</a> (beží fronta?)</li>@endif
+                    @if ($att['refunds_to_review'] > 0)<li><a href="{{ route('admin.refunds', ['status' => 'needs_review']) }}" class="underline" wire:navigate>{{ $att['refunds_to_review'] }} refundácií zo Stripe čaká na posúdenie</a></li>@endif
+                    @if ($att['disputes'] > 0)<li><a href="{{ route('admin.refunds', ['status' => 'disputed']) }}" class="underline" wire:navigate>{{ $att['disputes'] }} otvorených sporov o platbu</a></li>@endif
+                    @if ($att['ai_reconciling'] > 0)<li><a href="{{ route('admin.ai', ['status' => 'reconciling']) }}" class="underline" wire:navigate>{{ $att['ai_reconciling'] }} AI úloh s nejasným výsledkom</a> (<code>php artisan app:ai-reconcile</code>)</li>@endif
+                    @if ($att['stale_reservations'] > 0)<li><a href="{{ route('admin.usage', ['open' => 1]) }}" class="underline" wire:navigate>{{ $att['stale_reservations'] }} rezervácií použití držaných dlhšie ako deň</a></li>@endif
+                    @if ($att['pending_orders'] > 0)<li><a href="{{ route('admin.orders', ['status' => 'pending']) }}" class="underline" wire:navigate>{{ $att['pending_orders'] }} objednávok čaká na úhradu dlhšie ako hodinu</a> (uzavrú sa po 24 h)</li>@endif
+                </ul>
+            </flux:callout.text>
+        </flux:callout>
+    @endif
+
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" data-test="finance-cards">
+        <flux:card class="space-y-1">
+            <flux:text class="text-xs uppercase tracking-wide">Platiace domácnosti</flux:text>
+            <flux:heading size="xl" class="font-display">{{ $f['recurring']['paying_households'] }}</flux:heading>
+            <flux:text class="text-xs">{{ $f['recurring']['monthly'] }} mesačne · {{ $f['recurring']['yearly'] }} ročne @if ($f['recurring']['compensation'] > 0) · {{ $f['recurring']['compensation'] }} kompenzačný Plus @endif @if ($f['recurring']['canceling'] > 0) · {{ $f['recurring']['canceling'] }} bez obnovy @endif</flux:text>
+        </flux:card>
+
+        <flux:card class="space-y-1">
+            <flux:text class="text-xs uppercase tracking-wide">MRR (normalizované)</flux:text>
+            <flux:heading size="xl" class="font-display">{{ Catalog::formatCents($f['recurring']['mrr_cents']) }}</flux:heading>
+            <flux:text class="text-xs">Ročné platby ÷ 12; konečné ceny bez rozlíšenia DPH režimu</flux:text>
+        </flux:card>
+
+        <flux:card class="space-y-1">
+            <flux:text class="text-xs uppercase tracking-wide">Inkaso {{ $f['month_label'] }}</flux:text>
+            <flux:heading size="xl" class="font-display">{{ Catalog::formatCents($f['month']['cash_cents']) }}</flux:heading>
+            <flux:text class="text-xs">{{ $f['month']['orders_paid'] }} úhrad · predplatné {{ Catalog::formatCents($f['month']['subscriptions_cents']) }} · balíky {{ Catalog::formatCents($f['month']['addons_cents']) }}</flux:text>
+        </flux:card>
+
+        <flux:card class="space-y-1">
+            <flux:text class="text-xs uppercase tracking-wide">Refundácie {{ $f['month_label'] }}</flux:text>
+            <flux:heading size="xl" class="font-display {{ $f['month']['refunds_cents'] > 0 ? 'text-red-600 dark:text-red-400' : '' }}">{{ Catalog::formatCents($f['month']['refunds_cents']) }}</flux:heading>
+            <flux:text class="text-xs">{{ $f['month']['refunds_count'] }} prípadov · minulý mesiac {{ Catalog::formatCents($f['previous']['refunds_cents']) }}</flux:text>
+        </flux:card>
+    </div>
+
+    <flux:card class="space-y-3">
+        <flux:heading size="lg" class="font-display">Ekonomika mesiaca {{ $f['month_label'] }}</flux:heading>
+        <div class="grid gap-x-8 gap-y-3 text-sm lg:grid-cols-[3fr_2fr]">
+            <dl class="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1">
+                <dt class="text-zinc-500">Tržba (časovo rozlíšená)</dt><dd class="text-right tabular-nums">{{ Catalog::formatCents($f['month']['revenue_cents']) }}</dd>
+                <dt class="text-zinc-500">Inkaso (cash)</dt><dd class="text-right tabular-nums">{{ Catalog::formatCents($f['month']['cash_cents']) }}</dd>
+                <dt class="text-zinc-500">Refundácie</dt><dd class="text-right tabular-nums">− {{ Catalog::formatCents($f['month']['refunds_cents']) }}</dd>
+                <dt class="text-zinc-500">AI náklady (odhad, {{ $f['month']['ai_jobs'] }} úloh)</dt><dd class="text-right tabular-nums">{{ Money::microUsd($f['month']['ai_cost_micro'], 2) }}@if ($f['month']['ai_cost_cents'] !== null) ≈ {{ Catalog::formatCents($f['month']['ai_cost_cents']) }}@endif</dd>
+                <dt class="font-medium">Príspevok po variabilných nákladoch</dt>
+                <dd class="text-right font-medium tabular-nums">
+                    @if ($f['month']['contribution_cents'] !== null)
+                        {{ Catalog::formatCents($f['month']['contribution_cents']) }}
+                    @else
+                        <span class="font-normal text-zinc-500" title="RECIPES_BILLING_USD_EUR_RATE">bez kurzu USD→EUR</span>
+                    @endif
+                </dd>
+            </dl>
+            <flux:text class="text-xs">
+                Tržba rozpočítava zaplatené obdobia na dni mesiaca (ročná platba nie je mesačný výnos); inkaso je to, čo prišlo. AI náklady sú odhad z cenníka poskytovateľa v USD
+                @if ($f['month']['usd_eur_rate'] !== null) prepočítaný kurzom {{ $f['month']['usd_eur_rate'] }} @endif.
+                Príspevok = inkaso − refundácie − AI náklady; nezahŕňa poplatky Stripe, dane ani fixné náklady, preto nie je čistý zisk.
+                Minulý mesiac: inkaso {{ Catalog::formatCents($f['previous']['cash_cents']) }}, tržba {{ Catalog::formatCents($f['previous']['revenue_cents']) }}.
+            </flux:text>
+        </div>
+    </flux:card>
 
     @unless ($this->settings->enabled())
         <flux:callout variant="danger" icon="power">

@@ -176,6 +176,61 @@ class RefundService
         });
     }
 
+    /**
+     * Close a refund made in the Stripe dashboard: the administrator decides which unused units go back (possibly
+     * none) and whether the paid period ends. Money already moved; this only records the decision, auditable.
+     *
+     * @param  array<string, int>  $unitsToRevoke
+     */
+    public function review(RefundCase $case, array $unitsToRevoke, bool $revokeEntitlement, string $note, ?User $by = null): RefundCase
+    {
+        if ($case->status !== RefundStatus::NeedsReview) {
+            throw new InvalidArgumentException('Posúdiť možno iba refundáciu v stave „čaká na posúdenie“.');
+        }
+
+        $order = $case->order;
+        $unitsToRevoke = array_filter(array_map('intval', $unitsToRevoke), fn (int $n) => $n > 0);
+        $this->assertUnitsAvailable($order, $unitsToRevoke);
+
+        DB::transaction(function () use ($case, $order, $unitsToRevoke, $revokeEntitlement, $note, $by) {
+            $this->revokeUnits($order, $unitsToRevoke, 'refund:'.$case->id, $by, $note);
+            if ($revokeEntitlement) {
+                $this->revokeEntitlements($order, $note);
+            }
+            $case->update([
+                'status' => RefundStatus::Reviewed,
+                'units_revoked' => $unitsToRevoke,
+                'revoke_entitlement' => $revokeEntitlement,
+                'reason' => $case->reason.' Posúdenie: '.mb_substr($note, 0, 1000),
+                'requested_by' => $by?->id ?? $case->requested_by,
+                'processed_at' => $case->processed_at ?? now(),
+            ]);
+        });
+
+        $this->audit->record('billing.refund.reviewed', $case, [], [
+            'order_id' => $order->id,
+            'units_revoked' => $unitsToRevoke,
+            'revoke_entitlement' => $revokeEntitlement,
+        ], $note, $by);
+
+        return $case->fresh();
+    }
+
+    /**
+     * Unused units still held by the grants of an order, keyed by usage kind value (what a refund may take back).
+     *
+     * @return array<string, int>
+     */
+    public function revocableUnits(Order $order): array
+    {
+        $units = [];
+        foreach ($this->grantsOf($order) as $grant) {
+            $units[$grant->kind->value] = ($units[$grant->kind->value] ?? 0) + $grant->available();
+        }
+
+        return $units;
+    }
+
     public function syncOrderStatus(Order $order): void
     {
         $refunded = $this->refundedCents($order);
@@ -187,7 +242,7 @@ class RefundService
 
     public function refundedCents(Order $order): int
     {
-        return (int) $order->refundCases()->whereIn('status', [RefundStatus::Processed, RefundStatus::NeedsReview])->sum('amount_cents');
+        return (int) $order->refundCases()->whereIn('status', array_filter(RefundStatus::cases(), fn (RefundStatus $s) => $s->countsAsRefunded()))->sum('amount_cents');
     }
 
     /** @return Collection<int, UsageGrant> */

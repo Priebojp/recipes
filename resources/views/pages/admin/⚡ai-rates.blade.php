@@ -156,38 +156,40 @@ new #[Layout('layouts::admin')] #[Title('Cenník AI')] class extends Component {
         </table>
     </flux:card>
 
-    <flux:card as="form" wire:submit="save" class="space-y-4">
-        <flux:heading size="lg" class="font-display">Pridať sadzbu</flux:heading>
-        <div class="grid gap-4 sm:grid-cols-3">
-            <flux:input wire:model="provider" label="Poskytovateľ" placeholder="openai" />
-            <flux:input wire:model="model" label="Model" placeholder="gpt-6-luna" />
-            <flux:select wire:model.live="modality" label="Druh">
-                <flux:select.option value="text">Text (tokeny)</flux:select.option>
-                <flux:select.option value="image">Obrázok</flux:select.option>
-            </flux:select>
-        </div>
-        @if ($modality === 'image')
+    <flux:card class="space-y-4">
+        <form wire:submit="save" class="space-y-4">
+            <flux:heading size="lg" class="font-display">Pridať sadzbu</flux:heading>
             <div class="grid gap-4 sm:grid-cols-3">
-                <flux:select wire:model="quality" label="Kvalita">
-                    <flux:select.option value="">ľubovoľná</flux:select.option>
-                    @foreach (AiSettings::IMAGE_QUALITIES as $q)
-                        <flux:select.option :value="$q">{{ $q }}</flux:select.option>
-                    @endforeach
+                <flux:input wire:model="provider" label="Poskytovateľ" placeholder="openai" />
+                <flux:input wire:model="model" label="Model" placeholder="gpt-6-luna" />
+                <flux:select wire:model.live="modality" label="Druh">
+                    <flux:select.option value="text">Text (tokeny)</flux:select.option>
+                    <flux:select.option value="image">Obrázok</flux:select.option>
                 </flux:select>
-                <flux:input wire:model="size" label="Rozmer (px)" placeholder="1024x1024" />
-                <flux:input wire:model="per_unit_usd" label="USD za obrázok" placeholder="0,053" />
             </div>
-        @endif
-        <div class="grid gap-4 sm:grid-cols-3">
-            <flux:input wire:model="input_usd" label="USD za 1M vstupných tokenov" placeholder="0,10" />
-            <flux:input wire:model="cached_input_usd" label="USD za 1M cache vstupných" placeholder="voliteľné" />
-            <flux:input wire:model="output_usd" label="USD za 1M výstupných tokenov" placeholder="0,50" />
-        </div>
-        <div class="grid gap-4 sm:grid-cols-3">
-            <flux:input wire:model="effective_from" type="date" label="Účinnosť od" />
-            <flux:input wire:model="source" label="Zdroj (URL cenníka)" placeholder="https://…" />
-            <flux:input wire:model="note" label="Poznámka" />
-        </div>
-        <flux:button type="submit" variant="primary">Pridať sadzbu</flux:button>
+            @if ($modality === 'image')
+                <div class="grid gap-4 sm:grid-cols-3">
+                    <flux:select wire:model="quality" label="Kvalita">
+                        <flux:select.option value="">ľubovoľná</flux:select.option>
+                        @foreach (AiSettings::IMAGE_QUALITIES as $q)
+                            <flux:select.option :value="$q">{{ $q }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                    <flux:input wire:model="size" label="Rozmer (px)" placeholder="1024x1024" />
+                    <flux:input wire:model="per_unit_usd" label="USD za obrázok" placeholder="0,053" />
+                </div>
+            @endif
+            <div class="grid gap-4 sm:grid-cols-3">
+                <flux:input wire:model="input_usd" label="USD za 1M vstupných tokenov" placeholder="0,10" />
+                <flux:input wire:model="cached_input_usd" label="USD za 1M cache vstupných" placeholder="voliteľné" />
+                <flux:input wire:model="output_usd" label="USD za 1M výstupných tokenov" placeholder="0,50" />
+            </div>
+            <div class="grid gap-4 sm:grid-cols-3">
+                <flux:input wire:model="effective_from" type="date" label="Účinnosť od" />
+                <flux:input wire:model="source" label="Zdroj (URL cenníka)" placeholder="https://…" />
+                <flux:input wire:model="note" label="Poznámka" />
+            </div>
+            <flux:button type="submit" variant="primary">Pridať sadzbu</flux:button>
+        </form>
     </flux:card>
 </div>

@@ -27,6 +27,7 @@ class CheckoutService
      */
     public function startSubscription(Household $household, User $by, string $planCode): StartedCheckout
     {
+        $this->assertNotBlocked($household);
         $plan = $this->catalog->plan($planCode);
         if ($plan === null || ! $plan->stripe_price_id) {
             throw new CheckoutException('Táto ponuka momentálne nie je dostupná.');
@@ -68,6 +69,7 @@ class CheckoutService
      */
     public function startAddon(Household $household, User $by, string $addonCode): StartedCheckout
     {
+        $this->assertNotBlocked($household);
         $addon = $this->catalog->addon($addonCode);
         if ($addon === null || ! $addon->stripe_price_id) {
             throw new CheckoutException('Tento balík momentálne nie je dostupný.');
@@ -105,6 +107,14 @@ class CheckoutService
     {
         if ($order->status === OrderStatus::Pending) {
             $order->update(['status' => OrderStatus::Canceled]);
+        }
+    }
+
+    /** @throws CheckoutException */
+    private function assertNotBlocked(Household $household): void
+    {
+        if ($household->isBlocked()) {
+            throw new CheckoutException('Nákupy sú pre túto domácnosť pozastavené. Kontaktuj podporu.');
         }
     }
 

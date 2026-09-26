@@ -7,12 +7,26 @@
     <body class="min-h-screen bg-paper text-zinc-800 antialiased dark:bg-zinc-900 dark:text-zinc-100">
         @php
             $nav = [
-                ['route' => 'admin.index', 'label' => 'Prehľad', 'icon' => 'chart-bar', 'match' => 'admin.index'],
-                ['route' => 'admin.ai', 'label' => 'AI použitie a náklady', 'icon' => 'cpu-chip', 'match' => 'admin.ai'],
-                ['route' => 'admin.ai.settings', 'label' => 'AI nastavenia', 'icon' => 'adjustments-horizontal', 'match' => 'admin.ai.settings'],
-                ['route' => 'admin.ai.rates', 'label' => 'Cenník AI', 'icon' => 'currency-dollar', 'match' => 'admin.ai.rates'],
-                ['route' => 'admin.households', 'label' => 'Domácnosti', 'icon' => 'home-modern', 'match' => 'admin.households'],
-                ['route' => 'admin.audit', 'label' => 'Audit', 'icon' => 'document-magnifying-glass', 'match' => 'admin.audit'],
+                'Prehľad' => [
+                    ['route' => 'admin.index', 'label' => 'Prehľad', 'icon' => 'chart-bar', 'match' => 'admin.index'],
+                    ['route' => 'admin.households', 'label' => 'Domácnosti', 'icon' => 'home-modern', 'match' => 'admin.households*'],
+                ],
+                'Financie' => [
+                    ['route' => 'admin.subscriptions', 'label' => 'Predplatné', 'icon' => 'arrow-path', 'match' => 'admin.subscriptions'],
+                    ['route' => 'admin.orders', 'label' => 'Objednávky', 'icon' => 'shopping-bag', 'match' => 'admin.orders*'],
+                    ['route' => 'admin.refunds', 'label' => 'Refundácie', 'icon' => 'receipt-refund', 'match' => 'admin.refunds'],
+                    ['route' => 'admin.usage', 'label' => 'AI použitia', 'icon' => 'ticket', 'match' => 'admin.usage'],
+                    ['route' => 'admin.catalog', 'label' => 'Katalóg', 'icon' => 'tag', 'match' => 'admin.catalog'],
+                    ['route' => 'admin.stripe-events', 'label' => 'Stripe udalosti', 'icon' => 'bolt', 'match' => 'admin.stripe-events'],
+                ],
+                'AI' => [
+                    ['route' => 'admin.ai', 'label' => 'Použitie a náklady', 'icon' => 'cpu-chip', 'match' => 'admin.ai'],
+                    ['route' => 'admin.ai.settings', 'label' => 'Nastavenia', 'icon' => 'adjustments-horizontal', 'match' => 'admin.ai.settings'],
+                    ['route' => 'admin.ai.rates', 'label' => 'Cenník AI', 'icon' => 'currency-dollar', 'match' => 'admin.ai.rates'],
+                ],
+                'Dohľad' => [
+                    ['route' => 'admin.audit', 'label' => 'Audit', 'icon' => 'document-magnifying-glass', 'match' => 'admin.audit'],
+                ],
             ];
         @endphp
 
@@ -23,10 +37,14 @@
             </flux:sidebar.header>
 
             <flux:sidebar.nav>
-                @foreach ($nav as $item)
-                    <flux:sidebar.item :icon="$item['icon']" :href="route($item['route'])" :current="request()->routeIs($item['match'])" wire:navigate>
-                        {{ $item['label'] }}
-                    </flux:sidebar.item>
+                @foreach ($nav as $heading => $items)
+                    <flux:sidebar.group :heading="$heading" class="mt-2">
+                        @foreach ($items as $item)
+                            <flux:sidebar.item :icon="$item['icon']" :href="route($item['route'])" :current="request()->routeIs($item['match'])" wire:navigate>
+                                {{ $item['label'] }}
+                            </flux:sidebar.item>
+                        @endforeach
+                    </flux:sidebar.group>
                 @endforeach
             </flux:sidebar.nav>
 

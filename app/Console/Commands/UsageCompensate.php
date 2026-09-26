@@ -2,16 +2,14 @@
 
 namespace App\Console\Commands;
 
-use App\Enums\UsageGrantSource;
 use App\Enums\UsageKind;
 use App\Models\Household;
-use App\Services\Admin\AdminAuditor;
-use App\Services\Usage\UsageLedger;
+use App\Services\Admin\Compensations;
 use Illuminate\Console\Command;
-use Illuminate\Support\Str;
+use InvalidArgumentException;
 
 /**
- * Support tool until the admin module (stage 4): a compensation grant is a separate, audited grant –
+ * CLI twin of the admin compensation form: a compensation grant is a separate, audited grant –
  * never an edit of an existing one and never a carry-over of an expired monthly use.
  */
 class UsageCompensate extends Command
@@ -26,7 +24,7 @@ class UsageCompensate extends Command
 
     protected $description = 'Vystaví kompenzačný grant AI použití domácnosti a zapíše ho do auditu.';
 
-    public function handle(UsageLedger $ledger, AdminAuditor $audit): int
+    public function handle(Compensations $compensations): int
     {
         $household = Household::find((int) $this->argument('household'));
         if ($household === null) {
@@ -45,22 +43,20 @@ class UsageCompensate extends Command
         }
 
         $expires = $this->option('expires') ? now()->parse((string) $this->option('expires')) : null;
-        $key = 'compensation:'.($this->option('key') ? Str::slug((string) $this->option('key')) : Str::uuid());
 
-        $grant = $ledger->grant($household, $kind, UsageGrantSource::Compensation, $quantity, $key, expiresAt: $expires, note: $reason);
+        try {
+            $grant = $compensations->grantUses($household, $kind, $quantity, $reason, $expires, $this->option('key') ?: null);
+        } catch (InvalidArgumentException $e) {
+            $this->error($e->getMessage());
+
+            return self::INVALID;
+        }
 
         if (! $grant->wasRecentlyCreated) {
-            $this->warn("Grant s kľúčom {$key} už existuje (#{$grant->id}); nič nové sa nevystavilo.");
+            $this->warn("Grant s kľúčom {$grant->source_key} už existuje (#{$grant->id}); nič nové sa nevystavilo.");
 
             return self::SUCCESS;
         }
-
-        $audit->record('usage.compensation.granted', $grant, [], [
-            'household_id' => $household->id,
-            'kind' => $kind->value,
-            'quantity' => $quantity,
-            'expires_at' => $expires?->toIso8601String(),
-        ], $reason);
 
         $this->info("Kompenzácia #{$grant->id}: {$quantity} × {$kind->label()} pre domácnosť {$household->id}.");
 

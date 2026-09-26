@@ -28,6 +28,9 @@ interface StripeGateway
 
     public function resumeRenewal(Subscription $subscription): void;
 
+    /** Pull the subscription's current status / period end from Stripe into the local Cashier row. */
+    public function syncSubscription(Subscription $subscription): void;
+
     /**
      * @param  array<string, string>  $metadata
      * @return array{id: string, status: string}

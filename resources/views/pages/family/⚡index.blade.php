@@ -119,20 +119,22 @@ new #[Title('Rodina')] class extends Component {
     </x-page-header>
 
     @if ($this->canEdit)
-        <flux:card as="form" wire:submit="save" class="space-y-3">
-            <flux:heading size="lg" class="font-display">{{ $editingId ? 'Upraviť stravníka' : 'Nový stravník' }}</flux:heading>
-            <div class="grid gap-3 sm:grid-cols-3">
-                <flux:input wire:model="name" label="Meno" placeholder="napr. Eva" data-test="person-name" />
-                <flux:select wire:model="kind" label="Typ">
-                    <flux:select.option value="member">Člen</flux:select.option>
-                    <flux:select.option value="guest">Hosť</flux:select.option>
-                </flux:select>
-                <flux:input type="color" wire:model="color" label="Farba (voliteľné)" />
-            </div>
-            <div class="flex gap-2">
-                <flux:button type="submit" variant="primary" data-test="person-save">{{ $editingId ? 'Uložiť' : 'Pridať' }}</flux:button>
-                @if ($editingId)<flux:button wire:click="cancelEdit" variant="ghost">Zrušiť</flux:button>@endif
-            </div>
+        <flux:card class="space-y-3">
+            <form wire:submit="save" class="space-y-3">
+                <flux:heading size="lg" class="font-display">{{ $editingId ? 'Upraviť stravníka' : 'Nový stravník' }}</flux:heading>
+                <div class="grid gap-3 sm:grid-cols-3">
+                    <flux:input wire:model="name" label="Meno" placeholder="napr. Eva" data-test="person-name" />
+                    <flux:select wire:model="kind" label="Typ">
+                        <flux:select.option value="member">Člen</flux:select.option>
+                        <flux:select.option value="guest">Hosť</flux:select.option>
+                    </flux:select>
+                    <flux:input type="color" wire:model="color" label="Farba (voliteľné)" />
+                </div>
+                <div class="flex gap-2">
+                    <flux:button type="submit" variant="primary" data-test="person-save">{{ $editingId ? 'Uložiť' : 'Pridať' }}</flux:button>
+                    @if ($editingId)<flux:button wire:click="cancelEdit" variant="ghost">Zrušiť</flux:button>@endif
+                </div>
+            </form>
         </flux:card>
     @endif
 

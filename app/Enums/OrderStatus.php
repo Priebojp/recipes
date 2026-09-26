@@ -29,4 +29,15 @@ enum OrderStatus: string
     {
         return in_array($this, [self::Paid, self::Refunded, self::PartiallyRefunded], true);
     }
+
+    public function badgeColor(): string
+    {
+        return match ($this) {
+            self::Paid => 'green',
+            self::Pending => 'amber',
+            self::Refunded, self::PartiallyRefunded => 'blue',
+            self::Failed => 'red',
+            self::Canceled, self::Expired => 'zinc',
+        };
+    }
 }

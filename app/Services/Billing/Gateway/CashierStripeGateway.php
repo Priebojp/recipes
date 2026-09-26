@@ -3,6 +3,7 @@
 namespace App\Services\Billing\Gateway;
 
 use App\Models\BillingAccount;
+use Carbon\Carbon;
 use Laravel\Cashier\Cashier;
 use Laravel\Cashier\Subscription;
 use Stripe\Exception\InvalidRequestException;
@@ -51,6 +52,18 @@ class CashierStripeGateway implements StripeGateway
     public function resumeRenewal(Subscription $subscription): void
     {
         $subscription->resume();
+    }
+
+    public function syncSubscription(Subscription $subscription): void
+    {
+        $subscription->syncStripeStatus();
+
+        $stripeSubscription = $subscription->asStripeSubscription();
+        $subscription->forceFill([
+            'ends_at' => $stripeSubscription->cancel_at_period_end
+                ? Carbon::createFromTimestamp((int) ($stripeSubscription->cancel_at ?? $stripeSubscription->current_period_end ?? 0))
+                : ($stripeSubscription->ended_at ? Carbon::createFromTimestamp((int) $stripeSubscription->ended_at) : null),
+        ])->save();
     }
 
     public function refund(string $paymentIntentId, ?int $amountCents, string $idempotencyKey, array $metadata): array
