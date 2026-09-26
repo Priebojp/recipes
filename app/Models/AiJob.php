@@ -19,12 +19,21 @@ use Illuminate\Support\Carbon;
  * @property string $request_key
  * @property string|null $provider
  * @property string|null $model
+ * @property array<string, mixed>|null $profile
  * @property string|null $provider_job_id
  * @property string $prompt_version
  * @property array<string, mixed>|null $input
  * @property string|null $prompt
  * @property array<string, mixed>|null $output
  * @property string|null $error
+ * @property int|null $input_tokens
+ * @property int|null $cached_input_tokens
+ * @property int|null $output_tokens
+ * @property int|null $reasoning_tokens
+ * @property int|null $image_output_tokens
+ * @property int|null $estimated_cost_micro_usd
+ * @property int|null $cost_rate_id
+ * @property int|null $duration_ms
  * @property int|null $result_media_id
  * @property Carbon|null $applied_at
  * @property Carbon|null $started_at
@@ -33,9 +42,10 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  */
 #[Fillable([
-    'household_id', 'recipe_id', 'kind', 'input_revision_id', 'status', 'request_key', 'provider', 'model',
-    'provider_job_id', 'prompt_version', 'input', 'prompt', 'output', 'error', 'result_media_id', 'applied_at',
-    'started_at', 'finished_at', 'created_by',
+    'household_id', 'recipe_id', 'kind', 'input_revision_id', 'status', 'request_key', 'provider', 'model', 'profile',
+    'provider_job_id', 'prompt_version', 'input', 'prompt', 'output', 'error', 'input_tokens', 'cached_input_tokens',
+    'output_tokens', 'reasoning_tokens', 'image_output_tokens', 'estimated_cost_micro_usd', 'cost_rate_id', 'duration_ms',
+    'result_media_id', 'applied_at', 'started_at', 'finished_at', 'created_by',
 ])]
 class AiJob extends Model
 {
@@ -45,6 +55,7 @@ class AiJob extends Model
             'kind' => AiJobKind::class,
             'status' => AiJobStatus::class,
             'input' => 'array',
+            'profile' => 'array',
             'output' => 'array',
             'applied_at' => 'datetime',
             'started_at' => 'datetime',
@@ -62,5 +73,37 @@ class AiJob extends Model
     public function household(): BelongsTo
     {
         return $this->belongsTo(Household::class);
+    }
+
+    /** @return BelongsTo<AiCostRate, $this> */
+    public function costRate(): BelongsTo
+    {
+        return $this->belongsTo(AiCostRate::class, 'cost_rate_id');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Short human description of the profile the job ran with (e.g. "medium · 1:1" or "effort: low").
+     */
+    public function profileLabel(): string
+    {
+        $profile = $this->profile ?? [];
+        $parts = [];
+        if (isset($profile['reasoning_effort']) && $profile['reasoning_effort'] !== 'default') {
+            $parts[] = 'effort: '.$profile['reasoning_effort'];
+        }
+        if (isset($profile['quality'])) {
+            $parts[] = $profile['quality'];
+        }
+        if (isset($profile['size'])) {
+            $parts[] = $profile['size'];
+        }
+
+        return $parts === [] ? '–' : implode(' · ', $parts);
     }
 }

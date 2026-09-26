@@ -11,6 +11,7 @@ use App\Models\RecipeRevision;
 use App\Models\User;
 use App\Services\ImageUploadService;
 use App\Services\RecipeService;
+use Carbon\CarbonInterface;
 use InvalidArgumentException;
 use Laravel\Ai\Image;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -22,6 +23,8 @@ class AiImageService
         private AiAvailability $availability,
         private ImagePromptBuilder $prompts,
         private ImageUploadService $uploads,
+        private AiSettings $settings,
+        private AiCostCalculator $costs,
     ) {}
 
     /**
@@ -71,7 +74,8 @@ class AiImageService
             'status' => AiJobStatus::Queued,
             'request_key' => $key,
             'provider' => $this->availability->imageProvider(),
-            'model' => config('recipes.ai.image_model'),
+            'model' => $this->settings->imageModel(),
+            'profile' => $this->settings->imageProfile(),
             'prompt_version' => $version,
             'input' => ['description' => $description, 'serving_mode' => $preview['serving_mode'], 'summary' => $preview['summary']],
             'prompt' => $preview['prompt'],
@@ -91,14 +95,20 @@ class AiImageService
         if ($job->status !== AiJobStatus::Queued) {
             return;
         }
-        $job->update(['status' => AiJobStatus::Running, 'started_at' => now()]);
+        $startedAt = now();
+        $job->update(['status' => AiJobStatus::Running, 'started_at' => $startedAt]);
 
         $temp = null;
 
         try {
+            // Quality and size come from the job's snapshot: the client never chooses them, and an admin change
+            // never silently upgrades a queued job to a more expensive tier.
+            $profile = $job->profile ?? $this->settings->imageProfile();
+
             $response = Image::of((string) $job->prompt)
-                ->size('4:3')
-                ->timeout((int) config('recipes.ai.timeout_seconds'))
+                ->size((string) ($profile['size'] ?? '1:1'))
+                ->quality((string) ($profile['quality'] ?? 'medium'))
+                ->timeout($this->settings->timeoutSeconds())
                 ->generate($job->provider, $job->model);
 
             $image = $response->firstImage();
@@ -113,15 +123,27 @@ class AiImageService
                 'result_media_id' => $media->id,
                 'provider_job_id' => $response->meta->id ?? null,
                 'finished_at' => now(),
+                'duration_ms' => $this->elapsedMs($startedAt),
+                ...$this->costs->attributesFor($job, $response->usage, imagesDelivered: max(1, count($response))),
             ]);
         } catch (\Throwable $e) {
             report($e);
-            $job->update(['status' => AiJobStatus::Failed, 'error' => mb_substr($e->getMessage(), 0, 1000), 'finished_at' => now()]);
+            $job->update([
+                'status' => AiJobStatus::Failed,
+                'error' => mb_substr($e->getMessage(), 0, 1000),
+                'finished_at' => now(),
+                'duration_ms' => $this->elapsedMs($startedAt),
+            ]);
         } finally {
             if ($temp && is_file($temp)) {
                 @unlink($temp);
             }
         }
+    }
+
+    private function elapsedMs(CarbonInterface $since): int
+    {
+        return max(0, (int) $since->diffInMilliseconds(now()));
     }
 
     public function resultMedia(AiJob $job): ?Media

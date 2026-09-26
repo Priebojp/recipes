@@ -27,6 +27,8 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string|null $two_factor_recovery_codes
  * @property Carbon|null $two_factor_confirmed_at
  * @property string|null $remember_token
+ * @property bool $is_platform_admin
+ * @property Carbon|null $platform_admin_granted_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -47,7 +49,29 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_platform_admin' => 'boolean',
+            'platform_admin_granted_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Platform administrator of the whole application (not a household role). Granted only by `app:grant-platform-admin`.
+     */
+    public function isPlatformAdmin(): bool
+    {
+        return (bool) $this->is_platform_admin;
+    }
+
+    /**
+     * Whether the user may open /admin right now: admin role plus confirmed two-factor authentication when required.
+     */
+    public function canAccessAdmin(): bool
+    {
+        if (! $this->isPlatformAdmin()) {
+            return false;
+        }
+
+        return ! config('admin.require_two_factor') || $this->two_factor_confirmed_at !== null;
     }
 
     /** @return BelongsToMany<Household, $this> */

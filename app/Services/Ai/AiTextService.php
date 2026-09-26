@@ -12,6 +12,7 @@ use App\Models\RecipeRevision;
 use App\Models\RecipeStep;
 use App\Models\User;
 use App\Services\RecipeService;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use Laravel\Ai\Responses\StructuredAgentResponse;
@@ -23,6 +24,8 @@ class AiTextService
     public function __construct(
         private RecipeService $recipes,
         private AiAvailability $availability,
+        private AiSettings $settings,
+        private AiCostCalculator $costs,
     ) {}
 
     /**
@@ -61,7 +64,8 @@ class AiTextService
             'status' => AiJobStatus::Queued,
             'request_key' => $key,
             'provider' => $this->availability->textProvider(),
-            'model' => config('recipes.ai.text_model'),
+            'model' => $this->settings->textModel(),
+            'profile' => $this->settings->textProfile(),
             'prompt_version' => $version,
             'input' => ['scope' => $scope, 'recipe' => $this->payload($revision->snapshot)],
             'created_by' => $by?->id,
@@ -103,7 +107,8 @@ class AiTextService
         if ($job->status !== AiJobStatus::Queued) {
             return;
         }
-        $job->update(['status' => AiJobStatus::Running, 'started_at' => now()]);
+        $startedAt = now();
+        $job->update(['status' => AiJobStatus::Running, 'started_at' => $startedAt]);
 
         try {
             $prompt = (string) json_encode([
@@ -113,11 +118,14 @@ class AiTextService
 
             $job->update(['prompt' => $prompt]);
 
-            $response = RecipeTextAgent::make()->prompt(
+            // The profile was snapshotted when the job was created, so an admin change never alters a queued job.
+            $effort = $job->profile['reasoning_effort'] ?? 'default';
+
+            $response = RecipeTextAgent::make()->withReasoningEffort($effort)->prompt(
                 $prompt,
                 provider: $job->provider,
                 model: $job->model,
-                timeout: (int) config('recipes.ai.timeout_seconds'),
+                timeout: $this->settings->timeoutSeconds(),
             );
 
             $structured = $response instanceof StructuredAgentResponse
@@ -126,11 +134,27 @@ class AiTextService
 
             $output = $this->validateOutput(is_array($structured) ? $structured : [], $job->input['recipe']);
 
-            $job->update(['status' => AiJobStatus::Succeeded, 'output' => $output, 'finished_at' => now()]);
+            $job->update([
+                'status' => AiJobStatus::Succeeded,
+                'output' => $output,
+                'finished_at' => now(),
+                'duration_ms' => $this->elapsedMs($startedAt),
+                ...$this->costs->attributesFor($job, $response->usage),
+            ]);
         } catch (\Throwable $e) {
             report($e);
-            $job->update(['status' => AiJobStatus::Failed, 'error' => mb_substr($e->getMessage(), 0, 1000), 'finished_at' => now()]);
+            $job->update([
+                'status' => AiJobStatus::Failed,
+                'error' => mb_substr($e->getMessage(), 0, 1000),
+                'finished_at' => now(),
+                'duration_ms' => $this->elapsedMs($startedAt),
+            ]);
         }
+    }
+
+    private function elapsedMs(CarbonInterface $since): int
+    {
+        return max(0, (int) $since->diffInMilliseconds(now()));
     }
 
     /**

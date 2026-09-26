@@ -10,6 +10,13 @@
     <flux:separator class="md:hidden" />
 
     <div class="flex-1 self-stretch max-md:pt-6">
+        @if (session('admin_two_factor_required'))
+            <flux:callout variant="warning" icon="shield-exclamation" class="mb-4">
+                <flux:callout.heading>Administrácia vyžaduje dvojfaktorové overenie</flux:callout.heading>
+                <flux:callout.text>Zapni a potvrď dvojfaktorové overenie nižšie; potom sa /admin otvorí.</flux:callout.text>
+            </flux:callout>
+        @endif
+
         <flux:heading>{{ $heading ?? '' }}</flux:heading>
         <flux:subheading>{{ $subheading ?? '' }}</flux:subheading>
 
