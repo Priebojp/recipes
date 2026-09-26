@@ -24,6 +24,9 @@
                     ['route' => 'admin.ai.settings', 'label' => 'Nastavenia', 'icon' => 'adjustments-horizontal', 'match' => 'admin.ai.settings'],
                     ['route' => 'admin.ai.rates', 'label' => 'Cenník AI', 'icon' => 'currency-dollar', 'match' => 'admin.ai.rates'],
                 ],
+                'Výživa' => [
+                    ['route' => 'admin.food', 'label' => 'Potraviny', 'icon' => 'cake', 'match' => 'admin.food'],
+                ],
                 'Právne a súkromie' => [
                     ['route' => 'admin.legal', 'label' => 'Právne dokumenty', 'icon' => 'scale', 'match' => 'admin.legal*'],
                     ['route' => 'admin.services', 'label' => 'Služby a cookies', 'icon' => 'squares-2x2', 'match' => 'admin.services'],

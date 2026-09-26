@@ -105,6 +105,18 @@ return [
         ],
     ],
 
+    /*
+     * Food database (v2.1 stage 9). One provider (USDA FoodData Central), answers cached, application-side hourly
+     * limit well under the provider's 1 000 req/h/IP. Without USDA_FDC_API_KEY the stored dictionary works and
+     * searching for new foods is off with a clear message.
+     */
+    'food' => [
+        'cache_hours' => (int) env('RECIPES_FOOD_CACHE_HOURS', 24 * 7),
+        'rate_limit_per_hour' => (int) env('RECIPES_FOOD_RATE_LIMIT_PER_HOUR', 900),
+        'timeout_seconds' => 15,
+        'search_data_types' => ['SR Legacy', 'Foundation'],
+    ],
+
     'export' => [
         // 2: selection_presets and shopping_lists added (v2 stage 6); older keys are unchanged.
         'schema_version' => 2,

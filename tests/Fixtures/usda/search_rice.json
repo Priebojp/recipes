@@ -1,0 +1,137 @@
+{
+  "totalHits": 467,
+  "currentPage": 1,
+  "totalPages": 1,
+  "foods": [
+    {
+      "fdcId": 169708,
+      "description": "Rice, white, long-grain, parboiled, enriched, cooked",
+      "dataType": "SR Legacy",
+      "ndbNumber": 20047,
+      "foodCategory": "Cereal Grains and Pasta",
+      "foodNutrients": [
+        {
+          "nutrientId": 1079,
+          "nutrientName": "Fiber, total dietary",
+          "nutrientNumber": "291",
+          "unitName": "G",
+          "value": 0.9
+        },
+        {
+          "nutrientId": 1003,
+          "nutrientName": "Protein",
+          "nutrientNumber": "203",
+          "unitName": "G",
+          "value": 2.91
+        },
+        {
+          "nutrientId": 1093,
+          "nutrientName": "Sodium, Na",
+          "nutrientNumber": "307",
+          "unitName": "MG",
+          "value": 2.0
+        },
+        {
+          "nutrientId": 1051,
+          "nutrientName": "Water",
+          "nutrientNumber": "255",
+          "unitName": "G",
+          "value": 70.4
+        },
+        {
+          "nutrientId": 1004,
+          "nutrientName": "Total lipid (fat)",
+          "nutrientNumber": "204",
+          "unitName": "G",
+          "value": 0.37
+        },
+        {
+          "nutrientId": 1062,
+          "nutrientName": "Energy",
+          "nutrientNumber": "268",
+          "unitName": "kJ",
+          "value": 513
+        },
+        {
+          "nutrientId": 1005,
+          "nutrientName": "Carbohydrate, by difference",
+          "nutrientNumber": "205",
+          "unitName": "G",
+          "value": 26.0
+        },
+        {
+          "nutrientId": 1008,
+          "nutrientName": "Energy",
+          "nutrientNumber": "208",
+          "unitName": "KCAL",
+          "value": 123
+        }
+      ]
+    },
+    {
+      "fdcId": 169707,
+      "description": "Rice, white, long-grain, parboiled, enriched, dry",
+      "dataType": "SR Legacy",
+      "ndbNumber": 20046,
+      "foodCategory": "Cereal Grains and Pasta",
+      "foodNutrients": [
+        {
+          "nutrientId": 1062,
+          "nutrientName": "Energy",
+          "nutrientNumber": "268",
+          "unitName": "kJ",
+          "value": 1560.0
+        },
+        {
+          "nutrientId": 1005,
+          "nutrientName": "Carbohydrate, by difference",
+          "nutrientNumber": "205",
+          "unitName": "G",
+          "value": 80.9
+        },
+        {
+          "nutrientId": 1008,
+          "nutrientName": "Energy",
+          "nutrientNumber": "208",
+          "unitName": "KCAL",
+          "value": 374
+        },
+        {
+          "nutrientId": 1004,
+          "nutrientName": "Total lipid (fat)",
+          "nutrientNumber": "204",
+          "unitName": "G",
+          "value": 1.03
+        },
+        {
+          "nutrientId": 1051,
+          "nutrientName": "Water",
+          "nutrientNumber": "255",
+          "unitName": "G",
+          "value": 9.86
+        },
+        {
+          "nutrientId": 1003,
+          "nutrientName": "Protein",
+          "nutrientNumber": "203",
+          "unitName": "G",
+          "value": 7.51
+        },
+        {
+          "nutrientId": 1079,
+          "nutrientName": "Fiber, total dietary",
+          "nutrientNumber": "291",
+          "unitName": "G",
+          "value": 1.8
+        },
+        {
+          "nutrientId": 1093,
+          "nutrientName": "Sodium, Na",
+          "nutrientNumber": "307",
+          "unitName": "MG",
+          "value": 2.0
+        }
+      ]
+    }
+  ]
+}

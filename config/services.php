@@ -28,6 +28,12 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    // USDA FoodData Central (v2.1 stage 9). Data is CC0; the key only identifies the caller (1 000 req/h/IP).
+    'usda' => [
+        'key' => env('USDA_FDC_API_KEY'),
+        'base_url' => env('USDA_FDC_BASE_URL', 'https://api.nal.usda.gov/fdc/v1'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

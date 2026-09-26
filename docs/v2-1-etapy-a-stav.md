@@ -9,7 +9,7 @@ vystavenie. Nič z v2 sa neprerába – Cashier, ledger, oprávnenia a admin sa 
 | # | Etapa | Stav | Obsah |
 |---|---|---|---|
 | 8 | **Profily obrázkov a porovnanie low/medium** | ✅ kód hotový (vetva `v2-1-etapa-8-image-profiles`) · ⏳ porovnávací beh a rozhodnutie prevádzkovateľa | Verzované profily `image_economy_v1` / `image_standard_v1` / `image_high_v1`, snímka kódu profilu na úlohe, druh použitia `image_economy` v ledgeri, rozšírené `app:ai-measure` o porovnávací beh 10 jedál × (2 low + 2 medium), admin prehľad nákladov podľa profilu; **žiadna zmena ponuky** |
-| 9 | **Databáza potravín a priradenie ingrediencií** | ⏳ naplánované | `FoodSourceRecord` (USDA FoodData Central ako jediný prvý zdroj, cache, licencia), ručný SK/CZ slovník bežných surovín, `IngredientFoodMapping` s prevodom jednotiek a stavom suroviny, admin kurátorstvo a neúspešné priradenia |
+| 9 | **Databáza potravín a priradenie ingrediencií** | ✅ kód hotový (vetva `v2-1-etapa-9-food-database`) · ⏳ `USDA_FDC_API_KEY` a prvý `app:food-sync` na serveri | `FoodSourceRecord` (USDA FoodData Central ako jediný prvý zdroj, cache, licencia), ručný SK/CZ slovník bežných surovín, `IngredientFoodMapping` s prevodom jednotiek a stavom suroviny, admin kurátorstvo a neúspešné priradenia |
 | 10 | **Výživové hodnoty receptu** | ⏳ naplánované | `NutritionCalculation` (revízia receptu, kompletnosť, predpoklady, verzia výpočtu), tok „Vypočítať výživové hodnoty“ s potvrdením priradení, zobrazenie na recept / porciu / 100 g, neaktuálnosť po editácii; bez AI a bez použití |
 | 11 | **Rozpoznanie jedla z fotografie** | ⏳ naplánované | `MealAnalysis` + `MealAnalysisItem`, `AiJobKind::MealAnalysis` s obrazovým vstupom gpt-6-luna, druh použitia `meal_analysis` (3 skúšobné na používateľa), obrazovka „Skontroluj jedlo“, súkromné úložisko fotiek s TTL a odstránením EXIF, meranie nákladu analýzy |
 | 12 | **Súkromný denník „Zjedol som“** | ⏳ naplánované | `MealConsumption` + `ConsumptionNutritionSnapshot` (recept / analýza / manuálne jedlo), zjedený podiel a opravy po zložkách, oprávnenia iba pre vlastníka denníka, export/výmaz/čistenie, oddelenie od `CookingEvent` |
@@ -135,10 +135,42 @@ a väzba ingrediencie receptu na potravinu s bezpečným prevodom jednotiek. Bez
    (scenár 8); ml → g len cez hustotu potraviny; priradenie s neexistujúcim ID sa odmietne (scenár 6); admin bez roly 403;
    sync nemení existujúce mapovania.
 
+### Čo je hotové (kód)
+
+- Zdroj: rozhranie `App\Services\Food\FoodDataSource` (`search`, `fetch`, `isConfigured`) s implementáciou `UsdaFoodDataCentral`
+  (`config/services.php` → `usda.key` z `USDA_FDC_API_KEY`, `base_url`; HTTP klient s timeoutom 5/15 s, retry na výpadok/429/5xx,
+  cache odpovedí 7 dní, aplikačný limiter 900 req/h – `config/recipes.php` → `food`). Hodnoty na 100 g, kcal primárne z živiny 1008
+  (záloha Atwater 2048/2047, zdroj uložený v snímke), sacharidy s metodikou `by_difference`/`by_summation`, kJ oddelene, `null` = neznáme.
+  USDA porcie sa importujú ako prevody `usda_portion` (cup → šálka, tbsp → PL, tsp → ČL, medium/large → ks, clove → strúčik, slice → plátok).
+  Bez kľúča: `FoodSourceUnavailableException` s jasnou hláškou, slovník so snímkami funguje. V testoch `Tests\Support\FakeFoodDataSource`.
+- Tabuľky `food_source_records` (unikát provider + external_id, licencia, `preparation_state`, `basis`, živiny nullable, `carbohydrate_method`,
+  `source_snapshot`, `fetched_at`, `is_curated`, `sync_warning`), `food_aliases` (SK/CZ synonymá, `normalized` ako v nákupnom zozname,
+  kurátor), `food_unit_conversions` (gramáž jednotky pre konkrétnu potravinu, `ml` = hustota, `source` usda_portion|manual|label),
+  `ingredient_food_mappings` (jedno priradenie na riadok ingrediencie, `grams` + `grams_origin`, `status`, `unresolved_reason`, kto potvrdil).
+  Enumy `FoodPreparationState`, `FoodMappingStatus`, `FoodGramsOrigin`.
+- `FoodAliasSeeder`: 149 potravín (ID overené voči USDA API 26. 9. 2026, uložené ako `snapshot.seed.expected_name`) a 400 aliasov;
+  seed nesie iba ID, názvy a stav – hodnoty stiahne `app:food-sync [--dry-run] [--only=ID…]` (`FoodCatalog::sync`), ktorý zachová
+  `name_sk`, stav, kurátorský príznak a ručné prevody, **nedotýka sa priradení**, a označí `sync_warning`, keď sa popis v zdroji
+  zmenil alebo záznam zmizol. Súhrn posledného behu je v `app_settings` (`food.sync.last`).
+- `IngredientMatcher`: kandidáti zo slovníka (celý názov > dlhší viacslovný alias > jednoslovný; poznámka v zátvorke sa ignoruje),
+  voliteľne vyhľadanie v zdroji pre neznáme názvy (hity sa nikdy neukladajú samy); `resolveGrams` prevedie g/dkg/kg priamo,
+  ml/dl/l iba cez hustotu potraviny, ks/PL/ČL/šálka/strúčik/… iba cez potvrdený prevod, „podľa chuti“ a neznáma jednotka = nepriradené.
+  `FoodMappingService::propose()` (neprepisuje potvrdené/odmietnuté), `confirm()` (ručná gramáž musí byť „zadané“ alebo „odhad“;
+  bez gramáže ostáva `unresolved`), `reject()`, `unresolvedNames()` (agregované názvy bez receptov). `FoodCatalog::resolve()` prijme
+  iba existujúce interné ID alebo ID overené v zdroji (scenár 6).
+- Admin `/admin/food` (password.confirm, menu „Výživa → Potraviny“): stav kľúča bez hodnoty, posledný sync, počty, nepriradené suroviny,
+  vyhľadanie v USDA a import, katalóg s filtrom, detail so slovenským názvom/stavom/kurátorstvom, aliasy a prevody. Audit
+  `food.record.imported|updated|refreshed`, `food.alias.created|deleted`, `food.conversion.created|updated|deleted`.
+- Testy: `tests/Feature/Food/UsdaFoodDataCentralTest.php` (fixtúry z reálnych odpovedí v `tests/Fixtures/usda/`), `FoodCatalogTest.php`
+  (seed idempotentný, sync so snímkou/licenciou/porciami, upozornenia, dry-run, bez kľúča, scenár 6), `IngredientMatcherTest.php`
+  (scenáre 7 a 8, prevody, „podľa chuti“, návrhy vs. rozhodnutia), `tests/Feature/Admin/FoodAdminTest.php` (403, stav, import, aliasy, prevody, audit).
+
 ### Migrácia a nasadenie
 
-Štyri tabuľky; `php artisan db:seed --class=FoodAliasSeeder` + `php artisan app:food-sync` (vyžaduje `USDA_FDC_API_KEY`;
-bez kľúča funguje slovník s uloženými snímkami, vyhľadávanie nových potravín je vypnuté s jasnou hláškou).
+Štyri tabuľky (`2026_09_26_200656_create_food_tables`). Do `.env` doplniť `USDA_FDC_API_KEY` (bezplatný kľúč z https://fdc.nal.usda.gov/api-key-signup),
+potom `php artisan db:seed --class=FoodAliasSeeder` a `php artisan app:food-sync --dry-run` → `php artisan app:food-sync`. Bez kľúča funguje
+slovník s uloženými snímkami (po prvom synci), vyhľadávanie nových potravín a sync sú vypnuté s jasnou hláškou v admine aj v príkaze.
+Pozor: demo kľúč USDA má limit 10 požiadaviek za hodinu – na prvý sync 149 záznamov treba vlastný kľúč.
 
 ## Etapa 10 – Výživové hodnoty receptu
 
