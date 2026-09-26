@@ -46,14 +46,16 @@ new #[Title('Domácnosť')] class extends Component {
 <div class="mx-auto max-w-xl space-y-6">
     <x-page-header title="Nastavenia domácnosti" :back="route('family.index')" />
 
-    <flux:card as="form" wire:submit="save" class="space-y-4">
-        <flux:input wire:model="name" label="Názov domácnosti" />
-        <flux:select wire:model="timezone" label="Časová zóna" description="Určuje „dnes“, „zajtra“ aj hranice týždňa.">
-            @foreach ($this->timezones as $tz)
-                <flux:select.option :value="$tz">{{ $tz }}</flux:select.option>
-            @endforeach
-        </flux:select>
-        <flux:button type="submit" variant="primary" :disabled="! auth()->user()->can('manage', $this->household)">Uložiť</flux:button>
+    <flux:card class="space-y-4">
+        <form wire:submit="save" class="space-y-4">
+            <flux:input wire:model="name" label="Názov domácnosti" />
+            <flux:select wire:model="timezone" label="Časová zóna" description="Určuje „dnes“, „zajtra“ aj hranice týždňa.">
+                @foreach ($this->timezones as $tz)
+                    <flux:select.option :value="$tz">{{ $tz }}</flux:select.option>
+                @endforeach
+            </flux:select>
+            <flux:button type="submit" variant="primary" :disabled="! auth()->user()->can('manage', $this->household)">Uložiť</flux:button>
+        </form>
     </flux:card>
 
     <flux:card class="space-y-2">

@@ -39,6 +39,19 @@ class Money
         return (int) $whole * self::MICRO + (int) $fraction;
     }
 
+    /** Parse "3,99" / "3.99" / "24" typed by a person into EUR cents. Null when empty or invalid. */
+    public static function parseEurToCents(?string $input): ?int
+    {
+        $normalized = str_replace([' ', ',', '€'], ['', '.', ''], trim((string) $input));
+        if ($normalized === '' || ! preg_match('/^\d+(\.\d{1,2})?$/', $normalized)) {
+            return null;
+        }
+
+        [$whole, $fraction] = array_pad(explode('.', $normalized, 2), 2, '');
+
+        return (int) $whole * 100 + (int) str_pad(substr($fraction, 0, 2), 2, '0');
+    }
+
     public static function microToUsdString(?int $micro): string
     {
         if ($micro === null) {

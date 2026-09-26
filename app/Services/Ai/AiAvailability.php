@@ -60,6 +60,10 @@ class AiAvailability
             return 'AI funkcie sú dočasne nedostupné. Recepty môžeš ďalej upravovať ručne.';
         }
 
+        if ($household->isBlocked()) {
+            return 'AI funkcie sú pre túto domácnosť pozastavené. Recepty môžeš ďalej upravovať ručne; ozvi sa podpore.';
+        }
+
         // The ledger decides whether the household has a use left; the trial and the current monthly grant of a paid
         // period are opened lazily here (idempotent), so nothing depends on the scheduler having run.
         if ($this->ledger->enforced()) {

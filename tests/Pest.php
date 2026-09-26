@@ -64,3 +64,17 @@ function household(): array
 
     return ['user' => $user, 'household' => $household, 'person' => $person];
 }
+
+/**
+ * A platform administrator with two-factor authentication, logged in with the password freshly confirmed
+ * (the admin finance pages sit behind password.confirm).
+ */
+function actingAsPlatformAdmin(): User
+{
+    $admin = User::factory()->withTwoFactor()->create();
+    $admin->forceFill(['is_platform_admin' => true, 'platform_admin_granted_at' => now()])->save();
+
+    test()->actingAs($admin)->withSession(['auth.password_confirmed_at' => now()->timestamp]);
+
+    return $admin;
+}

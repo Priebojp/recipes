@@ -88,6 +88,9 @@ return [
         'timezone' => env('RECIPES_BILLING_TIMEZONE', 'Europe/Bratislava'),
         'renewal_grace_days' => (int) env('RECIPES_BILLING_GRACE_DAYS', 3),
         'pending_order_ttl_hours' => 24,
+        // Optional USD→EUR rate for the admin dashboard's "contribution after variable costs" estimate. AI costs are
+        // measured in USD; without a rate the dashboard shows them separately and computes no contribution.
+        'usd_eur_rate' => env('RECIPES_BILLING_USD_EUR_RATE') !== null ? (float) env('RECIPES_BILLING_USD_EUR_RATE') : null,
         'stripe_prices' => [
             'plus_monthly' => env('STRIPE_PRICE_PLUS_MONTHLY'),
             'plus_yearly' => env('STRIPE_PRICE_PLUS_YEARLY'),

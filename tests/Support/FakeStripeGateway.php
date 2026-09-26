@@ -24,6 +24,12 @@ class FakeStripeGateway implements StripeGateway
     /** @var list<string> */
     public array $resumed = [];
 
+    /** @var list<string> */
+    public array $synced = [];
+
+    /** Status the next sync should report (null = unchanged). */
+    public ?string $syncStatus = null;
+
     public bool $failRefunds = false;
 
     private int $sequence = 0;
@@ -53,6 +59,14 @@ class FakeStripeGateway implements StripeGateway
     {
         $this->resumed[] = $subscription->stripe_id;
         $subscription->forceFill(['ends_at' => null])->save();
+    }
+
+    public function syncSubscription(Subscription $subscription): void
+    {
+        $this->synced[] = $subscription->stripe_id;
+        if ($this->syncStatus !== null) {
+            $subscription->forceFill(['stripe_status' => $this->syncStatus])->save();
+        }
     }
 
     public function refund(string $paymentIntentId, ?int $amountCents, string $idempotencyKey, array $metadata): array

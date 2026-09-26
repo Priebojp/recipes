@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Database\Factories\HouseholdFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -17,6 +18,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property string $timezone
  * @property int $owner_user_id
  * @property array<int>|null $default_person_ids
+ * @property CarbonInterface|null $blocked_at
+ * @property string|null $blocked_reason
  */
 #[Fillable(['name', 'timezone', 'owner_user_id', 'default_person_ids'])]
 class Household extends Model
@@ -26,7 +29,13 @@ class Household extends Model
 
     protected function casts(): array
     {
-        return ['default_person_ids' => 'array'];
+        return ['default_person_ids' => 'array', 'blocked_at' => 'datetime'];
+    }
+
+    /** Blocked by the platform administrator (abuse): no new AI jobs, no purchases; data and manual editing stay. */
+    public function isBlocked(): bool
+    {
+        return $this->blocked_at !== null;
     }
 
     /** @return BelongsTo<User, $this> */
@@ -99,5 +108,11 @@ class Household extends Model
     public function paidEntitlements(): HasMany
     {
         return $this->hasMany(PaidEntitlement::class);
+    }
+
+    /** @return HasMany<RefundCase, $this> */
+    public function refundCases(): HasMany
+    {
+        return $this->hasMany(RefundCase::class);
     }
 }

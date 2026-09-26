@@ -9,7 +9,7 @@ a bezpečná administrácia, potom ledger a Cashier, potom právne stránky, sú
 | 1 | **Administrácia a meranie AI** | ✅ hotové (PR #1) | Rola administrátora platformy, `/admin`, MFA, audit, meranie usage a odhad nákladov AI, prepínanie modelu / reasoning effort / kvality obrázkov, kill switch, cenník sadzieb, účet `support@moje-recepty.sk` |
 | 2 | **Ledger a granty použití** | ✅ hotové (PR #2) | `UsageGrant`, `UsageReservation`, `UsageLedgerEntry`, rezervácia pod zámkom, spotreba/uvoľnenie, skúšobné granty, `reconciling`, súbežné testy (akceptačné testy 6, 7, 22, 23) |
 | 3 | **Cashier a Stripe** | ✅ hotové (vetva `v2-etapa-3-cashier`) | `BillingAccount`, katalóg `PlanVersion`/`AddonVersion`, Checkout, webhook inbox, `PaidEntitlement`, mesačné granty pri ročnej platbe, portal, refund workflow (testy 1–5, 8–12, 14) |
-| 4 | Admin – finančné moduly | ⬜ | Dashboard MRR/inkaso/refundácie, predplatné, balíky a objednávky, použitia a kompenzácie, synchronizácia so Stripe |
+| 4 | **Admin – finančné moduly** | ✅ hotové (vetva `v2-etapa-4-admin-financie`) | Dashboard MRR/inkaso/refundácie/príspevok, detail domácnosti s kompenzáciami a blokovaním, predplatné so synchronizáciou, objednávky s refund workflow, posúdenie refundácií zo Stripe, ledger použití, verzovaný katalóg, inbox Stripe udalostí (test 13, 14) |
 | 5 | Právne stránky, cookies, súkromie | ⬜ | `/vop`, `/ochrana-osobnych-udajov`, `/cookies`, `/odstupenie-od-zmluvy`, verzie a akceptácie, registrácia služieb, **cookie lišta podľa kap. 10 tohto zadania** (nie z iného projektu), consent receipt, export/výmaz, žiadosti (testy 15–21) |
 | 6 | Plus funkcie | ⬜ | Týždenný jedálniček, nákupný zoznam, uložené skupiny a filtre – bez platenej AI, ak stačí existujúci algoritmus |
 | 7 | Staging a launch | ⬜ | Test clock, doklady, identita prevádzkovateľa, meranie 30+30 AI úloh, potvrdenie cien, produkčné secrets a webhook |
@@ -186,7 +186,88 @@ testuje cez stránku nastavení a bránu; proti reálnemu test účtu sa overí 
 `checkout.session.*`, `invoice.paid`, `invoice.payment_failed`, `charge.refunded`, `charge.dispute.created`) a
 `STRIPE_PRICE_*`; scheduler spúšťa `app:billing-reconcile` denne o 3:15.
 
-### Otvorené vstupy pre launch (nezmenené zo zadania, kap. 18)
+### Etapa 4 – čo je hotové
+
+### Prehľad a finančné ukazovatele (`FinanceReport`)
+
+- **Platiace domácnosti** = domácnosti s aktívnym zaplateným obdobím, ktoré má objednávku (kompenzačný Plus sa počíta
+  zvlášť). **MRR** je normalizované mesačne: mesačný plán celou cenou, ročný ÷ 12; z konečných cien, DPH režim nie je
+  určený (kap. 18). Stavy Cashier predplatných a počet „bez obnovy“ sú vedľa.
+- Za mesiac sa oddelene ukazuje **inkaso** (zaplatené objednávky podľa `paid_at`, rozdelené na predplatné a balíky),
+  **refundácie** (prípady `processed`/`needs_review`/`reviewed` podľa `processed_at`), **tržba časovo rozlíšená**
+  (zaplatené obdobia rozpočítané na dni, revokované len do revokácie; balíky v deň úhrady) a **AI náklady** v USD
+  z odhadov úloh. **Príspevok po variabilných nákladoch** = inkaso − refundácie − AI náklady sa počíta len keď je
+  nastavený kurz `RECIPES_BILLING_USD_EUR_RATE`; v UI je výslovne označený ako odhad, nie zisk (bez poplatkov Stripe,
+  daní a fixných nákladov).
+- Blok **„Vyžaduje pozornosť“**: zlyhané a >1 h nespracované Stripe udalosti, refundácie na posúdenie, otvorené spory,
+  AI úlohy `reconciling`, rezervácie držané >24 h, objednávky čakajúce >1 h – každý riadok vedie na prefiltrovaný modul.
+
+### Domácnosti a detail (`/admin/households/{id}`)
+
+- Zoznam má plán (Plus/Free, zaplatené do, kompenzácia), overenie vlastníka, badge „blokovaná“ a filter
+  všetky/Plus/Free/blokované.
+- Detail (za `password.confirm`): plán a zaplatené do, Cashier predplatné s odkazmi do Stripe dashboardu (test/live
+  podľa kľúča – `StripeDashboard`), zostatky použití a AI za 30 dní, zaplatené obdobia, granty s počítadlami,
+  objednávky, refundácie. Bez receptov a mien stravníkov.
+- **Kompenzačné použitia** (`Compensations::grantUses`): samostatný grant `compensation:{kľúč|uuid}`, dôvod povinný,
+  voliteľná expirácia a idempotentný kľúč (tiket); audit `usage.compensation.granted`. CLI `app:usage-compensate`
+  používa tú istú službu.
+- **Časovo obmedzený Plus** (`Compensations::grantPlus`): `PaidEntitlement` bez objednávky
+  (`compensation:plus:{uuid}`) pre zvolený aktívny plán a obdobie; `UsageProvisioner` k nemu otvorí mesačné granty
+  plánu. Nevzniká objednávka, doklad ani stav `paid`; audit `billing.plus.granted`, predčasné ukončenie
+  `billing.plus.revoked` (zaplatené obdobie sa takto ukončiť nedá – to je refundácia).
+- **Blokovanie zneužitia** (`HouseholdModeration`, stĺpce `households.blocked_at/blocked_reason`): zastaví nové AI
+  úlohy (`AiAvailability`) a nákupy (`CheckoutService`), nemaže recepty ani nároky, ručná editácia funguje; obe akcie
+  s dôvodom, audit `household.blocked` / `household.unblocked`.
+- Predplatné: **synchronizácia zo Stripe** (`StripeGateway::syncSubscription` → Cashier `syncStripeStatus` +
+  `cancel_at_period_end`), zrušenie / obnovenie obnovovania cez bránu s povinným dôvodom; audit
+  `billing.subscription.synced|renewal_canceled|renewal_resumed`.
+
+### Predplatné, objednávky, refundácie
+
+- `/admin/subscriptions`: Cashier riadky s domácnosťou, stavom, zaplatené do, filtrom podľa stavu a „bez obnovy“;
+  akcie sync / zrušiť / obnoviť ako v detaile.
+- `/admin/orders` + detail: snímka produktu a verzie, Stripe ID s odkazmi, zaplatené obdobia, udelené použitia
+  s nevyužitými jednotkami. **Refund workflow** z UI volá `RefundService::request()` – druh (odstúpenie / reklamácia /
+  dobrovoľná), suma v EUR, počet odoberaných nevyužitých textov/obrázkov (max = nevyužité jednotky tejto objednávky),
+  voliteľne odobratie Plus obdobia, idempotentný kľúč, dôvod. Zlyhanie v Stripe zostáva `failed` bez odobratia.
+- **Posúdenie refundácie zo Stripe dashboardu** (`RefundService::review()`): prípad `needs_review` uzavrie administrátor
+  rozhodnutím, koľko jednotiek (aj 0) a či Plus obdobie sa odoberie → stav `reviewed`, audit `billing.refund.reviewed`.
+  Nový stav `RefundStatus::Reviewed` sa počíta ako refundovaný pre stav objednávky aj report.
+- `/admin/refunds`: všetky prípady s filtrom podľa stavu a druhu.
+
+### Použitia, katalóg, Stripe udalosti
+
+- `/admin/usage`: súčty platných grantov, granty s filtrami (domácnosť / zdroj / druh), rozbalený append-only ledger
+  grantu (čas, dôvod, pohyb, rezervácia, kto, kľúč), otvorené rezervácie >24 h (prepínač na všetky). Jediný zápis je
+  **prepočet počítadiel z ledgeru** (`UsageLedger::reconcile`, audit len pri oprave) – žiadna editácia zostatku.
+- `/admin/catalog` (`CatalogManager`): verzie plánov a balíkov so stavom návrh / aktívna / stiahnutá. „Nová verzia“
+  skopíruje poslednú verziu kódu do návrhu (názov, cena, Stripe price ID, limity); **aktivácia** návrhu v jednej
+  transakcii stiahne predchádzajúcu aktívnu verziu; stiahnutie prestane predávať. Audit
+  `catalog.{plan|addon}.{version_created|activated|retired}`. Stripe ceny sa v Stripe nevytvárajú – ID sa zadáva.
+  Akceptačný test 14: kúpené snímky, `plan_version_id` objednávok a nárokov aj `planForStripePrice` starej ceny ostávajú.
+- `/admin/stripe-events`: inbox s filtrom stavu, hľadaním, payloadom a **ručným opakovaním** zlyhanej / zaseknutej
+  udalosti (`StripeEventProcessor::process`, idempotentné; audit `billing.stripe_event.retried`).
+
+### Bezpečnosť
+
+- Všetky moduly sú za rolou + MFA (etapa 1); stránky s finančnými akciami (detail domácnosti, predplatné, detail
+  objednávky, katalóg, Stripe udalosti) navyše za `password.confirm`, ktorý Livewire drží aj pre následné akcie.
+  Každá akcia navyše volá `authorize('platform-admin')`. Test 13: bežný vlastník má 403, finančné a kompenzačné akcie
+  majú audit s aktérom a dôvodom.
+
+### Testy
+
+`tests/Feature/Admin/{AdminFinancePagesTest, HouseholdAdminTest, RefundAdminTest, CatalogAdminTest,
+StripeEventsAdminTest}.php` (13 testov) s falošnou bránou (`FakeStripeGateway::syncSubscription`) a helperom
+`actingAsPlatformAdmin()` v `tests/Pest.php`. Celá sada: 201 testov.
+
+### Nasadenie
+
+`php artisan migrate` (stĺpce blokovania), voliteľne `RECIPES_BILLING_USD_EUR_RATE`. Synchronizácia predplatného volá
+Stripe API – na reálnom účte sa overí v etape 7.
+
+## Otvorené vstupy pre launch (nezmenené zo zadania, kap. 18)
 
 Prevádzkovateľ a fakturačné údaje, potvrdenie cien a limitov, výsledky nákladového merania (30 + 30 úloh na reálnom
 kľúči), analytický poskytovateľ, hosting/e-mail/zálohy/monitoring, DPH/OSS režim, právne schválenie textov.
