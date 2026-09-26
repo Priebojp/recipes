@@ -1,8 +1,8 @@
 <?php
 
 use App\Ai\Agents\RecipeTextAgent;
-use App\Enums\AiJobKind;
 use App\Enums\AiJobStatus;
+use App\Enums\UsageKind;
 use App\Models\AdminAudit;
 use App\Models\AiCostRate;
 use App\Models\Recipe;
@@ -12,8 +12,10 @@ use App\Services\Ai\AiImageService;
 use App\Services\Ai\AiSettings;
 use App\Services\Ai\AiTextService;
 use App\Services\Ai\AiUnavailableException;
+use App\Services\Ai\ImageProfile;
 use App\Services\RecipeService;
 use Database\Seeders\AiCostRateSeeder;
+use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Image;
 use Livewire\Livewire;
 
@@ -60,13 +62,15 @@ it('falls back to the .env configuration and lets the administrator override it 
 
     expect($settings->textModel())->toBe('gpt-6-luna')
         ->and($settings->textReasoningEffort())->toBe('low')
+        ->and($settings->defaultImageProfile())->toBe(ImageProfile::StandardV1)
         ->and($settings->imageQuality())->toBe('medium')
         ->and($settings->imagePixelSize())->toBe('1024x1024')
         ->and($settings->enabled())->toBeTrue();
 
-    $settings->update(['text_reasoning_effort' => 'medium', 'image_quality' => 'low', 'monthly_budget_micro_usd' => 5_000_000], $admin, 'test');
+    $settings->update(['text_reasoning_effort' => 'medium', 'image_profile' => 'image_economy_v1', 'monthly_budget_micro_usd' => 5_000_000], $admin, 'test');
 
     expect($settings->textReasoningEffort())->toBe('medium')
+        ->and($settings->defaultImageProfile())->toBe(ImageProfile::EconomyV1)
         ->and($settings->imageQuality())->toBe('low')
         ->and($settings->monthlyBudgetMicroUsd())->toBe(5_000_000);
 
@@ -80,9 +84,17 @@ it('falls back to the .env configuration and lets the administrator override it 
     $settings->update(['text_reasoning_effort' => 'medium'], $admin);
     expect(AdminAudit::query()->where('action', 'ai.settings.updated')->count())->toBe(1);
 
+    // High is never a default: the stored override is ignored and the .env default applies.
+    $settings->update(['image_profile' => 'image_high_v1'], $admin);
+    expect($settings->defaultImageProfile())->toBe(ImageProfile::StandardV1);
+
     // Reset removes the overrides.
     $settings->update(array_fill_keys(array_keys(AiSettings::KEYS), null), $admin);
     expect($settings->textReasoningEffort())->toBe('low')->and($settings->imageQuality())->toBe('medium');
+
+    // The .env default maps low → Economy.
+    config()->set('recipes.ai.image_quality', 'low');
+    expect($settings->defaultImageProfile())->toBe(ImageProfile::EconomyV1);
 });
 
 it('stops new jobs with the kill switch and keeps manual editing working', function () {
@@ -90,7 +102,7 @@ it('stops new jobs with the kill switch and keeps manual editing working', funct
     $recipe = settingsRecipe($h);
     app(AiSettings::class)->update(['enabled' => false], $h['user']);
 
-    expect(app(AiAvailability::class)->reasonUnavailable($h['household'], AiJobKind::Text))->toContain('dočasne nedostupné');
+    expect(app(AiAvailability::class)->reasonUnavailable($h['household'], UsageKind::Text))->toContain('dočasne nedostupné');
     expect(fn () => app(AiTextService::class)->request($recipe, $h['user'], 'description'))->toThrow(AiUnavailableException::class);
     expect(app(RecipeService::class)->update($recipe->fresh(), $h['user'], ['title' => 'Ručne'])->title)->toBe('Ručne');
 });
@@ -123,7 +135,8 @@ it('snapshots quality and size on the image job so a later change never upgrades
 
     $job = app(AiImageService::class)->request($recipe, $h['user'], 'Kuracie kúsky na paprike so smotanovou omáčkou', 'auto');
 
-    expect($job->profile['quality'])->toBe('medium')
+    expect($job->profile['code'])->toBe('image_standard_v1')
+        ->and($job->profile['quality'])->toBe('medium')
         ->and($job->profile['size'])->toBe('1:1')
         ->and($job->profile['pixel_size'])->toBe('1024x1024')
         ->and($job->model)->toBe('gpt-image-2');
@@ -140,7 +153,7 @@ it('sends the reasoning effort only to OpenAI', function () {
     $agent = (new RecipeTextAgent)->withReasoningEffort('medium');
 
     expect($agent->providerOptions('openai'))->toBe(['reasoning' => ['effort' => 'medium']])
-        ->and($agent->providerOptions(\Laravel\Ai\Enums\Lab::OpenAI))->toBe(['reasoning' => ['effort' => 'medium']])
+        ->and($agent->providerOptions(Lab::OpenAI))->toBe(['reasoning' => ['effort' => 'medium']])
         ->and($agent->providerOptions('anthropic'))->toBe([])
         ->and((new RecipeTextAgent)->withReasoningEffort('default')->providerOptions('openai'))->toBe([])
         ->and((new RecipeTextAgent)->withReasoningEffort('bogus')->reasoningEffort())->toBeNull();
@@ -154,7 +167,7 @@ it('saves the settings form and adds cost rates from the admin pages', function 
     Livewire::test('pages::admin.ai-settings')
         ->assertSet('text_reasoning_effort', 'low')
         ->set('text_reasoning_effort', 'medium')
-        ->set('image_quality', 'high')
+        ->set('image_profile', 'image_economy_v1')
         ->set('monthly_budget_usd', '2,50')
         ->set('reason', 'skúška kvality')
         ->call('save')
@@ -162,7 +175,7 @@ it('saves the settings form and adds cost rates from the admin pages', function 
 
     $settings = app(AiSettings::class);
     expect($settings->textReasoningEffort())->toBe('medium')
-        ->and($settings->imageQuality())->toBe('high')
+        ->and($settings->defaultImageProfile())->toBe(ImageProfile::EconomyV1)
         ->and($settings->monthlyBudgetMicroUsd())->toBe(2_500_000)
         ->and(AdminAudit::query()->where('action', 'ai.settings.updated')->where('reason', 'skúška kvality')->exists())->toBeTrue();
 
@@ -170,6 +183,12 @@ it('saves the settings form and adds cost rates from the admin pages', function 
         ->set('monthly_budget_usd', 'veľa')
         ->call('save')
         ->assertHasErrors(['monthly_budget_usd']);
+
+    // High is not exposed as a default.
+    Livewire::test('pages::admin.ai-settings')
+        ->set('image_profile', 'image_high_v1')
+        ->call('save')
+        ->assertHasErrors(['image_profile']);
 
     Livewire::test('pages::admin.ai-rates')
         ->set('provider', 'openai')

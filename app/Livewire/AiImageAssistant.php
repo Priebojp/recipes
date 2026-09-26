@@ -9,6 +9,7 @@ use App\Models\Recipe;
 use App\Services\Ai\AiAvailability;
 use App\Services\Ai\AiImageService;
 use App\Services\Ai\AiUnavailableException;
+use App\Services\Ai\ImageProfile;
 use App\Services\Usage\UsageBalance;
 use App\Support\CurrentHousehold;
 use Illuminate\Contracts\View\View;
@@ -67,17 +68,24 @@ class AiImageAssistant extends Component
         return app(AiImageService::class)->preview($this->recipe, $this->description, $this->mode);
     }
 
+    /** The profile the server would run the next generation with – derived from entitlements, never sent by the client. */
+    #[Computed]
+    public function profile(): ImageProfile
+    {
+        return app(AiAvailability::class)->imageProfileFor($this->recipe->household);
+    }
+
     #[Computed]
     public function unavailable(): ?string
     {
-        return app(AiAvailability::class)->reasonUnavailable($this->recipe->household, AiJobKind::Image);
+        return app(AiAvailability::class)->reasonUnavailable($this->recipe->household, $this->profile->usageKind());
     }
 
-    /** Uses left for Standard images; null when the ledger is not enforced. */
+    /** Uses left for the derived profile's kind of image; null when the ledger is not enforced. */
     #[Computed]
     public function balance(): ?UsageBalance
     {
-        return app(AiAvailability::class)->balance($this->recipe->household, AiJobKind::Image);
+        return app(AiAvailability::class)->balance($this->recipe->household, $this->profile->usageKind());
     }
 
     public function generate(AiImageService $service, bool $variant = false): void
@@ -93,12 +101,12 @@ class AiImageAssistant extends Component
         }
 
         $this->jobId = $job->id;
-        unset($this->job, $this->balance, $this->unavailable);
+        unset($this->job, $this->balance, $this->unavailable, $this->profile);
     }
 
     public function refreshStatus(): void
     {
-        unset($this->job, $this->balance, $this->unavailable);
+        unset($this->job, $this->balance, $this->unavailable, $this->profile);
     }
 
     public function approve(AiImageService $service): void

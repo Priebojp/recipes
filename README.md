@@ -24,7 +24,7 @@ Kontroly: `composer test` (Pint, PHPStan level 7, Pest). Testy AI mockujú posky
 - AI úlohy bežia vo fronte (`QUEUE_CONNECTION=database` je predvolené): spusti `php artisan queue:work`. V testoch a s `QUEUE_CONNECTION=sync` bežia synchrónne.
 - Text aj obrázky idú cez Laravel AI SDK; poskytovateľ a model sa nastavujú v `.env` (`RECIPES_AI_TEXT_PROVIDER`, `RECIPES_AI_IMAGE_PROVIDER`, voliteľne `RECIPES_AI_*_MODEL`). Predvolený je OpenAI (`OPENAI_API_KEY`), SDK podporuje aj Anthropic, Gemini a ďalších (`config/ai.php` sa dá publikovať cez `php artisan vendor:publish --tag=ai-config`).
 - Bez kľúča je AI označené ako **nenakonfigurované**; ukladanie receptov a výber jedla fungujú bez AI.
-- Limity na domácnosť: `RECIPES_AI_DAILY_TEXT_LIMIT`, `RECIPES_AI_DAILY_IMAGE_LIMIT`, `RECIPES_AI_MAX_CONCURRENT`. Vyčerpanie sa ukáže pred ďalším spustením. Reasoning effort (`RECIPES_AI_TEXT_REASONING_EFFORT`, predvolene `low`) a profil obrázka (`RECIPES_AI_IMAGE_QUALITY=medium`, `RECIPES_AI_IMAGE_SIZE=1:1`) sa dajú prepnúť za behu v `/admin`.
+- Limity na domácnosť: `RECIPES_AI_DAILY_TEXT_LIMIT`, `RECIPES_AI_DAILY_IMAGE_LIMIT`, `RECIPES_AI_MAX_CONCURRENT`. Vyčerpanie sa ukáže pred ďalším spustením. Reasoning effort (`RECIPES_AI_TEXT_REASONING_EFFORT`, predvolene `low`) a predvolený profil obrázkov (`RECIPES_AI_IMAGE_QUALITY=medium` → `image_standard_v1`, `low` → `image_economy_v1`; profily majú pevne 1024 × 1024 a jeden obrázok) sa dajú prepnúť za behu v `/admin`. Profil sa snímkuje na úlohe (`profile.code`) a určuje druh použitia (`image_standard` / `image_economy`) – klient ho nevyberá, server ho odvodí z dostupných nárokov.
 - Každá úloha (`ai_jobs`) ukladá prompt, verziu promptu, poskytovateľa/model, profil (reasoning effort, kvalita, rozmer), vstupnú revíziu, výstup, chybu, namerané tokeny, trvanie a odhad ceny (`estimated_cost_micro_usd` podľa `ai_cost_rates`). `request_key` bráni duplicitnému platenému spusteniu pri opakovanom requeste; „Vygenerovať ďalší variant“ / „Vygenerovať znova“ je vedome nová úloha.
 - Tajné kľúče sú iba na serveri; prehliadač nikdy nevolá poskytovateľa priamo.
 
@@ -57,6 +57,8 @@ prejsť checklist. Postup je v `docs/runbook-launch.md`.
 php artisan app:launch-check --stripe                                   # checklist; exit 1, kým niečo blokuje
 php artisan app:billing-test-clock start 12 --plan=plus_yearly --at="2026-01-31 10:00"   # simulácia v sandboxe
 php artisan app:ai-measure 12 --yes                                     # 30 + 30 AI úloh na reálnom kľúči
+php artisan app:ai-compare-images 12 --yes                              # 10 jedál × (2 low + 2 medium), hodnotenie v /admin/ai/comparisons/{beh}
+php artisan app:ai-backfill-image-profiles --dry-run                    # staré obrázkové úlohy bez kódu profilu → image_standard_v1
 php artisan cashier:webhook                                             # endpoint s presným zoznamom udalostí
 ```
 

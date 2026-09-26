@@ -36,8 +36,13 @@ new #[Title('AI použitia')] class extends Component {
     public function balances(): array
     {
         $ledger = app(UsageLedger::class);
+        $granted = UsageGrant::query()->where('household_id', $this->household->id)->distinct()->pluck('kind')->map(fn ($k) => $k instanceof UsageKind ? $k->value : (string) $k)->all();
         $result = [];
         foreach (UsageKind::cases() as $kind) {
+            // Kinds the household never held (e.g. Economy images before the v2.1 offer) would only show empty cards.
+            if (! in_array($kind->value, $granted, true) && ! in_array($kind, [UsageKind::Text, UsageKind::ImageStandard], true)) {
+                continue;
+            }
             $result[$kind->value] = $ledger->balance($this->household, $kind);
         }
 

@@ -59,8 +59,11 @@ class AiImageService
     /**
      * Create (or reuse) the queued job without dispatching it. With $rateLimits=false the daily and concurrency caps
      * are skipped (operator measurement runs the job itself); key, kill switch and ledger still apply.
+     *
+     * @param  ImageProfile|null  $profile  operator-run comparisons pin a profile; user requests never pass one – the
+     *                                      server derives it from the household's entitlements ({@see AiAvailability::imageProfileFor()})
      */
-    public function create(Recipe $recipe, ?User $by, string $description, string $mode, bool $variant = false, bool $rateLimits = true): AiJob
+    public function create(Recipe $recipe, ?User $by, string $description, string $mode, bool $variant = false, bool $rateLimits = true, ?ImageProfile $profile = null): AiJob
     {
         $preview = $this->preview($recipe, $description, $mode);
         if ($preview['needs_description'] || $preview['prompt'] === null) {
@@ -71,8 +74,9 @@ class AiImageService
         $revision = $recipe->active_revision_id ? RecipeRevision::find($recipe->active_revision_id) : null;
         $revision ??= $this->recipes->snapshotRevision($recipe, $by, 'manual');
 
+        $profile ??= $this->availability->imageProfileFor($recipe->household);
         $version = (string) config('recipes.ai.image_prompt_version');
-        $key = hash('sha256', implode('|', ['image', $recipe->id, $revision->id, $preview['prompt'], $version, $variant ? microtime(true) : '']));
+        $key = hash('sha256', implode('|', ['image', $recipe->id, $revision->id, $preview['prompt'], $version, $profile->value, $variant ? microtime(true) : '']));
 
         // A retry of identical input returns the existing job first: it never needs a second use.
         $existing = AiJob::query()->where('request_key', $key)->first();
@@ -80,7 +84,8 @@ class AiImageService
             return $existing;
         }
 
-        if ($reason = $this->availability->reasonUnavailable($recipe->household, AiJobKind::Image, $rateLimits)) {
+        // The profile decides which kind of use is reserved: Economy never touches a Standard entitlement and vice versa.
+        if ($reason = $this->availability->reasonUnavailable($recipe->household, $profile->usageKind(), $rateLimits)) {
             throw new AiUnavailableException($reason);
         }
 
@@ -95,12 +100,12 @@ class AiImageService
                 'request_key' => $key,
                 'provider' => $this->availability->imageProvider(),
                 'model' => $this->settings->imageModel(),
-                'profile' => $this->settings->imageProfile(),
+                'profile' => $profile->snapshot(),
                 'prompt_version' => $version,
                 'input' => ['description' => $description, 'serving_mode' => $preview['serving_mode'], 'summary' => $preview['summary']],
                 'prompt' => $preview['prompt'],
                 'created_by' => $by?->id,
-            ], AiJobKind::Image);
+            ], $profile->usageKind());
         } catch (InsufficientUsageException $e) {
             throw new AiUnavailableException($e->getMessage(), previous: $e);
         }
@@ -120,12 +125,14 @@ class AiImageService
 
         try {
             // Quality and size come from the job's snapshot: the client never chooses them, and an admin change
-            // never silently upgrades a queued job to a more expensive tier.
-            $profile = $job->profile ?? $this->settings->imageProfile();
+            // never silently upgrades a queued job to a more expensive tier. A pre-v2.1 snapshot keeps its stored
+            // values; only a missing value falls back to the profile the snapshot resolves to.
+            $snapshot = $job->profile ?? [];
+            $profile = ImageProfile::fromSnapshot($snapshot);
 
             $response = Image::of((string) $job->prompt)
-                ->size((string) ($profile['size'] ?? '1:1'))
-                ->quality((string) ($profile['quality'] ?? 'medium'))
+                ->size((string) ($snapshot['size'] ?? $profile->size()))
+                ->quality((string) ($snapshot['quality'] ?? $profile->quality()))
                 ->timeout($this->settings->timeoutSeconds())
                 ->generate($job->provider, $job->model);
 

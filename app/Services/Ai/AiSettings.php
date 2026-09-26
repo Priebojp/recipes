@@ -16,18 +16,15 @@ class AiSettings
     /** "default" sends no reasoning parameter and lets the provider decide. */
     public const REASONING_EFFORTS = ['default', 'low', 'medium', 'high'];
 
+    /** Quality tiers a cost rate may be priced for (the profiles in {@see ImageProfile} pick one of them). */
     public const IMAGE_QUALITIES = ['low', 'medium', 'high'];
-
-    /** Aspect ratio understood by the SDK => pixel size used by OpenAI (and by the cost rates). */
-    public const IMAGE_SIZES = ['1:1' => '1024x1024', '3:2' => '1536x1024', '2:3' => '1024x1536'];
 
     public const KEYS = [
         'enabled' => 'ai.enabled',
         'text_model' => 'ai.text_model',
         'text_reasoning_effort' => 'ai.text_reasoning_effort',
         'image_model' => 'ai.image_model',
-        'image_quality' => 'ai.image_quality',
-        'image_size' => 'ai.image_size',
+        'image_profile' => 'ai.image_profile',
         'daily_text_limit' => 'ai.daily_text_limit',
         'daily_image_limit' => 'ai.daily_image_limit',
         'monthly_budget_micro_usd' => 'ai.monthly_budget_micro_usd',
@@ -68,25 +65,30 @@ class AiSettings
         return $this->stringOrNull($this->settings->get(self::KEYS['image_model'], config('recipes.ai.image_model')));
     }
 
+    /**
+     * Default profile for new image jobs whose household has no entitlement deciding otherwise (v2.1 stage 8).
+     * Runtime override stores the profile code; the .env default `RECIPES_AI_IMAGE_QUALITY` maps low → Economy,
+     * medium → Standard. Only selectable profiles are accepted; anything else means Standard.
+     */
+    public function defaultImageProfile(): ImageProfile
+    {
+        $stored = $this->settings->get(self::KEYS['image_profile']);
+        $profile = is_string($stored) ? ImageProfile::tryFrom($stored) : null;
+        $profile ??= ImageProfile::fromQuality($this->stringOrNull(config('recipes.ai.image_quality', 'medium')));
+
+        return in_array($profile, ImageProfile::selectable(), true) ? $profile : ImageProfile::StandardV1;
+    }
+
+    /** Quality tier of the default profile ("medium"). */
     public function imageQuality(): string
     {
-        $value = (string) $this->settings->get(self::KEYS['image_quality'], config('recipes.ai.image_quality', 'medium'));
-
-        return in_array($value, self::IMAGE_QUALITIES, true) ? $value : 'medium';
+        return $this->defaultImageProfile()->quality();
     }
 
-    /** Aspect ratio ("1:1"). */
-    public function imageSize(): string
+    /** Pixel size of the default profile ("1024x1024"). */
+    public function imagePixelSize(): string
     {
-        $value = (string) $this->settings->get(self::KEYS['image_size'], config('recipes.ai.image_size', '1:1'));
-
-        return array_key_exists($value, self::IMAGE_SIZES) ? $value : '1:1';
-    }
-
-    /** Pixel size matching the aspect ratio ("1024x1024"). */
-    public function imagePixelSize(?string $aspect = null): string
-    {
-        return self::IMAGE_SIZES[$aspect ?? $this->imageSize()] ?? self::IMAGE_SIZES['1:1'];
+        return $this->defaultImageProfile()->pixelSize();
     }
 
     public function dailyTextLimit(): int
@@ -133,18 +135,13 @@ class AiSettings
     }
 
     /**
-     * Snapshot stored on an image job.
+     * Snapshot of the default profile as stored on an image job ({@see ImageProfile::snapshot()}).
      *
-     * @return array{quality: string, size: string, pixel_size: string, count: int}
+     * @return array{code: string, quality: string, size: string, pixel_size: string, count: int}
      */
     public function imageProfile(): array
     {
-        return [
-            'quality' => $this->imageQuality(),
-            'size' => $this->imageSize(),
-            'pixel_size' => $this->imagePixelSize(),
-            'count' => 1,
-        ];
+        return $this->defaultImageProfile()->snapshot();
     }
 
     /**
@@ -159,8 +156,7 @@ class AiSettings
             'text_model' => $this->textModel(),
             'text_reasoning_effort' => $this->textReasoningEffort(),
             'image_model' => $this->imageModel(),
-            'image_quality' => $this->imageQuality(),
-            'image_size' => $this->imageSize(),
+            'image_profile' => $this->defaultImageProfile()->value,
             'daily_text_limit' => $this->dailyTextLimit(),
             'daily_image_limit' => $this->dailyImageLimit(),
             'monthly_budget_micro_usd' => $this->monthlyBudgetMicroUsd(),
@@ -179,8 +175,7 @@ class AiSettings
             'text_model' => $this->stringOrNull(config('recipes.ai.text_model')),
             'text_reasoning_effort' => (string) config('recipes.ai.text_reasoning_effort', 'default'),
             'image_model' => $this->stringOrNull(config('recipes.ai.image_model')),
-            'image_quality' => (string) config('recipes.ai.image_quality', 'medium'),
-            'image_size' => (string) config('recipes.ai.image_size', '1:1'),
+            'image_profile' => ImageProfile::fromQuality($this->stringOrNull(config('recipes.ai.image_quality', 'medium')))->value,
             'daily_text_limit' => (int) config('recipes.ai.daily_text_limit'),
             'daily_image_limit' => (int) config('recipes.ai.daily_image_limit'),
             'monthly_budget_micro_usd' => filled(config('recipes.ai.monthly_budget_usd')) ? Money::parseUsdToMicro((string) config('recipes.ai.monthly_budget_usd')) : null,

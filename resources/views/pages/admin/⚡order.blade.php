@@ -27,9 +27,8 @@ new #[Layout('layouts::admin')] #[Title('Objednávka')] class extends Component 
 
     public string $refund_amount = '';
 
-    public string $refund_text = '0';
-
-    public string $refund_images = '0';
+    /** @var array<string, string> unused units to take back per usage kind value (v2.1: any kind the order granted) */
+    public array $refund_units = [];
 
     public bool $refund_revoke_plus = false;
 
@@ -39,9 +38,8 @@ new #[Layout('layouts::admin')] #[Title('Objednávka')] class extends Component 
 
     public ?int $review_case = null;
 
-    public string $review_text = '0';
-
-    public string $review_images = '0';
+    /** @var array<string, string> */
+    public array $review_units = [];
 
     public bool $review_revoke_plus = false;
 
@@ -83,6 +81,42 @@ new #[Layout('layouts::admin')] #[Title('Objednávka')] class extends Component 
         return app(RefundService::class)->revocableUnits($this->order);
     }
 
+    /**
+     * Kinds the refund forms offer: everything the order granted (so a new kind such as Economy images needs no
+     * form change), Text and Standard images always.
+     *
+     * @return list<UsageKind>
+     */
+    #[Computed]
+    public function unitKinds(): array
+    {
+        $kinds = [UsageKind::Text, UsageKind::ImageStandard];
+        foreach (array_keys($this->revocable) as $value) {
+            $kind = UsageKind::tryFrom((string) $value);
+            if ($kind !== null && ! in_array($kind, $kinds, true)) {
+                $kinds[] = $kind;
+            }
+        }
+
+        return $kinds;
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     * @return array<string, int> kind value => units (> 0 only, unknown kinds dropped)
+     */
+    private function units(array $input): array
+    {
+        $units = [];
+        foreach ($input as $value => $count) {
+            if (UsageKind::tryFrom((string) $value) !== null && (int) $count > 0) {
+                $units[(string) $value] = (int) $count;
+            }
+        }
+
+        return $units;
+    }
+
     #[Computed]
     public function refundedCents(): int
     {
@@ -95,8 +129,8 @@ new #[Layout('layouts::admin')] #[Title('Objednávka')] class extends Component 
         $validated = $this->validate([
             'refund_kind' => ['required', 'in:withdrawal,complaint,goodwill'],
             'refund_amount' => ['required', 'string', 'max:20'],
-            'refund_text' => ['required', 'integer', 'min:0'],
-            'refund_images' => ['required', 'integer', 'min:0'],
+            'refund_units' => ['array'],
+            'refund_units.*' => ['nullable', 'integer', 'min:0'],
             'refund_key' => ['nullable', 'string', 'max:100'],
             'refund_reason' => ['required', 'string', 'min:5', 'max:1000'],
         ]);
@@ -108,7 +142,7 @@ new #[Layout('layouts::admin')] #[Title('Objednávka')] class extends Component 
             return;
         }
 
-        $units = array_filter([UsageKind::Text->value => (int) $validated['refund_text'], UsageKind::ImageStandard->value => (int) $validated['refund_images']]);
+        $units = $this->units($validated['refund_units'] ?? []);
 
         try {
             $case = $refunds->request($this->order, RefundKind::from($validated['refund_kind']), $amount, $validated['refund_reason'], $units, $this->refund_revoke_plus, auth()->user(), $validated['refund_key'] ?: null);
@@ -119,10 +153,8 @@ new #[Layout('layouts::admin')] #[Title('Objednávka')] class extends Component 
         }
 
         $this->order->refresh();
-        unset($this->refunds, $this->grants, $this->entitlements, $this->revocable, $this->refundedCents);
-        $this->reset(['refund_text', 'refund_images', 'refund_key', 'refund_reason', 'refund_revoke_plus']);
-        $this->refund_text = '0';
-        $this->refund_images = '0';
+        unset($this->refunds, $this->grants, $this->entitlements, $this->revocable, $this->unitKinds, $this->refundedCents);
+        $this->reset(['refund_units', 'refund_key', 'refund_reason', 'refund_revoke_plus']);
 
         if ($case->status === RefundStatus::Processed) {
             Flux::toast(variant: 'success', text: "Refundácia #{$case->id} spracovaná (Stripe {$case->stripe_refund_id}).");
@@ -134,24 +166,22 @@ new #[Layout('layouts::admin')] #[Title('Objednávka')] class extends Component 
     public function startReview(int $caseId): void
     {
         $this->review_case = $caseId;
-        $this->reset(['review_text', 'review_images', 'review_revoke_plus', 'review_note']);
-        $this->review_text = '0';
-        $this->review_images = '0';
+        $this->reset(['review_units', 'review_revoke_plus', 'review_note']);
     }
 
     public function review(RefundService $refunds): void
     {
         $this->authorize('platform-admin');
         $validated = $this->validate([
-            'review_text' => ['required', 'integer', 'min:0'],
-            'review_images' => ['required', 'integer', 'min:0'],
+            'review_units' => ['array'],
+            'review_units.*' => ['nullable', 'integer', 'min:0'],
             'review_note' => ['required', 'string', 'min:5', 'max:1000'],
         ]);
 
         $case = RefundCase::query()->where('order_id', $this->order->id)->findOrFail($this->review_case);
 
         try {
-            $refunds->review($case, [UsageKind::Text->value => (int) $validated['review_text'], UsageKind::ImageStandard->value => (int) $validated['review_images']], $this->review_revoke_plus, $validated['review_note'], auth()->user());
+            $refunds->review($case, $this->units($validated['review_units'] ?? []), $this->review_revoke_plus, $validated['review_note'], auth()->user());
         } catch (InvalidArgumentException $e) {
             $this->addError('review_note', $e->getMessage());
 
@@ -160,7 +190,7 @@ new #[Layout('layouts::admin')] #[Title('Objednávka')] class extends Component 
 
         $this->review_case = null;
         $this->order->refresh();
-        unset($this->refunds, $this->grants, $this->entitlements, $this->revocable);
+        unset($this->refunds, $this->grants, $this->entitlements, $this->revocable, $this->unitKinds);
         Flux::toast(variant: 'success', text: 'Refundácia posúdená a zapísaná do auditu.');
     }
 }; ?>
@@ -278,8 +308,9 @@ new #[Layout('layouts::admin')] #[Title('Objednávka')] class extends Component 
                 <flux:heading size="sm">Posúdenie refundácie #{{ $review_case }} zo Stripe</flux:heading>
                 <flux:text class="text-xs">Peniaze už odišli. Rozhodni, koľko nevyužitých jednotiek tejto objednávky sa odoberie (môže byť 0) a či končí Plus obdobie.</flux:text>
                 <div class="grid gap-3 sm:grid-cols-3">
-                    <flux:input wire:model="review_text" type="number" min="0" label="Odobrať textových" />
-                    <flux:input wire:model="review_images" type="number" min="0" label="Odobrať obrázkov" />
+                    @foreach ($this->unitKinds as $kind)
+                        <flux:input wire:model="review_units.{{ $kind->value }}" type="number" min="0" placeholder="0" label="Odobrať: {{ $kind->label() }}" />
+                    @endforeach
                     <flux:checkbox wire:model="review_revoke_plus" label="Odobrať zaplatené Plus obdobie" class="mt-6" />
                 </div>
                 <flux:textarea wire:model="review_note" rows="2" label="Poznámka (ide do auditu)" />
@@ -303,8 +334,9 @@ new #[Layout('layouts::admin')] #[Title('Objednávka')] class extends Component 
                         <flux:select.option value="goodwill">{{ RefundKind::Goodwill->label() }}</flux:select.option>
                     </flux:select>
                     <flux:input wire:model="refund_amount" label="Suma (EUR)" placeholder="3,99" />
-                    <flux:input wire:model="refund_text" type="number" min="0" :max="$this->revocable['text'] ?? 0" label="Odobrať textových (max {{ $this->revocable['text'] ?? 0 }})" />
-                    <flux:input wire:model="refund_images" type="number" min="0" :max="$this->revocable['image_standard'] ?? 0" label="Odobrať obrázkov (max {{ $this->revocable['image_standard'] ?? 0 }})" />
+                    @foreach ($this->unitKinds as $kind)
+                        <flux:input wire:model="refund_units.{{ $kind->value }}" type="number" min="0" placeholder="0" :max="$this->revocable[$kind->value] ?? 0" label="Odobrať: {{ $kind->label() }} (max {{ $this->revocable[$kind->value] ?? 0 }})" />
+                    @endforeach
                 </div>
                 <div class="grid gap-3 sm:grid-cols-2">
                     <flux:input wire:model="refund_key" label="Idempotentný kľúč (číslo tiketu, voliteľné)" />

@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\AiJobKind;
 use App\Enums\UsageKind;
 use App\Models\AdminAudit;
 use App\Models\Order;
@@ -94,7 +93,7 @@ it('blocks a household from new AI jobs and purchases, keeps its data and lifts 
 
     $household = $h['household']->fresh();
     expect($household->isBlocked())->toBeTrue()
-        ->and(app(AiAvailability::class)->reasonUnavailable($household, AiJobKind::Text))->toContain('pozastavené')
+        ->and(app(AiAvailability::class)->reasonUnavailable($household, UsageKind::Text))->toContain('pozastavené')
         ->and(app(UsageLedger::class)->available($household, UsageKind::Text))->toBe(3)
         ->and(AdminAudit::query()->where('action', 'household.blocked')->sole()->reason)->toBe('Opakované zneužívanie skúšobných účtov');
 
@@ -111,7 +110,7 @@ it('blocks a household from new AI jobs and purchases, keeps its data and lifts 
         ->assertHasNoErrors();
 
     expect($household->fresh()->isBlocked())->toBeFalse()
-        ->and(app(AiAvailability::class)->reasonUnavailable($household->fresh(), AiJobKind::Text))->toBeNull()
+        ->and(app(AiAvailability::class)->reasonUnavailable($household->fresh(), UsageKind::Text))->toBeNull()
         ->and(AdminAudit::query()->where('action', 'household.unblocked')->exists())->toBeTrue();
 });
 

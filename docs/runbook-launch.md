@@ -93,6 +93,22 @@ php artisan app:ai-measure --report=<kľúč behu>              # zopakovať rep
   použitia kryje samostatný kompenzačný grant `compensation:measure-…` (audit `usage.compensation.granted`, `ai.measurement.completed`).
 - Report: doručené/zlyhané, Ø cena, rozpätie, Ø trvanie, Ø tokeny; projekcia plného mesiaca Plus (30 textov + 5 obrázkov) proti
   2,49 € / 2,00 €, balíka 20 obrázkov proti 3,99 € a 100 textov proti 1,99 €. Ceny poskytovateľa v USD, bez poplatkov Stripe a daní.
+- Obrázky merania bežia s predvoleným profilom (`/admin/ai/settings`, dnes Standard = medium); grant merania je toho istého druhu.
+
+### 4a. Porovnanie profilov obrázkov low/medium (v2.1 etapa 8, voliteľné pre launch v2)
+
+```bash
+php artisan app:ai-compare-images <testovacia domácnosť>          # vypíše odhad z cenníka (≈ 20 × 0,006 + 20 × 0,053 USD) a pýta si potvrdenie
+php artisan app:ai-compare-images <testovacia domácnosť> --yes
+php artisan app:ai-compare-images --report=<kľúč behu>
+```
+
+- V testovacej domácnosti vytvorí (alebo znovu použije) recepty 10 jedál zo zadania a pre každé vygeneruje 2 × Economy (low) + 2 × Standard
+  (medium) s rovnakým promptom. Obrázky ostávajú v neaktívnej cover kolekcii, nič sa neaktivuje; použitia kryjú granty
+  `compensation:compare-…` (jeden na druh `image_economy` / `image_standard`).
+- Hodnotenie v `/admin/ai/comparisons/{beh}` (password.confirm): pri každom obrázku „prijateľný áno/nie“ + poznámka. Kritérium ≥ 18/20
+  Economy prijateľných a žiadna systematická zámena jedla/prílohy. Rozhodnutie sa zapíše ako launch potvrdenie `image_profile`
+  (neblokuje launch v2) a je vstupom etapy 13; ponuka, ceny ani existujúce nároky sa tým nemenia.
 - Výsledok sa uloží do `app_settings` (`launch.ai_measurement`) a zobrazuje v `/admin/launch`; checklist chce ≥ 30 + 30 s aktuálnym modelom.
 - Ak výsledok nesedí s cenníkom: zmena kvality obrázkov (`/admin/ai/settings`), nová verzia katalógu, alebo profily z dodatku v2.1.
 

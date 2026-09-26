@@ -3,6 +3,7 @@
 use App\Models\AiCostRate;
 use App\Services\Ai\AiCostCalculator;
 use App\Services\Ai\AiSettings;
+use App\Services\Ai\ImageProfile;
 use App\Support\Money;
 use Flux\Flux;
 use Livewire\Attributes\Computed;
@@ -11,7 +12,7 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 
 /**
- * Runtime AI profile: model, reasoning effort, image quality/size, limits, budget alarm and the kill switch.
+ * Runtime AI profile: model, reasoning effort, default image profile, limits, budget alarm and the kill switch.
  * Values are stored in app_settings and audited; .env keeps the defaults.
  */
 new #[Layout('layouts::admin')] #[Title('AI nastavenia')] class extends Component {
@@ -23,9 +24,7 @@ new #[Layout('layouts::admin')] #[Title('AI nastavenia')] class extends Componen
 
     public string $image_model = '';
 
-    public string $image_quality = 'medium';
-
-    public string $image_size = '1:1';
+    public string $image_profile = 'image_standard_v1';
 
     public int $daily_text_limit = 30;
 
@@ -47,8 +46,7 @@ new #[Layout('layouts::admin')] #[Title('AI nastavenia')] class extends Componen
         $this->text_model = (string) ($values['text_model'] ?? '');
         $this->text_reasoning_effort = (string) $values['text_reasoning_effort'];
         $this->image_model = (string) ($values['image_model'] ?? '');
-        $this->image_quality = (string) $values['image_quality'];
-        $this->image_size = (string) $values['image_size'];
+        $this->image_profile = (string) $values['image_profile'];
         $this->daily_text_limit = (int) $values['daily_text_limit'];
         $this->daily_image_limit = (int) $values['daily_image_limit'];
         $this->monthly_budget_usd = Money::microToUsdString($values['monthly_budget_micro_usd']);
@@ -61,7 +59,7 @@ new #[Layout('layouts::admin')] #[Title('AI nastavenia')] class extends Componen
         return app(AiSettings::class)->defaults();
     }
 
-    /** @return array{text: int|null, image: int|null, text_rate: string|null, image_rate: string|null} */
+    /** @return array{text: int|null, text_rate: string|null, profiles: array<string, array{cost: int|null, rate: string|null}>} */
     #[Computed]
     public function projection(): array
     {
@@ -70,13 +68,17 @@ new #[Layout('layouts::admin')] #[Title('AI nastavenia')] class extends Componen
 
         // Illustrative text operation from the specification: 3 000 input and 2 000 billed output tokens.
         $textRate = $calc->rateFor($settings->textProvider(), $this->text_model ?: null, AiCostRate::MODALITY_TEXT, null, null, now());
-        $imageRate = $calc->rateFor($settings->imageProvider(), $this->image_model ?: null, AiCostRate::MODALITY_IMAGE, $this->image_quality, AiSettings::IMAGE_SIZES[$this->image_size] ?? null, now());
+
+        $profiles = [];
+        foreach (ImageProfile::cases() as $profile) {
+            $rate = $calc->rateFor($settings->imageProvider(), $this->image_model ?: null, AiCostRate::MODALITY_IMAGE, $profile->quality(), $profile->pixelSize(), now());
+            $profiles[$profile->value] = ['cost' => $rate ? $calc->estimateImage($rate, 1) : null, 'rate' => $rate?->label()];
+        }
 
         return [
             'text' => $textRate ? $calc->estimateText($textRate, 3000, 2000) : null,
-            'image' => $imageRate ? $calc->estimateImage($imageRate, 1) : null,
             'text_rate' => $textRate?->label(),
-            'image_rate' => $imageRate?->label(),
+            'profiles' => $profiles,
         ];
     }
 
@@ -89,8 +91,7 @@ new #[Layout('layouts::admin')] #[Title('AI nastavenia')] class extends Componen
             'text_model' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9._:\/-]*$/'],
             'text_reasoning_effort' => ['required', 'in:'.implode(',', AiSettings::REASONING_EFFORTS)],
             'image_model' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9._:\/-]*$/'],
-            'image_quality' => ['required', 'in:'.implode(',', AiSettings::IMAGE_QUALITIES)],
-            'image_size' => ['required', 'in:'.implode(',', array_keys(AiSettings::IMAGE_SIZES))],
+            'image_profile' => ['required', 'in:'.implode(',', array_map(fn (ImageProfile $p) => $p->value, ImageProfile::selectable()))],
             'daily_text_limit' => ['required', 'integer', 'min:0', 'max:10000'],
             'daily_image_limit' => ['required', 'integer', 'min:0', 'max:10000'],
             'monthly_budget_usd' => ['nullable', 'string', 'max:20'],
@@ -109,8 +110,7 @@ new #[Layout('layouts::admin')] #[Title('AI nastavenia')] class extends Componen
             'text_model' => $validated['text_model'] ?? '',
             'text_reasoning_effort' => $validated['text_reasoning_effort'],
             'image_model' => $validated['image_model'] ?? '',
-            'image_quality' => $validated['image_quality'],
-            'image_size' => $validated['image_size'],
+            'image_profile' => $validated['image_profile'],
             'daily_text_limit' => (int) $validated['daily_text_limit'],
             'daily_image_limit' => (int) $validated['daily_image_limit'],
             'monthly_budget_micro_usd' => $budget,
@@ -134,7 +134,7 @@ new #[Layout('layouts::admin')] #[Title('AI nastavenia')] class extends Componen
 }; ?>
 
 <div class="space-y-6">
-    <x-page-header title="AI nastavenia" subtitle="Model, váha reasoningu a kvalita obrázkov pre nové úlohy. Zmena sa audituje; už zaradené úlohy bežia s pôvodným profilom." :back="route('admin.ai')" />
+    <x-page-header title="AI nastavenia" subtitle="Model, váha reasoningu a predvolený profil obrázkov pre nové úlohy. Zmena sa audituje; už zaradené úlohy bežia s pôvodným profilom." :back="route('admin.ai')" />
 
     <form wire:submit="save" class="grid gap-4 lg:grid-cols-3">
         <div class="space-y-4 lg:col-span-2">
@@ -157,18 +157,13 @@ new #[Layout('layouts::admin')] #[Title('AI nastavenia')] class extends Componen
             <flux:card class="space-y-4">
                 <flux:heading size="lg" class="font-display">Obrázky</flux:heading>
                 <flux:input wire:model="image_model" label="Obrázkový model" placeholder="{{ $this->defaults['image_model'] ?? 'predvolený model poskytovateľa' }}" description="Predvolené z .env: {{ $this->defaults['image_model'] ?? '(nenastavené)' }}." />
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <flux:select wire:model="image_quality" label="Kvalita" description="Profil Standard zo zadania = medium. HQ sa nikdy nezapne potichu za jednu Standard jednotku.">
-                        @foreach (AiSettings::IMAGE_QUALITIES as $quality)
-                            <flux:select.option :value="$quality">{{ $quality }}</flux:select.option>
-                        @endforeach
-                    </flux:select>
-                    <flux:select wire:model="image_size" label="Rozmer" description="Karta receptu orezáva bez deformácie; originál sa zachová.">
-                        @foreach (AiSettings::IMAGE_SIZES as $aspect => $pixels)
-                            <flux:select.option :value="$aspect">{{ $pixels }}</flux:select.option>
-                        @endforeach
-                    </flux:select>
-                </div>
+                <flux:radio.group wire:model="image_profile" label="Predvolený profil obrázkov" description="Pre nové bezplatné/skúšobné použitia. Profil určuje kvalitu, rozmer 1024 × 1024 a počet; klient ho nevyberá – server ho odvodí z dostupných nárokov (Standard nárok sa nikdy neminie na Economy a naopak). Predvolené z .env RECIPES_AI_IMAGE_QUALITY: {{ ImageProfile::from($this->defaults['image_profile'])->label() }}." data-test="image-profile">
+                    @foreach (ImageProfile::selectable() as $profile)
+                        @php($cost = $this->projection['profiles'][$profile->value]['cost'] ?? null)
+                        <flux:radio :value="$profile->value" :label="$profile->label().' ('.$profile->value.')'" :description="$profile->description().' · '.($cost !== null ? Money::microUsd($cost).' / obrázok' : 'bez sadzby v cenníku').' · spotrebúva '.$profile->usageKind()->label()" />
+                    @endforeach
+                </flux:radio.group>
+                <flux:text class="text-xs">{{ ImageProfile::HighV1->label() }} ({{ ImageProfile::HighV1->value }}): {{ ImageProfile::HighV1->description() }}{{ ($this->projection['profiles'][ImageProfile::HighV1->value]['cost'] ?? null) !== null ? ' · '.Money::microUsd($this->projection['profiles'][ImageProfile::HighV1->value]['cost']).' / obrázok' : '' }}.</flux:text>
             </flux:card>
 
             <flux:card class="space-y-4">
@@ -199,11 +194,14 @@ new #[Layout('layouts::admin')] #[Title('AI nastavenia')] class extends Componen
                         <dd class="font-medium">{{ $this->projection['text'] !== null ? Money::microUsd($this->projection['text']) : 'chýba sadzba pre „'.($this->text_model ?: 'predvolený').'“' }}</dd>
                         @if ($this->projection['text_rate']) <dd class="text-xs text-zinc-500">{{ $this->projection['text_rate'] }}</dd> @endif
                     </div>
-                    <div>
-                        <dt class="text-zinc-500">Jeden obrázok {{ $this->image_quality }} · {{ AiSettings::IMAGE_SIZES[$this->image_size] ?? $this->image_size }}</dt>
-                        <dd class="font-medium">{{ $this->projection['image'] !== null ? Money::microUsd($this->projection['image']) : 'chýba sadzba pre „'.($this->image_model ?: 'predvolený').'“' }}</dd>
-                        @if ($this->projection['image_rate']) <dd class="text-xs text-zinc-500">{{ $this->projection['image_rate'] }}</dd> @endif
-                    </div>
+                    @foreach (ImageProfile::cases() as $profile)
+                        @php($p = $this->projection['profiles'][$profile->value])
+                        <div>
+                            <dt class="text-zinc-500">Obrázok {{ $profile->label() }} · {{ $profile->quality() }} · {{ $profile->pixelSize() }}</dt>
+                            <dd class="font-medium">{{ $p['cost'] !== null ? Money::microUsd($p['cost']) : 'chýba sadzba pre „'.($this->image_model ?: 'predvolený').'“' }}</dd>
+                            @if ($p['rate']) <dd class="text-xs text-zinc-500">{{ $p['rate'] }}</dd> @endif
+                        </div>
+                    @endforeach
                 </dl>
                 <flux:text class="text-xs">Odhad z cenníka bez vstupov obrázka; skutočné usage je autoritatívne. Sadzby spravuješ v <a href="{{ route('admin.ai.rates') }}" class="underline" wire:navigate>Cenníku AI</a>.</flux:text>
             </flux:card>

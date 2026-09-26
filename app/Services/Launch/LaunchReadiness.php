@@ -403,7 +403,7 @@ class LaunchReadiness
         $textRate = $textModel ? $this->costs->rateFor($this->aiSettings->textProvider(), $textModel, AiCostRate::MODALITY_TEXT, null, null, now()) : null;
         $imageRate = $imageModel ? $this->costs->rateFor($this->aiSettings->imageProvider(), $imageModel, AiCostRate::MODALITY_IMAGE, $this->aiSettings->imageQuality(), $this->aiSettings->imagePixelSize(), now()) : null;
         $checks[] = new LaunchCheck('ai.models', $g, 'Modely a cenník AI', $textRate !== null && $imageRate !== null ? LaunchCheckStatus::Ok : LaunchCheckStatus::Fail,
-            'text: '.($textModel ?? 'predvolený').($textRate ? ' · sadzba ✓' : ' · bez sadzby').' · obrázky: '.($imageModel ?? 'predvolený').' '.$this->aiSettings->imageQuality().' '.$this->aiSettings->imagePixelSize().($imageRate ? ' · sadzba ✓' : ' · bez sadzby'),
+            'text: '.($textModel ?? 'predvolený').($textRate ? ' · sadzba ✓' : ' · bez sadzby').' · obrázky: '.($imageModel ?? 'predvolený').' '.$this->aiSettings->defaultImageProfile()->value.' ('.$this->aiSettings->imageQuality().' '.$this->aiSettings->imagePixelSize().')'.($imageRate ? ' · sadzba ✓' : ' · bez sadzby'),
             $textRate !== null && $imageRate !== null ? null : 'Nastav RECIPES_AI_TEXT_MODEL / RECIPES_AI_IMAGE_MODEL (gpt-6-luna, gpt-image-2) a nahraj cenník (AiCostRateSeeder), inak sú náklady neocenené.');
 
         $checks[] = $this->measurementCheck();
@@ -448,7 +448,7 @@ class LaunchReadiness
         foreach ($this->signoffs->all() as $key => $confirmation) {
             $item = LaunchSignoffs::ITEMS[$key];
             $checks[] = new LaunchCheck('signoff.'.$key, self::GROUP_SIGNOFFS, $item['label'],
-                $confirmation !== null ? LaunchCheckStatus::Ok : LaunchCheckStatus::Fail,
+                $confirmation !== null ? LaunchCheckStatus::Ok : (LaunchSignoffs::isOptional($key) ? LaunchCheckStatus::Warn : LaunchCheckStatus::Fail),
                 $confirmation !== null ? 'potvrdené '.CarbonImmutable::parse($confirmation['at'])->format('j. n. Y').': '.$confirmation['note'] : 'nepotvrdené',
                 $confirmation !== null ? null : $item['hint']);
         }

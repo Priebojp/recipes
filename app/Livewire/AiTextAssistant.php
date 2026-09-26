@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Enums\AiJobKind;
 use App\Enums\AiJobStatus;
+use App\Enums\UsageKind;
 use App\Models\AiJob;
 use App\Models\Recipe;
 use App\Services\Ai\AiAvailability;
@@ -66,14 +67,14 @@ class AiTextAssistant extends Component
     #[Computed]
     public function unavailable(): ?string
     {
-        return app(AiAvailability::class)->reasonUnavailable($this->recipe->household, AiJobKind::Text);
+        return app(AiAvailability::class)->reasonUnavailable($this->recipe->household, UsageKind::Text);
     }
 
     /** Uses left for text operations; null when the ledger is not enforced. */
     #[Computed]
     public function balance(): ?UsageBalance
     {
-        return app(AiAvailability::class)->balance($this->recipe->household, AiJobKind::Text);
+        return app(AiAvailability::class)->balance($this->recipe->household, UsageKind::Text);
     }
 
     #[Computed]

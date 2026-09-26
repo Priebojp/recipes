@@ -2,7 +2,6 @@
 
 namespace App\Services\Ai;
 
-use App\Enums\AiJobKind;
 use App\Enums\AiJobStatus;
 use App\Enums\UsageKind;
 use App\Models\AiJob;
@@ -28,18 +27,19 @@ class AiJobLifecycle
 
     /**
      * Create the queued job and reserve its use in one transaction. Nothing is created when no use is available.
+     * The kind of use is the caller's decision: text jobs spend Text, image jobs the kind of their image profile.
      *
      * @param  array<string, mixed>  $attributes
      *
      * @throws InsufficientUsageException
      */
-    public function create(array $attributes, AiJobKind $kind): AiJob
+    public function create(array $attributes, UsageKind $kind): AiJob
     {
         return DB::transaction(function () use ($attributes, $kind) {
             $job = AiJob::create($attributes);
 
             if ($this->ledger->enforced()) {
-                $this->ledger->reserve($job, UsageKind::fromAiJobKind($kind));
+                $this->ledger->reserve($job, $kind);
             }
 
             return $job;

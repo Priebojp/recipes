@@ -17,7 +17,7 @@ class LaunchSignoffs
 {
     private const PREFIX = 'launch.signoff.';
 
-    /** @var array<string, array{label: string, hint: string}> */
+    /** @var array<string, array{label: string, hint: string, optional?: bool}> optional items never block the go-live */
     public const ITEMS = [
         'prices' => [
             'label' => 'Ceny a limity potvrdené',
@@ -50,6 +50,11 @@ class LaunchSignoffs
         'operations' => [
             'label' => 'Hosting, e-mail, zálohy, monitoring, príjemcovia dát',
             'hint' => 'Produkčný SMTP, denné zálohy DB a médií s otestovanou obnovou, monitoring fronty a scheduleru, zoznam príjemcov v privacy registri.',
+        ],
+        'image_profile' => [
+            'label' => 'Porovnanie obrázkov low/medium vyhodnotené (v2.1)',
+            'hint' => 'php artisan app:ai-compare-images <domácnosť> --yes, hodnotenie v /admin/ai/comparisons/{beh}: aspoň 18 z 20 Economy prijateľných a žiadna systematická zámena → rozhodnutie o profile novej ponuky (etapa 13). Neblokuje launch v2.',
+            'optional' => true,
         ],
     ];
 
@@ -91,6 +96,11 @@ class LaunchSignoffs
     public function missing(): array
     {
         return array_values(array_filter(array_keys(self::ITEMS), fn (string $key) => ! $this->isConfirmed($key)));
+    }
+
+    public static function isOptional(string $key): bool
+    {
+        return (bool) (self::ITEMS[$key]['optional'] ?? false);
     }
 
     public function confirm(string $key, User $by, string $note): void
