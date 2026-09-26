@@ -2,8 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\BillingAccount;
 use App\Models\User;
 use App\Services\Admin\AppSettings;
+use App\Services\Billing\Gateway\CashierStripeGateway;
+use App\Services\Billing\Gateway\StripeGateway;
 use App\Services\Selection\SelectionConfig;
 use App\Support\CurrentHousehold;
 use Carbon\CarbonImmutable;
@@ -12,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Laravel\Cashier\Cashier;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -23,6 +27,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->scoped(CurrentHousehold::class);
         $this->app->singleton(AppSettings::class);
         $this->app->bind(SelectionConfig::class, fn () => SelectionConfig::fromConfig());
+        $this->app->bind(StripeGateway::class, CashierStripeGateway::class);
+
+        // The webhook route is registered by the application (routes/web.php) with an inbox in front of Cashier.
+        Cashier::ignoreRoutes();
     }
 
     /**
@@ -34,6 +42,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Platform administration is a separate role from household ownership; granted only by the deploy command.
         Gate::define('platform-admin', fn (User $user): bool => $user->isPlatformAdmin());
+
+        // The Stripe customer is the household's billing account, never a person.
+        Cashier::useCustomerModel(BillingAccount::class);
     }
 
     /**

@@ -21,6 +21,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'platform-admin' => EnsurePlatformAdmin::class,
         ]);
+
+        // Stripe signs its webhooks; CSRF does not apply to them.
+        $middleware->validateCsrfTokens(except: ['stripe/*']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

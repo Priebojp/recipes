@@ -79,6 +79,23 @@ return [
         ],
     ],
 
+    /*
+     * Stripe catalogue mapping (v2 stage 3). The client only ever sends an internal offer code; prices and Stripe
+     * price IDs live in the versioned catalogue tables (plan_versions / addon_versions) seeded from these values.
+     * Test and live IDs differ per environment; a missing ID blocks checkout of that offer, nothing else.
+     */
+    'billing' => [
+        'timezone' => env('RECIPES_BILLING_TIMEZONE', 'Europe/Bratislava'),
+        'renewal_grace_days' => (int) env('RECIPES_BILLING_GRACE_DAYS', 3),
+        'pending_order_ttl_hours' => 24,
+        'stripe_prices' => [
+            'plus_monthly' => env('STRIPE_PRICE_PLUS_MONTHLY'),
+            'plus_yearly' => env('STRIPE_PRICE_PLUS_YEARLY'),
+            'images_20_standard' => env('STRIPE_PRICE_IMAGES_20_STANDARD'),
+            'text_100' => env('STRIPE_PRICE_TEXT_100'),
+        ],
+    ],
+
     'export' => [
         'schema_version' => 1,
     ],

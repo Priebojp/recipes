@@ -4,7 +4,7 @@ use App\Enums\UsageGrantSource;
 use App\Enums\UsageKind;
 use App\Models\Household;
 use App\Models\UsageGrant;
-use App\Services\Usage\TrialGrants;
+use App\Services\Usage\UsageProvisioner;
 use App\Services\Usage\UsageBalance;
 use App\Services\Usage\UsageLedger;
 use Illuminate\Support\Collection;
@@ -14,9 +14,9 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Title('AI použitia')] class extends Component {
-    public function mount(TrialGrants $trials): void
+    public function mount(UsageProvisioner $provisioner): void
     {
-        $trials->ensureFor($this->household);
+        $provisioner->ensureFor($this->household);
     }
 
     #[Computed]

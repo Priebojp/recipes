@@ -40,6 +40,7 @@ class UsageLedger
      * the existing grant instead of adding uses a second time.
      *
      * @param  array<string, mixed>|null  $meta
+     * @param  array{order_id?: int|null, paid_entitlement_id?: int|null}  $links  purchase the grant belongs to
      */
     public function grant(
         Household $household,
@@ -52,12 +53,13 @@ class UsageLedger
         ?User $actor = null,
         ?string $note = null,
         ?array $meta = null,
+        array $links = [],
     ): UsageGrant {
         if ($quantity < 1) {
             throw new InvalidArgumentException('Grant musí mať aspoň jedno použitie.');
         }
 
-        return DB::transaction(function () use ($household, $kind, $source, $quantity, $sourceKey, $validFrom, $expiresAt, $actor, $note, $meta) {
+        return DB::transaction(function () use ($household, $kind, $source, $quantity, $sourceKey, $validFrom, $expiresAt, $actor, $note, $meta, $links) {
             $existing = UsageGrant::query()->where('source_key', $sourceKey)->first();
             if ($existing !== null) {
                 return $existing;
@@ -69,6 +71,8 @@ class UsageLedger
                     'kind' => $kind,
                     'source' => $source,
                     'source_key' => $sourceKey,
+                    'order_id' => $links['order_id'] ?? null,
+                    'paid_entitlement_id' => $links['paid_entitlement_id'] ?? null,
                     'quantity' => $quantity,
                     'valid_from' => $validFrom ?? now(),
                     'expires_at' => $expiresAt,
@@ -270,7 +274,7 @@ class UsageLedger
 
     public function exhaustedMessage(UsageKind $kind): string
     {
-        return "Nemáš už žiadne voľné AI použitia ({$kind->label()}). Ďalšie získaš s predplatným Plus alebo dokúpením balíka – nič sa neúčtuje automaticky. Recept môžeš ďalej upravovať ručne.";
+        return "Nemáš už žiadne voľné AI použitia ({$kind->label()}). Ďalšie získaš s predplatným Plus alebo dokúpením balíka v Nastavenia → Predplatné – nič sa neúčtuje automaticky. Recept môžeš ďalej upravovať ručne.";
     }
 
     private function settle(AiJob $job, UsageReservationState $target): ?UsageReservation

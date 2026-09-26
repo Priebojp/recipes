@@ -19,6 +19,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property UsageKind $kind
  * @property UsageGrantSource $source
  * @property string $source_key
+ * @property int|null $order_id
+ * @property int|null $paid_entitlement_id
  * @property int $quantity
  * @property int $reserved_quantity
  * @property int $consumed_quantity
@@ -31,8 +33,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int|null $created_by
  */
 #[Fillable([
-    'household_id', 'kind', 'source', 'source_key', 'quantity', 'reserved_quantity', 'consumed_quantity',
-    'revoked_quantity', 'valid_from', 'expires_at', 'revoked_at', 'note', 'meta', 'created_by',
+    'household_id', 'kind', 'source', 'source_key', 'order_id', 'paid_entitlement_id', 'quantity', 'reserved_quantity',
+    'consumed_quantity', 'revoked_quantity', 'valid_from', 'expires_at', 'revoked_at', 'note', 'meta', 'created_by',
 ])]
 class UsageGrant extends Model
 {

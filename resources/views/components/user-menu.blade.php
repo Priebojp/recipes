@@ -13,6 +13,7 @@
     <flux:menu.group heading="Domácnosť">
         <flux:menu.item :href="route('plan.history')" icon="clock" wire:navigate>História varenia</flux:menu.item>
         <flux:menu.item :href="route('household.edit')" icon="home" wire:navigate>Nastavenia domácnosti</flux:menu.item>
+        <flux:menu.item :href="route('subscription.edit')" icon="credit-card" wire:navigate>Predplatné a AI použitia</flux:menu.item>
     </flux:menu.group>
 
     <flux:menu.separator />

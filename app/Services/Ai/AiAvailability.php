@@ -7,16 +7,16 @@ use App\Enums\AiJobStatus;
 use App\Enums\UsageKind;
 use App\Models\AiJob;
 use App\Models\Household;
-use App\Services\Usage\TrialGrants;
 use App\Services\Usage\UsageBalance;
 use App\Services\Usage\UsageLedger;
+use App\Services\Usage\UsageProvisioner;
 
 /**
  * Tells the UI whether AI is configured and whether the household still has budget for another run.
  */
 class AiAvailability
 {
-    public function __construct(private AiSettings $settings, private UsageLedger $ledger, private TrialGrants $trials) {}
+    public function __construct(private AiSettings $settings, private UsageLedger $ledger, private UsageProvisioner $provisioner) {}
 
     public function textProvider(): string
     {
@@ -60,10 +60,10 @@ class AiAvailability
             return 'AI funkcie sú dočasne nedostupné. Recepty môžeš ďalej upravovať ručne.';
         }
 
-        // The ledger decides whether the household has a use left; a verified owner's trial is granted lazily here
-        // so accounts verified before the ledger existed get it exactly once.
+        // The ledger decides whether the household has a use left; the trial and the current monthly grant of a paid
+        // period are opened lazily here (idempotent), so nothing depends on the scheduler having run.
         if ($this->ledger->enforced()) {
-            $this->trials->ensureFor($household);
+            $this->provisioner->ensureFor($household);
             if ($this->ledger->available($household, UsageKind::fromAiJobKind($kind)) < 1) {
                 return $this->ledger->exhaustedMessage(UsageKind::fromAiJobKind($kind));
             }
@@ -102,7 +102,7 @@ class AiAvailability
             return null;
         }
 
-        $this->trials->ensureFor($household);
+        $this->provisioner->ensureFor($household);
 
         return $this->ledger->balance($household, UsageKind::fromAiJobKind($kind));
     }
