@@ -29,6 +29,7 @@ class StripeEventProcessor
         private UsageLedger $ledger,
         private UsageProvisioner $provisioner,
         private RefundService $refunds,
+        private OrderConfirmations $confirmations,
     ) {}
 
     public function process(StripeEvent $event): void
@@ -93,6 +94,8 @@ class StripeEventProcessor
             }
         });
 
+        $this->confirmations->send($order);
+
         return true;
     }
 
@@ -142,7 +145,8 @@ class StripeEventProcessor
         [$plan, $start, $end] = $line;
         $household = $account->household;
 
-        DB::transaction(function () use ($invoice, $subscriptionId, $plan, $start, $end, $household) {
+        $order = null;
+        DB::transaction(function () use ($invoice, $subscriptionId, $plan, $start, $end, $household, &$order) {
             $order = Order::query()
                 ->where('household_id', $household->id)
                 ->where(fn ($q) => $q->where('stripe_subscription_id', $subscriptionId)
@@ -180,6 +184,9 @@ class StripeEventProcessor
         });
 
         $this->provisioner->openCurrentGrants($household);
+        if ($order !== null) {
+            $this->confirmations->send($order);
+        }
 
         return true;
     }

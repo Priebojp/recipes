@@ -2,6 +2,7 @@
 
 namespace Tests\Support;
 
+use App\Enums\LegalDocumentType;
 use App\Enums\MembershipRole;
 use App\Models\Household;
 use App\Models\HouseholdMembership;
@@ -9,6 +10,7 @@ use App\Models\Order;
 use App\Models\Person;
 use App\Models\User;
 use App\Services\Billing\Gateway\StripeGateway;
+use App\Services\Legal\LegalDocuments;
 use App\Services\Usage\UsageProvisioner;
 use Database\Seeders\CatalogSeeder;
 
@@ -17,12 +19,17 @@ use Database\Seeders\CatalogSeeder;
  */
 class BillingScenario
 {
-    /** @return array{user: User, household: Household, person: Person, stripe: FakeStripeGateway} */
-    public static function start(): array
+    /**
+     * @return array{user: User, household: Household, person: Person, stripe: FakeStripeGateway}
+     */
+    public static function start(bool $legalReady = true): array
     {
         test()->seed(CatalogSeeder::class);
         $stripe = new FakeStripeGateway;
         app()->instance(StripeGateway::class, $stripe);
+        if ($legalReady) {
+            LegalScenario::ready(); // stage 5: checkout is blocked until the operator is identified and terms are published
+        }
 
         $h = household();
         $h['stripe'] = $stripe;
@@ -43,16 +50,24 @@ class BillingScenario
 
     public static function startPlan(string $plan = 'plus_monthly'): Order
     {
-        test()->post(route('checkout.plan'), ['plan' => $plan])->assertRedirectContains('checkout.stripe.test');
+        test()->post(route('checkout.plan'), ['plan' => $plan, ...self::termsInput()])->assertRedirectContains('checkout.stripe.test');
 
         return Order::query()->latest('id')->firstOrFail();
     }
 
     public static function startAddon(string $addon = 'images_20_standard'): Order
     {
-        test()->post(route('checkout.addon'), ['addon' => $addon])->assertRedirectContains('checkout.stripe.test');
+        test()->post(route('checkout.addon'), ['addon' => $addon, ...self::termsInput()])->assertRedirectContains('checkout.stripe.test');
 
         return Order::query()->latest('id')->firstOrFail();
+    }
+
+    /** The order form's acceptance of the current terms version (empty while nothing is published). */
+    public static function termsInput(): array
+    {
+        $terms = app(LegalDocuments::class)->current(LegalDocumentType::Terms);
+
+        return $terms === null ? [] : ['terms' => '1', 'terms_version' => $terms->version];
     }
 
     /** Stripe's three messages for a paid first subscription period. */

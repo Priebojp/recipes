@@ -31,12 +31,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $stripe_subscription_id
  * @property string|null $failure_reason
  * @property CarbonInterface|null $paid_at
+ * @property int|null $terms_version_id
+ * @property CarbonInterface|null $confirmation_sent_at
  * @property CarbonInterface|null $created_at
  */
 #[Fillable([
     'household_id', 'billing_account_id', 'created_by', 'kind', 'plan_version_id', 'addon_version_id', 'product_snapshot',
     'amount_cents', 'tax_cents', 'currency', 'status', 'stripe_checkout_session_id', 'stripe_payment_intent_id',
-    'stripe_invoice_id', 'stripe_subscription_id', 'failure_reason', 'paid_at',
+    'stripe_invoice_id', 'stripe_subscription_id', 'failure_reason', 'paid_at', 'terms_version_id', 'confirmation_sent_at',
 ])]
 class Order extends Model
 {
@@ -49,6 +51,7 @@ class Order extends Model
             'tax_cents' => 'integer',
             'status' => OrderStatus::class,
             'paid_at' => 'datetime',
+            'confirmation_sent_at' => 'datetime',
         ];
     }
 
@@ -86,6 +89,12 @@ class Order extends Model
     public function usageGrants(): HasMany
     {
         return $this->hasMany(UsageGrant::class);
+    }
+
+    /** @return BelongsTo<LegalDocumentVersion, $this> */
+    public function termsVersion(): BelongsTo
+    {
+        return $this->belongsTo(LegalDocumentVersion::class, 'terms_version_id');
     }
 
     /** @return HasMany<RefundCase, $this> */

@@ -59,6 +59,8 @@
 
         {{ $slot }}
 
+        @include('partials.consent')
+
         {{-- Mobile bottom navigation: four sections plus the account menu. --}}
         <nav class="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200/70 bg-paper/95 backdrop-blur lg:hidden dark:border-zinc-800 dark:bg-zinc-900/95" aria-label="Hlavná navigácia">
             <div class="grid grid-cols-5">

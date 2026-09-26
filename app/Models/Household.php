@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property array<int>|null $default_person_ids
  * @property CarbonInterface|null $blocked_at
  * @property string|null $blocked_reason
+ * @property CarbonInterface|null $erased_at
  */
 #[Fillable(['name', 'timezone', 'owner_user_id', 'default_person_ids'])]
 class Household extends Model
@@ -29,13 +30,19 @@ class Household extends Model
 
     protected function casts(): array
     {
-        return ['default_person_ids' => 'array', 'blocked_at' => 'datetime'];
+        return ['default_person_ids' => 'array', 'blocked_at' => 'datetime', 'erased_at' => 'datetime'];
     }
 
     /** Blocked by the platform administrator (abuse): no new AI jobs, no purchases; data and manual editing stay. */
     public function isBlocked(): bool
     {
         return $this->blocked_at !== null;
+    }
+
+    /** Content erased on a data-subject request; only financial records remain. */
+    public function isErased(): bool
+    {
+        return $this->erased_at !== null;
     }
 
     /** @return BelongsTo<User, $this> */

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\PrivacyExportController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->group(function () {
@@ -12,6 +13,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::livewire('settings/appearance', 'pages::settings.appearance')->name('appearance.edit');
     Route::livewire('settings/usage', 'pages::settings.usage')->name('usage.index');
     Route::livewire('settings/subscription', 'pages::settings.subscription')->name('subscription.edit');
+    Route::livewire('settings/privacy', 'pages::settings.privacy')->name('privacy.edit');
+    Route::get('settings/privacy/export', PrivacyExportController::class)->name('privacy.export');
 
     Route::livewire('settings/security', 'pages::settings.security')
         ->middleware([

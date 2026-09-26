@@ -27,6 +27,7 @@
     <flux:menu.separator />
 
     <flux:menu.item :href="route('profile.edit')" icon="cog-6-tooth" wire:navigate>Účet a bezpečnosť</flux:menu.item>
+    <flux:menu.item :href="route('privacy.edit')" icon="lock-closed" wire:navigate>Súkromie a podmienky</flux:menu.item>
 
     @if (auth()->user()->isPlatformAdmin())
         <flux:menu.item :href="route('admin.index')" icon="shield-check" wire:navigate data-test="admin-link">Administrácia</flux:menu.item>

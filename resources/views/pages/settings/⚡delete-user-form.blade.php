@@ -10,11 +10,8 @@ new class extends Component {}; ?>
         <flux:subheading>{{ __('Delete your account and all of its resources') }}</flux:subheading>
     </div>
 
-    <flux:modal.trigger name="confirm-user-deletion">
-        <flux:button variant="danger" data-test="delete-user-button">
-            {{ __('Delete account') }}
-        </flux:button>
-    </flux:modal.trigger>
-
-    <livewire:pages::settings.delete-user-modal />
+    <flux:text class="text-sm">Pred vymazaním uvidíš dopad na domácnosť, predplatné a nevyužité balíky. Vymazanie je v nastaveniach súkromia.</flux:text>
+    <flux:button variant="danger" :href="route('privacy.edit')" wire:navigate data-test="delete-user-button">
+        {{ __('Delete account') }}
+    </flux:button>
 </section>

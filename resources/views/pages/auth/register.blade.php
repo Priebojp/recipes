@@ -54,6 +54,16 @@
                 viewable
             />
 
+            @php($terms = app(App\Services\Legal\LegalDocuments::class)->current(App\Enums\LegalDocumentType::Terms))
+            @if ($terms)
+                <flux:field variant="inline">
+                    <flux:checkbox name="terms" value="1" :checked="old('terms')" data-test="register-terms" />
+                    <flux:label>Prijímam <a href="{{ route('legal.show', ['slug' => 'vop']) }}" target="_blank" rel="noopener" class="underline">obchodné podmienky</a> (verzia {{ $terms->version }})</flux:label>
+                </flux:field>
+                @error('terms') <flux:text class="-mt-4 text-sm text-red-600">{{ $message }}</flux:text> @enderror
+            @endif
+            <flux:text class="text-xs">Ako spracúvame údaje potrebné na prevádzku účtu, sa dočítaš v <a href="{{ route('legal.show', ['slug' => 'ochrana-osobnych-udajov']) }}" target="_blank" rel="noopener" class="underline">informáciách o súkromí</a>. Súhlas so spracúvaním na prevádzku účtu nepotrebujeme; voliteľná analytika sa riadi tvojou voľbou cookies.</flux:text>
+
             <div class="flex items-center justify-end">
                 <flux:button type="submit" variant="primary" class="w-full" data-test="register-user-button">
                     {{ __('Create account') }}

@@ -2,6 +2,7 @@
 
 use App\Enums\PlanInterval;
 use App\Services\Billing\Catalog;
+use App\Services\Billing\CheckoutService;
 use App\Support\CurrentHousehold;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
@@ -31,6 +32,12 @@ new #[Layout('layouts::public')] #[Title('Cenník')] class extends Component {
     public function addons(): Collection
     {
         return app(Catalog::class)->addons();
+    }
+
+    #[Computed]
+    public function paymentsReady(): bool
+    {
+        return app(CheckoutService::class)->isReady();
     }
 
     #[Computed]
@@ -93,14 +100,14 @@ new #[Layout('layouts::public')] #[Title('Cenník')] class extends Component {
                     @endforeach
                 </ul>
                 @if ($this->canBuy)
-                    <form method="POST" action="{{ route('checkout.plan') }}">
-                        @csrf
-                        <input type="hidden" name="plan" value="{{ $plan->code }}">
-                        <flux:button type="submit" variant="primary" :disabled="! $plan->stripe_price_id" data-test="buy-plus">Objednať s povinnosťou platby</flux:button>
-                        @unless ($plan->stripe_price_id)
+                    <div>
+                        <flux:button :href="route('checkout.review', ['plan' => $plan->code])" wire:navigate variant="primary" :disabled="! $plan->stripe_price_id || ! $this->paymentsReady" data-test="buy-plus">Pokračovať k objednávke</flux:button>
+                        @if (! $plan->stripe_price_id || ! $this->paymentsReady)
                             <flux:text class="mt-2 text-xs">Platby ešte nie sú zapnuté.</flux:text>
-                        @endunless
-                    </form>
+                        @else
+                            <flux:text class="mt-2 text-xs">Pred platbou uvidíš zhrnutie objednávky, podmienky a spôsob zrušenia.</flux:text>
+                        @endif
+                    </div>
                 @elseif (auth()->check())
                     <flux:text class="text-sm">Predplatné môže objednať iba vlastník domácnosti.</flux:text>
                 @else
@@ -123,11 +130,7 @@ new #[Layout('layouts::public')] #[Title('Cenník')] class extends Component {
                         <div class="text-xl font-semibold">{{ Catalog::formatCents($addon->final_price_cents, $addon->currency) }}</div>
                         <flux:text class="text-sm">{{ $addon->unit_count }} × {{ $addon->unit_kind->label() }}</flux:text>
                         @if ($this->canBuy)
-                            <form method="POST" action="{{ route('checkout.addon') }}">
-                                @csrf
-                                <input type="hidden" name="addon" value="{{ $addon->code }}">
-                                <flux:button type="submit" size="sm" :disabled="! $addon->stripe_price_id">Kúpiť s povinnosťou platby</flux:button>
-                            </form>
+                            <flux:button :href="route('checkout.review', ['addon' => $addon->code])" wire:navigate size="sm" :disabled="! $addon->stripe_price_id || ! $this->paymentsReady">Pokračovať k objednávke</flux:button>
                         @endif
                     </flux:card>
                 @endforeach
