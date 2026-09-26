@@ -85,6 +85,10 @@ return [
      * Test and live IDs differ per environment; a missing ID blocks checkout of that offer, nothing else.
      */
     'billing' => [
+        // Deploy-time switch for paid checkout (v2 stage 7). Off by default: a fresh deployment sells nothing until the
+        // operator flips it in a separate, controlled deployment after the launch checklist passes. Recipes, free
+        // features and existing paid entitlements are never affected by this switch.
+        'checkout_enabled' => (bool) env('RECIPES_CHECKOUT_ENABLED', false),
         'timezone' => env('RECIPES_BILLING_TIMEZONE', 'Europe/Bratislava'),
         'renewal_grace_days' => (int) env('RECIPES_BILLING_GRACE_DAYS', 3),
         'pending_order_ttl_hours' => 24,

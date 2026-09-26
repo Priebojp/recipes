@@ -46,6 +46,22 @@ class AiImageService
      */
     public function request(Recipe $recipe, ?User $by, string $description, string $mode, bool $variant = false): AiJob
     {
+        $job = $this->create($recipe, $by, $description, $mode, $variant);
+        if (! $job->wasRecentlyCreated) {
+            return $job;
+        }
+
+        GenerateRecipeImageJob::dispatch($job->id);
+
+        return $job->fresh();
+    }
+
+    /**
+     * Create (or reuse) the queued job without dispatching it. With $rateLimits=false the daily and concurrency caps
+     * are skipped (operator measurement runs the job itself); key, kill switch and ledger still apply.
+     */
+    public function create(Recipe $recipe, ?User $by, string $description, string $mode, bool $variant = false, bool $rateLimits = true): AiJob
+    {
         $preview = $this->preview($recipe, $description, $mode);
         if ($preview['needs_description'] || $preview['prompt'] === null) {
             throw new InvalidArgumentException('Doplň krátky opis jedla, z názvu sa nedá určiť, čo zobraziť.');
@@ -64,13 +80,13 @@ class AiImageService
             return $existing;
         }
 
-        if ($reason = $this->availability->reasonUnavailable($recipe->household, AiJobKind::Image)) {
+        if ($reason = $this->availability->reasonUnavailable($recipe->household, AiJobKind::Image, $rateLimits)) {
             throw new AiUnavailableException($reason);
         }
 
         try {
             // Job and its reserved use are created together; without a free use nothing is created.
-            $job = $this->lifecycle->create([
+            return $this->lifecycle->create([
                 'household_id' => $recipe->household_id,
                 'recipe_id' => $recipe->id,
                 'kind' => AiJobKind::Image,
@@ -88,10 +104,6 @@ class AiImageService
         } catch (InsufficientUsageException $e) {
             throw new AiUnavailableException($e->getMessage(), previous: $e);
         }
-
-        GenerateRecipeImageJob::dispatch($job->id);
-
-        return $job->fresh();
     }
 
     /**

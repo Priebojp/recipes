@@ -138,7 +138,7 @@ class CheckoutService
     private function assertReady(): void
     {
         if (! $this->readiness->isReady()) {
-            throw new CheckoutException('Platby ešte nie sú zapnuté: chýba identifikácia prevádzkovateľa alebo publikované obchodné podmienky. Bezplatné funkcie fungujú ďalej.');
+            throw new CheckoutException('Platby ešte nie sú zapnuté: chýba zapnutie platieb nasadením, identifikácia prevádzkovateľa alebo publikované obchodné podmienky. Bezplatné funkcie fungujú ďalej.');
         }
     }
 

@@ -30,5 +30,6 @@ Route::middleware(['auth', 'verified', 'platform-admin', 'throttle:60,1'])
             Route::livewire('legal', 'pages::admin.legal')->name('legal');
             Route::livewire('legal/{version}', 'pages::admin.legal-document')->name('legal.document');
             Route::livewire('services', 'pages::admin.services')->name('services');
+            Route::livewire('launch', 'pages::admin.launch')->name('launch');
         });
     });

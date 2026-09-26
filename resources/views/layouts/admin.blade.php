@@ -31,6 +31,7 @@
                 ],
                 'Dohľad' => [
                     ['route' => 'admin.audit', 'label' => 'Audit', 'icon' => 'document-magnifying-glass', 'match' => 'admin.audit'],
+                    ['route' => 'admin.launch', 'label' => 'Launch checklist', 'icon' => 'rocket-launch', 'match' => 'admin.launch'],
                 ],
             ];
         @endphp

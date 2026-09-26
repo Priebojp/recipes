@@ -12,7 +12,7 @@ a bezpečná administrácia, potom ledger a Cashier, potom právne stránky, sú
 | 4 | **Admin – finančné moduly** | ✅ hotové (vetva `v2-etapa-4-admin-financie`) | Dashboard MRR/inkaso/refundácie/príspevok, detail domácnosti s kompenzáciami a blokovaním, predplatné so synchronizáciou, objednávky s refund workflow, posúdenie refundácií zo Stripe, ledger použití, verzovaný katalóg, inbox Stripe udalostí (test 13, 14) |
 | 5 | **Právne stránky, cookies, súkromie** | ✅ hotové (vetva `v2-etapa-5-pravne-sukromie`) | `/vop`, `/ochrana-osobnych-udajov`, `/cookies`, `/odstupenie-od-zmluvy`, `/kontakt`, verzie a akceptácie, identita prevádzkovateľa a blokovanie checkoutu, register služieb, cookie lišta podľa kap. 10, consent receipt, zhrnutie pred platbou a e-mail s VOP, online odstúpenie, export/výmaz účtu, žiadosti (testy 15–21) |
 | 6 | **Plus funkcie** | ✅ hotové (vetva `v2-etapa-6-plus-funkcie`) | Návrh týždenného jedálnička existujúcim generátorom (bez AI), nákupný zoznam z plánu s explicitným zlučovaním, uložené skupiny a filtre výberu; gating podľa zaplateného obdobia, dáta zostávajú po skončení Plus |
-| 7 | Staging a launch | ⬜ | Test clock, doklady, identita prevádzkovateľa, meranie 30+30 AI úloh, potvrdenie cien, produkčné secrets a webhook |
+| 7 | **Staging a launch** | ✅ kód hotový (vetva `v2-etapa-7-staging-launch`) · ⏳ vstupy prevádzkovateľa | Launch checklist (`app:launch-check`, `/admin/launch`) s overením cien a webhooku v Stripe, ručné potvrdenia s auditom, prepínač platieb `RECIPES_CHECKOUT_ENABLED`, test clock simulácie (`app:billing-test-clock`), meranie 30+30 AI úloh (`app:ai-measure`), jeden zoznam Stripe udalostí pre `cashier:webhook`, runbook `runbook-launch.md` |
 
 ## Etapa 1 – čo je hotové
 
@@ -477,7 +477,70 @@ limit. `PagesRenderTest` renderuje nové stránky. Celá sada: 231 testov.
 `php artisan migrate` (tri nové tabuľky). Bez nových závislostí, bez zmeny JS bundlu (kopírovanie do schránky je
 inline Alpine). Cenník a `CatalogSeeder` už funkcie uvádzali; teraz sú skutočne dostupné.
 
+## Etapa 7 – čo je hotové
+
+Etapa nepridáva tabuľky (stav drží `app_settings`) ani závislosti. Postup krok za krokom je v `runbook-launch.md`.
+
+### Tri brány pred prvou platbou
+
+- **Prepínač platieb** `RECIPES_CHECKOUT_ENABLED` (`recipes.billing.checkout_enabled`, predvolene **false**): `CheckoutReadiness::blockers()`
+  ho hlási ako prvý blocker, `legalBlockers()` sú právne položky samostatne. Zapnutie je samostatné nasadenie (zadanie kap. 16 bod 7);
+  vypnutie okamžite zastaví nové nákupy, nároky, granty a portál fungujú ďalej. V testoch je zapnutý (`phpunit.xml`), v `.env.example` `true`.
+- **Právna pripravenosť** – nezmenená z etapy 5.
+- **Launch checklist** (`LaunchReadiness`): prostredie (APP_ENV/DEBUG/URL, fronta, pošta, posledný beh `app:billing-reconcile`, zlyhané
+  úlohy), Stripe (kľúče a ich režim – živé kľúče mimo produkcie sú vždy chyba, webhook secret, endpoint a jeho udalosti), katalóg (aktívne
+  verzie s price ID, zhoda s `STRIPE_PRICE_*`, s `--stripe` každá cena proti Stripe: suma, mena, interval, aktívna, live/test), právne
+  (blockery, cookies), administrácia (admin s 2FA, `ADMIN_REQUIRE_TWO_FACTOR`, zabudnuté `ADMIN_INITIAL_PASSWORD`), AI (kľúč, kill switch,
+  modely so sadzbou v cenníku, meranie 30+30, rozpočet), ručné potvrdenia a na záver stav prepínača (zapnuté s chybami = blokujúca chyba).
+  Prísne prevádzkové kontroly sú mimo produkcie iba upozornením, aby bol príkaz použiteľný aj na stagingu.
+- `php artisan app:launch-check [--stripe] [--json]` – exit 1, kým niečo blokuje (deploy pipeline). `/admin/launch` (password.confirm) ukazuje
+  to isté, tlačidlo „Overiť v Stripe“ volá Stripe API cez `StripeInspector` (`CashierStripeInspector`, v testoch `FakeStripeInspector`).
+
+### Ručné potvrdenia (`LaunchSignoffs`)
+
+Ceny a limity, Stripe účet, doklady s účtovníkom, DPH/OSS režim, právne schválenie, test clock, meranie AI, prevádzka (hosting, e-mail,
+zálohy, monitoring, príjemcovia dát). Potvrdenie = kto, kedy, povinná poznámka; uložené v `app_settings` (`launch.signoff.*`), audit
+`launch.signoff.confirmed` / `launch.signoff.withdrawn`. Odvolanie vráti položku medzi blokujúce. Potvrdenie je vyhlásenie prevádzkovateľa,
+nie právne posúdenie.
+
+### Test clock (`TestClockSimulation`, `app:billing-test-clock`)
+
+`start <domácnosť> --plan --at` vytvorí v sandboxe test clock, zákazníka na ňom (Cashier, testovacia karta `pm_card_visa`) a predplatné
+z katalógovej price ID (`error_if_incomplete`); domácnosť musí byť bez Stripe zákazníka a predplatného. Webhooky prídu bežnou cestou
+(`invoice.paid` → `PaidEntitlement` aj bez objednávky). `advance clock --at` posunie čas, počká na `ready` a otvorí mesačný grant pre
+obdobie so zmrazeným časom (to, čo by urobil scheduler – aplikácia sama ide v reálnom čase). `status --sync`, `list`, `delete`.
+Register clockov je v `app_settings` (`billing.test_clocks`), akcie sú v audite. So živými kľúčmi príkaz odmietne čokoľvek.
+Rozhranie `StripeTestClocks` (`CashierStripeTestClocks`, v testoch `FakeStripeTestClocks`); scenáre A–F sú v runbooku.
+
+### Meranie AI (`AiMeasurement`, `app:ai-measure`)
+
+`app:ai-measure <domácnosť> [--text=30] [--images=30] [--scope] --yes` spustí úlohy synchrónne cez bežné `ai_jobs` (`AiTextService::create`
+/ `AiImageService::create` s `rateLimits: false` – denné limity a súbeh sa neuplatnia, kľúč, kill switch, blokovanie domácnosti a ledger áno).
+Použitia kryje samostatný kompenzačný grant `compensation:measure-<beh>-<druh>`; úlohy majú `input.measurement_run`. Report: doručené,
+Ø cena, rozpätie, trvanie, tokeny a projekcia (mesiac Plus 30+5 vs. 2,49 €/2,00 €, balíky vs. 3,99 € a 1,99 €) v USD, s kurzom aj v EUR.
+Súhrn ide do `app_settings` (`launch.ai_measurement`), audit `ai.measurement.completed`; `--report=<beh>` ho vypíše znova. `request()`
+oboch služieb ostal rovnaký (create + dispatch).
+
+### Webhook udalosti a prevádzka
+
+- `StripeWebhookEvents::required()` = Cashier + `StripeEventProcessor`; `config('cashier.webhook.events')` ho používa, takže
+  `php artisan cashier:webhook` zaregistruje presný zoznam (doteraz iba Cashier default). Checklist porovná endpoint so zoznamom.
+- `app:billing-reconcile` zapisuje čas posledného behu (`ops.billing_reconcile_last_run_at`) – checklist z toho číta stav scheduleru.
+
+### Testy
+
+`tests/Feature/Launch/LaunchChecklistTest.php` (prepínač blokuje checkout aj s právnou pripravenosťou; blockery na prázdnej inštalácii → OK po
+infraštruktúre, meraní a potvrdeniach; overenie cien/endpointu proti falošnému Stripe vrátane nesprávnej sumy, intervalu, live/test a chýbajúcich
+udalostí; admin stránka s potvrdením/odvolaním a auditom), `tests/Feature/Billing/TestClockSimulationTest.php` (ročný plán s anchorom 31.,
+grant po posune bez duplicít, odmietnutie druhej simulácie a živých kľúčov, delete), `tests/Feature/Ai/AiMeasurementTest.php` (meranie proti
+vlastnému grantu bez dotyku skúšobných použití, ignorovanie denných limitov, uložený súhrn, potvrdenie v príkaze).
+
+### Nasadenie
+
+Bez migrácie. Do `.env` doplniť `RECIPES_CHECKOUT_ENABLED` (lokálne `true`, produkcia `false` až do launchu). Ďalej podľa `runbook-launch.md`.
+
 ## Otvorené vstupy pre launch (nezmenené zo zadania, kap. 18)
 
 Prevádzkovateľ a fakturačné údaje, potvrdenie cien a limitov, výsledky nákladového merania (30 + 30 úloh na reálnom
-kľúči), analytický poskytovateľ, hosting/e-mail/zálohy/monitoring, DPH/OSS režim, právne schválenie textov.
+kľúči), analytický poskytovateľ, hosting/e-mail/zálohy/monitoring, DPH/OSS režim, právne schválenie textov. Každý vstup má
+riadok v `/admin/launch`; kým chýba, `app:launch-check` končí chybou a platby ostávajú vypnuté.
