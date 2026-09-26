@@ -29,6 +29,7 @@
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="STRIPE_WEBHOOK_SECRET" value="whsec_test"/>
+        <env name="RECIPES_CHECKOUT_ENABLED" value="true"/>
         <env name="STRIPE_PRICE_PLUS_MONTHLY" value="price_plus_monthly"/>
         <env name="STRIPE_PRICE_PLUS_YEARLY" value="price_plus_yearly"/>
         <env name="STRIPE_PRICE_IMAGES_20_STANDARD" value="price_images_20"/>

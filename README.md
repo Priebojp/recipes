@@ -50,6 +50,16 @@ verzovaného cenníka v mikro-USD, rozpad podľa modelu, domácnosti a dňa, pos
 mesačný rozpočet), **Cenník AI**, domácnosti, audit. Hodnoty z administrácie prepisujú `.env`; už zaradené AI úlohy
 bežia so svojím pôvodným profilom. Stav etáp v2 je v `docs/v2-etapy-a-stav.md`.
 
+Launch (v2 etapa 7): platený checkout je vypnutý, kým `RECIPES_CHECKOUT_ENABLED=true` nezapne samostatné nasadenie; predtým musí
+prejsť checklist. Postup je v `docs/runbook-launch.md`.
+
+```bash
+php artisan app:launch-check --stripe                                   # checklist; exit 1, kým niečo blokuje
+php artisan app:billing-test-clock start 12 --plan=plus_yearly --at="2026-01-31 10:00"   # simulácia v sandboxe
+php artisan app:ai-measure 12 --yes                                     # 30 + 30 AI úloh na reálnom kľúči
+php artisan cashier:webhook                                             # endpoint s presným zoznamom udalostí
+```
+
 ## Ako funguje výber jedla
 
 Váhy sú v `config/recipes.php` (`selection`), čistá logika v `app/Services/Selection`:

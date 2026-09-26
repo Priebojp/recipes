@@ -1,6 +1,6 @@
 <?php
 
-use Laravel\Cashier\Console\WebhookCommand;
+use App\Services\Billing\StripeWebhookEvents;
 use Laravel\Cashier\Invoices\DompdfInvoiceRenderer;
 
 // use Laravel\Cashier\Invoices\LaravelPdfInvoiceRenderer;
@@ -49,7 +49,8 @@ return [
     'webhook' => [
         'secret' => env('STRIPE_WEBHOOK_SECRET'),
         'tolerance' => env('STRIPE_WEBHOOK_TOLERANCE', 300),
-        'events' => WebhookCommand::DEFAULT_EVENTS,
+        // Cashier's events plus the ones the inbox processor handles; `cashier:webhook` registers this exact list.
+        'events' => StripeWebhookEvents::required(),
     ],
 
     /*

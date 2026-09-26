@@ -6,7 +6,11 @@ use App\Models\BillingAccount;
 use App\Models\User;
 use App\Services\Admin\AppSettings;
 use App\Services\Billing\Gateway\CashierStripeGateway;
+use App\Services\Billing\Gateway\CashierStripeInspector;
+use App\Services\Billing\Gateway\CashierStripeTestClocks;
 use App\Services\Billing\Gateway\StripeGateway;
+use App\Services\Billing\Gateway\StripeInspector;
+use App\Services\Billing\Gateway\StripeTestClocks;
 use App\Services\Selection\SelectionConfig;
 use App\Support\CurrentHousehold;
 use Carbon\CarbonImmutable;
@@ -28,6 +32,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(AppSettings::class);
         $this->app->bind(SelectionConfig::class, fn () => SelectionConfig::fromConfig());
         $this->app->bind(StripeGateway::class, CashierStripeGateway::class);
+        $this->app->bind(StripeInspector::class, CashierStripeInspector::class);
+        $this->app->bind(StripeTestClocks::class, CashierStripeTestClocks::class);
 
         // The webhook route is registered by the application (routes/web.php) with an inbox in front of Cashier.
         Cashier::ignoreRoutes();

@@ -31,9 +31,26 @@ class AiTextService
     ) {}
 
     /**
-     * Create (or reuse) a text job for the recipe's current revision. Same recipe+revision+scope => same request_key.
+     * Create (or reuse) a text job for the recipe's current revision and queue it. Same recipe+revision+scope => same
+     * request_key.
      */
     public function request(Recipe $recipe, ?User $by, string $scope, bool $fresh = false): AiJob
+    {
+        $job = $this->create($recipe, $by, $scope, $fresh);
+        if (! $job->wasRecentlyCreated) {
+            return $job;
+        }
+
+        RunRecipeTextJob::dispatch($job->id);
+
+        return $job->fresh();
+    }
+
+    /**
+     * Create (or reuse) the queued job without dispatching it. With $rateLimits=false the daily and concurrency caps
+     * are skipped (operator measurement runs the job itself); key, kill switch and ledger still apply.
+     */
+    public function create(Recipe $recipe, ?User $by, string $scope, bool $fresh = false, bool $rateLimits = true): AiJob
     {
         if (! in_array($scope, self::SCOPES, true)) {
             throw new InvalidArgumentException('Neznámy rozsah úpravy.');
@@ -54,13 +71,13 @@ class AiTextService
             return $existing;
         }
 
-        if ($reason = $this->availability->reasonUnavailable($recipe->household, AiJobKind::Text)) {
+        if ($reason = $this->availability->reasonUnavailable($recipe->household, AiJobKind::Text, $rateLimits)) {
             throw new AiUnavailableException($reason);
         }
 
         try {
             // Job and its reserved use are created together; without a free use nothing is created.
-            $job = $this->lifecycle->create([
+            return $this->lifecycle->create([
                 'household_id' => $recipe->household_id,
                 'recipe_id' => $recipe->id,
                 'kind' => AiJobKind::Text,
@@ -77,10 +94,6 @@ class AiTextService
         } catch (InsufficientUsageException $e) {
             throw new AiUnavailableException($e->getMessage(), previous: $e);
         }
-
-        RunRecipeTextJob::dispatch($job->id);
-
-        return $job->fresh();
     }
 
     /**

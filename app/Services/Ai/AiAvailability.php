@@ -48,8 +48,11 @@ class AiAvailability
 
     /**
      * Returns null when a new job may start, otherwise the reason why not.
+     *
+     * @param  bool  $rateLimits  false skips the daily and concurrency caps (operator-run cost measurement); the key,
+     *                            the kill switch, household blocking and the ledger always apply
      */
-    public function reasonUnavailable(Household $household, AiJobKind $kind): ?string
+    public function reasonUnavailable(Household $household, AiJobKind $kind, bool $rateLimits = true): ?string
     {
         $configured = $kind === AiJobKind::Text ? $this->textConfigured() : $this->imageConfigured();
         if (! $configured) {
@@ -71,6 +74,10 @@ class AiAvailability
             if ($this->ledger->available($household, UsageKind::fromAiJobKind($kind)) < 1) {
                 return $this->ledger->exhaustedMessage(UsageKind::fromAiJobKind($kind));
             }
+        }
+
+        if (! $rateLimits) {
+            return null;
         }
 
         // Daily limits remain as a frequency cap (abuse protection), not as the paid quota.
