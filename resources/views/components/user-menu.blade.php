@@ -27,6 +27,10 @@
 
     <flux:menu.item :href="route('profile.edit')" icon="cog-6-tooth" wire:navigate>Účet a bezpečnosť</flux:menu.item>
 
+    @if (auth()->user()->isPlatformAdmin())
+        <flux:menu.item :href="route('admin.index')" icon="shield-check" wire:navigate data-test="admin-link">Administrácia</flux:menu.item>
+    @endif
+
     <form method="POST" action="{{ route('logout') }}" class="w-full">
         @csrf
         <flux:menu.item as="button" type="submit" icon="arrow-right-start-on-rectangle" class="w-full cursor-pointer" data-test="logout-button">

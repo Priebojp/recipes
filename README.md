@@ -24,9 +24,31 @@ Kontroly: `composer test` (Pint, PHPStan level 7, Pest). Testy AI mockujú posky
 - AI úlohy bežia vo fronte (`QUEUE_CONNECTION=database` je predvolené): spusti `php artisan queue:work`. V testoch a s `QUEUE_CONNECTION=sync` bežia synchrónne.
 - Text aj obrázky idú cez Laravel AI SDK; poskytovateľ a model sa nastavujú v `.env` (`RECIPES_AI_TEXT_PROVIDER`, `RECIPES_AI_IMAGE_PROVIDER`, voliteľne `RECIPES_AI_*_MODEL`). Predvolený je OpenAI (`OPENAI_API_KEY`), SDK podporuje aj Anthropic, Gemini a ďalších (`config/ai.php` sa dá publikovať cez `php artisan vendor:publish --tag=ai-config`).
 - Bez kľúča je AI označené ako **nenakonfigurované**; ukladanie receptov a výber jedla fungujú bez AI.
-- Limity na domácnosť: `RECIPES_AI_DAILY_TEXT_LIMIT`, `RECIPES_AI_DAILY_IMAGE_LIMIT`, `RECIPES_AI_MAX_CONCURRENT`. Vyčerpanie sa ukáže pred ďalším spustením.
-- Každá úloha (`ai_jobs`) ukladá prompt, verziu promptu, poskytovateľa/model, vstupnú revíziu, výstup a chybu. `request_key` bráni duplicitnému platenému spusteniu pri opakovanom requeste; „Vygenerovať ďalší variant“ / „Vygenerovať znova“ je vedome nová úloha.
+- Limity na domácnosť: `RECIPES_AI_DAILY_TEXT_LIMIT`, `RECIPES_AI_DAILY_IMAGE_LIMIT`, `RECIPES_AI_MAX_CONCURRENT`. Vyčerpanie sa ukáže pred ďalším spustením. Reasoning effort (`RECIPES_AI_TEXT_REASONING_EFFORT`, predvolene `low`) a profil obrázka (`RECIPES_AI_IMAGE_QUALITY=medium`, `RECIPES_AI_IMAGE_SIZE=1:1`) sa dajú prepnúť za behu v `/admin`.
+- Každá úloha (`ai_jobs`) ukladá prompt, verziu promptu, poskytovateľa/model, profil (reasoning effort, kvalita, rozmer), vstupnú revíziu, výstup, chybu, namerané tokeny, trvanie a odhad ceny (`estimated_cost_micro_usd` podľa `ai_cost_rates`). `request_key` bráni duplicitnému platenému spusteniu pri opakovanom requeste; „Vygenerovať ďalší variant“ / „Vygenerovať znova“ je vedome nová úloha.
 - Tajné kľúče sú iba na serveri; prehliadač nikdy nevolá poskytovateľa priamo.
+
+## Administrácia (/admin)
+
+Správca platformy je iná rola než vlastník domácnosti; udeľuje sa iba príkazom (žiadny seed admin/admin, žiadny
+verejný endpoint):
+
+```bash
+php artisan app:grant-platform-admin support@moje-recepty.sk --create --name="Podpora" --password='…'   # nový účet
+php artisan app:grant-platform-admin peter@example.com                                                   # existujúci účet
+php artisan app:grant-platform-admin niekto@example.com --revoke                                         # odobrať rolu
+php artisan db:seed --class=AiCostRateSeeder --force                                                     # cenník AI
+```
+
+`db:seed` mimo produkcie vytvorí `support@moje-recepty.sk` s heslom `password` (`ADMIN_EMAIL`, `ADMIN_INITIAL_PASSWORD`).
+Do `/admin` sa dostane iba administrátor so zapnutým dvojfaktorovým overením (`ADMIN_REQUIRE_TWO_FACTOR`); zmeny
+nastavení vyžadujú opätovné potvrdenie hesla a zapisujú sa do auditu.
+
+Moduly: prehľad (náklady AI dnes/mesiac/30 dní, rozpočet, fronta), **AI použitie a náklady** (tokeny, odhad ceny podľa
+verzovaného cenníka v mikro-USD, rozpad podľa modelu, domácnosti a dňa, posledné úlohy bez obsahu receptov),
+**AI nastavenia** (kill switch, model, reasoning effort low/medium/high, kvalita a rozmer obrázkov, denné limity,
+mesačný rozpočet), **Cenník AI**, domácnosti, audit. Hodnoty z administrácie prepisujú `.env`; už zaradené AI úlohy
+bežia so svojím pôvodným profilom. Stav etáp v2 je v `docs/v2-etapy-a-stav.md`.
 
 ## Ako funguje výber jedla
 

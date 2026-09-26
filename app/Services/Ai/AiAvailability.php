@@ -12,14 +12,16 @@ use App\Models\Household;
  */
 class AiAvailability
 {
+    public function __construct(private AiSettings $settings) {}
+
     public function textProvider(): string
     {
-        return (string) config('recipes.ai.text_provider');
+        return $this->settings->textProvider();
     }
 
     public function imageProvider(): string
     {
-        return (string) config('recipes.ai.image_provider');
+        return $this->settings->imageProvider();
     }
 
     public function textConfigured(): bool
@@ -33,6 +35,14 @@ class AiAvailability
     }
 
     /**
+     * Global kill switch set by the administrator: stops new jobs, keeps all data.
+     */
+    public function enabled(): bool
+    {
+        return $this->settings->enabled();
+    }
+
+    /**
      * Returns null when a new job may start, otherwise the reason why not.
      */
     public function reasonUnavailable(Household $household, AiJobKind $kind): ?string
@@ -42,7 +52,11 @@ class AiAvailability
             return 'AI nie je nakonfigurované – chýba API kľúč poskytovateľa. Recept funguje bez AI.';
         }
 
-        $limit = (int) config($kind === AiJobKind::Text ? 'recipes.ai.daily_text_limit' : 'recipes.ai.daily_image_limit');
+        if (! $this->enabled()) {
+            return 'AI funkcie sú dočasne nedostupné. Recepty môžeš ďalej upravovať ručne.';
+        }
+
+        $limit = $kind === AiJobKind::Text ? $this->settings->dailyTextLimit() : $this->settings->dailyImageLimit();
         $used = AiJob::query()
             ->where('household_id', $household->id)
             ->where('kind', $kind)
@@ -58,7 +72,7 @@ class AiAvailability
             ->whereIn('status', [AiJobStatus::Queued, AiJobStatus::Running])
             ->count();
 
-        if ($running >= (int) config('recipes.ai.max_concurrent_jobs')) {
+        if ($running >= $this->settings->maxConcurrentJobs()) {
             return 'Prebieha už maximálny počet AI úloh. Počkaj na ich dokončenie.';
         }
 

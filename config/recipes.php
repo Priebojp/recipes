@@ -46,6 +46,12 @@ return [
         'text_model' => env('RECIPES_AI_TEXT_MODEL'),
         'image_provider' => env('RECIPES_AI_IMAGE_PROVIDER', 'openai'),
         'image_model' => env('RECIPES_AI_IMAGE_MODEL'),
+        // Reasoning effort sent to OpenAI reasoning models (gpt-5/gpt-6 family): default|low|medium|high.
+        // "default" sends nothing and lets the provider decide. Overridable at runtime in /admin → AI nastavenia.
+        'text_reasoning_effort' => env('RECIPES_AI_TEXT_REASONING_EFFORT', 'low'),
+        // Image profile "Standard" from the v2 specification: medium quality, 1024 × 1024, one image.
+        'image_quality' => env('RECIPES_AI_IMAGE_QUALITY', 'medium'),
+        'image_size' => env('RECIPES_AI_IMAGE_SIZE', '1:1'),
         'text_prompt_version' => '1',
         'image_prompt_version' => '1',
         // Per household limits; the UI shows exhaustion before another run.
@@ -53,6 +59,10 @@ return [
         'daily_image_limit' => (int) env('RECIPES_AI_DAILY_IMAGE_LIMIT', 10),
         'max_concurrent_jobs' => (int) env('RECIPES_AI_MAX_CONCURRENT', 2),
         'timeout_seconds' => (int) env('RECIPES_AI_TIMEOUT', 120),
+        // Soft monthly budget for the admin dashboard (USD, provider list prices). Alarm only – never cuts paid usage.
+        'monthly_budget_usd' => env('RECIPES_AI_MONTHLY_BUDGET_USD'),
+        // Global kill switch default (runtime value lives in app_settings, editable in /admin).
+        'enabled' => (bool) env('RECIPES_AI_ENABLED', true),
     ],
 
     'export' => [
