@@ -62,8 +62,8 @@ new #[Title('Čo variť')] class extends Component {
     }
 }; ?>
 
-<div class="mx-auto max-w-2xl space-y-6">
-    <x-page-header title="Čo dnes navarím?" />
+<div class="mx-auto max-w-3xl space-y-8">
+    <x-page-header title="Čo dnes navarím?" :subtitle="app(App\Support\CurrentHousehold::class)->get()->name" />
 
     @if ($this->recipeCount === 0)
         <flux:callout icon="book-open">
@@ -82,9 +82,19 @@ new #[Title('Čo variť')] class extends Component {
             </x-slot>
         </flux:callout>
     @else
-        <flux:button :href="route('cook.select')" wire:navigate variant="primary" icon="sparkles" class="w-full py-6 text-lg" data-test="pick-meal">
-            Vyber mi jedlo
-        </flux:button>
+        <section class="relative overflow-hidden rounded-3xl bg-zinc-900 p-6 text-white shadow-lg sm:p-8 dark:bg-zinc-800">
+            <div class="pointer-events-none absolute -right-16 -top-20 size-64 rounded-full bg-accent/50 blur-3xl"></div>
+            <div class="pointer-events-none absolute -bottom-24 left-1/3 size-56 rounded-full bg-amber-300/20 blur-3xl"></div>
+            <div class="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+                <div class="space-y-1">
+                    <h2 class="font-display text-2xl font-bold sm:text-3xl">Nechaj si navrhnúť jedlo</h2>
+                    <p class="text-sm text-zinc-300">{{ trans_choice('{1} :count recept|[2,4] :count recepty|[0,*] :count receptov', $this->recipeCount) }} · {{ trans_choice('{1} :count stravník|[2,4] :count stravníci|[0,*] :count stravníkov', $this->personCount) }}</p>
+                </div>
+                <flux:button :href="route('cook.select')" wire:navigate variant="primary" icon="sparkles" class="shrink-0 px-6 py-6 text-base" data-test="pick-meal">
+                    Vyber mi jedlo
+                </flux:button>
+            </div>
+        </section>
 
         @if ($this->unfinishedSession)
             <flux:callout icon="arrow-path" variant="secondary">
@@ -97,20 +107,20 @@ new #[Title('Čo variť')] class extends Component {
         @endif
     @endif
 
-    <div>
-        <div class="mb-2 flex items-center justify-between">
-            <flux:heading size="lg">Dnešný plán</flux:heading>
+    <section class="space-y-3">
+        <div class="flex items-center justify-between">
+            <flux:heading size="lg" class="font-display">Dnešný plán</flux:heading>
             <flux:link :href="route('plan.index')" wire:navigate class="text-sm">Celý plán</flux:link>
         </div>
 
         @forelse ($this->todayPlans as $plan)
-            <div class="mb-2 flex items-center gap-3 rounded-xl border border-zinc-200 p-2 dark:border-zinc-700">
-                <x-recipe-cover :recipe="$plan->recipe" conversion="thumb" class="size-16 shrink-0 rounded-lg" />
+            <flux:card size="sm" class="flex items-center gap-3 !p-2.5">
+                <x-recipe-cover :recipe="$plan->recipe" conversion="thumb" class="size-16 shrink-0 rounded-xl" />
                 <div class="min-w-0 flex-1">
-                    <a href="{{ route('recipes.show', $plan->recipe) }}" wire:navigate class="block truncate font-medium">{{ $plan->recipe->title }}</a>
-                    <div class="flex flex-wrap items-center gap-1 text-xs text-zinc-500">
-                        @if ($plan->meal_type)<span>{{ $plan->meal_type->label() }}</span>@endif
-                        @if ($plan->servings)<span>· {{ $plan->servings }} porcií</span>@endif
+                    <a href="{{ route('recipes.show', $plan->recipe) }}" wire:navigate class="block truncate font-semibold">{{ $plan->recipe->title }}</a>
+                    <div class="flex flex-wrap items-center gap-1.5 text-xs text-zinc-500">
+                        @if ($plan->meal_type)<flux:badge size="sm" color="orange" variant="pill">{{ $plan->meal_type->label() }}</flux:badge>@endif
+                        @if ($plan->servings)<span>{{ $plan->servings }} porcií</span>@endif
                         <span class="flex -space-x-1">
                             @foreach ($plan->people as $person)
                                 <x-person-avatar :person="$person" size="size-5" />
@@ -119,11 +129,25 @@ new #[Title('Čo variť')] class extends Component {
                     </div>
                 </div>
                 <flux:button size="sm" icon="check" wire:click="openCooked({{ $plan->recipe_id }}, {{ $plan->id }})">Uvarené</flux:button>
-            </div>
+            </flux:card>
         @empty
-            <flux:text>Na dnes nie je nič naplánované.</flux:text>
+            <flux:card variant="soft" size="sm" class="text-center">
+                <flux:text>Na dnes nie je nič naplánované.</flux:text>
+            </flux:card>
         @endforelse
-    </div>
+    </section>
+
+    <section class="grid grid-cols-3 gap-3">
+        <a href="{{ route('recipes.create') }}" wire:navigate class="flex flex-col items-center gap-2 rounded-2xl border border-zinc-200/80 bg-white p-4 text-center text-sm font-medium transition hover:border-accent/50 dark:border-zinc-700 dark:bg-zinc-800">
+            <flux:icon name="plus" class="size-6 text-accent" /> Nový recept
+        </a>
+        <a href="{{ route('plan.history') }}" wire:navigate class="flex flex-col items-center gap-2 rounded-2xl border border-zinc-200/80 bg-white p-4 text-center text-sm font-medium transition hover:border-accent/50 dark:border-zinc-700 dark:bg-zinc-800">
+            <flux:icon name="clock" class="size-6 text-accent" /> História
+        </a>
+        <a href="{{ route('home') }}" wire:navigate class="flex flex-col items-center gap-2 rounded-2xl border border-zinc-200/80 bg-white p-4 text-center text-sm font-medium transition hover:border-accent/50 dark:border-zinc-700 dark:bg-zinc-800">
+            <flux:icon name="globe-alt" class="size-6 text-accent" /> Verejné recepty
+        </a>
+    </section>
 
     <livewire:cooked-panel />
 </div>

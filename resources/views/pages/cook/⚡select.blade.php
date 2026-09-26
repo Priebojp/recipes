@@ -20,8 +20,6 @@ new #[Title('Vyber mi jedlo')] class extends Component {
 
     public ?string $date = null;
 
-    public bool $showFilters = false;
-
     public bool $includeUntyped = true;
 
     public bool $onlyFavoritesOfAll = false;
@@ -137,7 +135,7 @@ new #[Title('Vyber mi jedlo')] class extends Component {
             <flux:legend>1. Pre koho varíš?</flux:legend>
             <div class="flex flex-wrap gap-2">
                 @foreach ($this->people as $person)
-                    <label class="flex cursor-pointer items-center gap-2 rounded-full border px-3 py-2 text-sm {{ in_array($person->id, $personIds) ? 'border-accent bg-accent/10 font-medium' : 'border-zinc-300 dark:border-zinc-600' }}">
+                    <label class="flex cursor-pointer items-center gap-2 rounded-full border px-3 py-2 text-sm transition {{ in_array($person->id, $personIds) ? 'border-accent bg-accent/10 font-medium text-accent-content' : 'border-zinc-300 bg-white hover:border-zinc-400 dark:border-zinc-600 dark:bg-zinc-800' }}">
                         <input type="checkbox" wire:model.live="personIds" value="{{ $person->id }}" class="sr-only" />
                         <x-person-avatar :person="$person" size="size-6" />
                         {{ $person->name }}
@@ -172,27 +170,25 @@ new #[Title('Vyber mi jedlo')] class extends Component {
             <flux:radio value="unknown" label="Zatiaľ neviem" />
         </flux:radio.group>
         @if ($term === 'date')
-            <flux:input type="date" wire:model="date" label="Dátum" />
+            <flux:date-picker wire:model="date" label="Dátum" with-today clearable />
         @endif
 
-        <div class="rounded-lg border border-zinc-200 dark:border-zinc-700">
-            <button type="button" wire:click="$toggle('showFilters')" class="flex w-full items-center justify-between px-4 py-3 text-sm font-medium">
-                <span>4. Voliteľné filtre</span>
-                <flux:icon :name="$showFilters ? 'chevron-up' : 'chevron-down'" class="size-4" />
-            </button>
-            @if ($showFilters)
-                <div class="space-y-4 border-t border-zinc-200 p-4 dark:border-zinc-700">
-                    <flux:input type="number" min="1" wire:model.live="maxMinutes" label="Najviac minút (celkový čas)" placeholder="napr. 30" />
-                    @if ($maxMinutes)
-                        <flux:checkbox wire:model="includeUnknownTime" label="Zahrnúť aj jedlá s neznámym časom" />
-                    @endif
-                    <flux:checkbox wire:model="onlyFavoritesOfAll" label="Iba obľúbené všetkých" />
-                    <flux:checkbox wire:model="allowDisliked" label="Pripustiť aj menej obľúbené (Nemá rád dostane nízku váhu)" />
-                    <flux:checkbox wire:model="includeUntyped" label="Zahrnúť recepty bez typu jedla" />
-                    <flux:input type="number" min="1" wire:model="noRepeatDays" label="Neopakovať posledných X dní (prísny filter)" placeholder="napr. 14" />
-                </div>
-            @endif
-        </div>
+        <flux:card size="sm" class="!py-1">
+            <flux:accordion transition>
+                <flux:accordion.item heading="4. Voliteľné filtre">
+                    <div class="space-y-4 pt-2">
+                        <flux:input type="number" min="1" wire:model.live="maxMinutes" label="Najviac minút (celkový čas)" placeholder="napr. 30" />
+                        @if ($maxMinutes)
+                            <flux:checkbox wire:model="includeUnknownTime" label="Zahrnúť aj jedlá s neznámym časom" />
+                        @endif
+                        <flux:checkbox wire:model="onlyFavoritesOfAll" label="Iba obľúbené všetkých" />
+                        <flux:checkbox wire:model="allowDisliked" label="Pripustiť aj menej obľúbené (Nemá rád dostane nízku váhu)" />
+                        <flux:checkbox wire:model="includeUntyped" label="Zahrnúť recepty bez typu jedla" />
+                        <flux:input type="number" min="1" wire:model="noRepeatDays" label="Neopakovať posledných X dní (prísny filter)" placeholder="napr. 14" />
+                    </div>
+                </flux:accordion.item>
+            </flux:accordion>
+        </flux:card>
 
         @if ($error)
             <flux:callout icon="exclamation-circle" variant="danger">{{ $error }}</flux:callout>

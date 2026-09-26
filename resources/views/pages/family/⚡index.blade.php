@@ -114,15 +114,13 @@ new #[Title('Rodina')] class extends Component {
 }; ?>
 
 <div class="mx-auto max-w-2xl space-y-6">
-    <x-page-header title="Rodina a hostia">
+    <x-page-header title="Rodina a hostia" subtitle="Stravníci nepotrebujú vlastný účet. Dvaja ľudia môžu mať rovnaké meno.">
         <flux:button :href="route('household.edit')" wire:navigate variant="ghost" icon="cog-6-tooth" size="sm">Domácnosť</flux:button>
     </x-page-header>
 
-    <flux:text class="text-sm">Stravníci nepotrebujú vlastný účet. Dvaja ľudia môžu mať rovnaké meno.</flux:text>
-
     @if ($this->canEdit)
-        <form wire:submit="save" class="space-y-3 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
-            <flux:heading size="sm">{{ $editingId ? 'Upraviť stravníka' : 'Nový stravník' }}</flux:heading>
+        <flux:card as="form" wire:submit="save" class="space-y-3">
+            <flux:heading size="lg" class="font-display">{{ $editingId ? 'Upraviť stravníka' : 'Nový stravník' }}</flux:heading>
             <div class="grid gap-3 sm:grid-cols-3">
                 <flux:input wire:model="name" label="Meno" placeholder="napr. Eva" data-test="person-name" />
                 <flux:select wire:model="kind" label="Typ">
@@ -135,16 +133,16 @@ new #[Title('Rodina')] class extends Component {
                 <flux:button type="submit" variant="primary" data-test="person-save">{{ $editingId ? 'Uložiť' : 'Pridať' }}</flux:button>
                 @if ($editingId)<flux:button wire:click="cancelEdit" variant="ghost">Zrušiť</flux:button>@endif
             </div>
-        </form>
+        </flux:card>
     @endif
 
     <section class="space-y-2">
         <div class="flex items-center justify-between">
-            <flux:heading size="lg">Stravníci</flux:heading>
+            <flux:heading size="lg" class="font-display">Stravníci</flux:heading>
             <flux:checkbox wire:model.live="showArchived" label="Aj archivovaní" />
         </div>
         @foreach ($this->people as $person)
-            <div class="flex items-center gap-3 rounded-lg border border-zinc-200 p-2 dark:border-zinc-700 {{ $person->archived_at ? 'opacity-60' : '' }}" wire:key="person-{{ $person->id }}">
+            <flux:card size="sm" class="flex items-center gap-3 !p-2.5 {{ $person->archived_at ? 'opacity-60' : '' }}" wire:key="person-{{ $person->id }}">
                 <x-person-avatar :person="$person" size="size-9" />
                 <div class="min-w-0 flex-1">
                     <div class="truncate font-medium">{{ $person->name }}</div>
@@ -168,24 +166,24 @@ new #[Title('Rodina')] class extends Component {
                         </flux:menu>
                     </flux:dropdown>
                 @endif
-            </div>
+            </flux:card>
         @endforeach
     </section>
 
     @if ($this->canEdit)
-        <section class="space-y-2 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
-            <flux:heading size="sm">Predvolená skupina stravníkov</flux:heading>
+        <flux:card class="space-y-3">
+            <flux:heading size="lg" class="font-display">Predvolená skupina stravníkov</flux:heading>
             <flux:text class="text-sm">Použije sa pri ďalšom otvorení generátora a plánovania.</flux:text>
             <div class="flex flex-wrap gap-2">
                 @foreach ($this->people->whereNull('archived_at') as $person)
-                    <label class="flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-sm {{ in_array($person->id, $defaultPersonIds) ? 'border-accent bg-accent/10' : 'border-zinc-300 dark:border-zinc-600' }}">
+                    <label class="flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition {{ in_array($person->id, $defaultPersonIds) ? 'border-accent bg-accent/10 font-medium text-accent-content' : 'border-zinc-300 hover:border-zinc-400 dark:border-zinc-600' }}">
                         <input type="checkbox" wire:model.live="defaultPersonIds" value="{{ $person->id }}" class="sr-only" />
                         <x-person-avatar :person="$person" size="size-5" /> {{ $person->name }}
                     </label>
                 @endforeach
             </div>
             <flux:button wire:click="saveDefaults" size="sm" variant="primary">Uložiť skupinu</flux:button>
-        </section>
+        </flux:card>
 
         <livewire:household-invitations />
     @endif

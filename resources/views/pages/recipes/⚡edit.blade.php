@@ -59,6 +59,8 @@ new class extends Component {
 
     public string $error = '';
 
+    public bool $isPublic = false;
+
     public function mount(Recipe $recipe): void
     {
         abort_unless($recipe->household_id === app(CurrentHousehold::class)->id(), 404);
@@ -71,6 +73,7 @@ new class extends Component {
     {
         $recipe->load(['ingredients', 'steps', 'mealTypes']);
         $this->version = $recipe->version;
+        $this->isPublic = $recipe->isPublic();
         $this->title = $recipe->title;
         $this->description = (string) $recipe->description;
         $this->mealTypes = array_map(fn ($t) => $t->value, $recipe->mealTypeEnums());
@@ -263,6 +266,14 @@ new class extends Component {
         $this->fillFrom($this->recipe);
     }
 
+    public function updatedIsPublic(bool $value, RecipeService $recipes): void
+    {
+        $this->authorize('update', $this->recipe);
+        $value ? $recipes->publish($this->recipe) : $recipes->unpublish($this->recipe);
+        unset($this->recipe);
+        \Flux\Flux::toast(variant: $value ? 'success' : null, text: $value ? 'Recept je verejný. Zobrazí sa na hlavnej stránke.' : 'Recept už nie je verejný.');
+    }
+
     public function destroy(RecipeService $recipes): void
     {
         $this->authorize('delete', $this->recipe);
@@ -301,11 +312,13 @@ new class extends Component {
         </section>
 
         <section class="space-y-3">
-            <flux:heading size="lg">Hlavná fotografia</flux:heading>
+            <flux:heading size="lg" class="font-display">Hlavná fotografia</flux:heading>
             <div class="flex flex-col gap-3 sm:flex-row">
                 <x-recipe-cover :recipe="$recipe" conversion="thumb" class="aspect-[4/3] w-full rounded-xl sm:w-56" />
                 <div class="flex-1 space-y-2">
-                    <flux:input type="file" wire:model="cover" label="Nahrať vlastnú fotografiu" accept="image/jpeg,image/png,image/webp" />
+                    <flux:file-upload wire:model="cover" label="Nahrať vlastnú fotografiu" accept="image/jpeg,image/png,image/webp">
+                        <flux:file-upload.dropzone inline heading="Pretiahni fotku alebo klikni" text="JPG, PNG alebo WebP do 10 MB" />
+                    </flux:file-upload>
                     <div wire:loading wire:target="cover" class="text-sm text-zinc-500">Nahrávam…</div>
                     @error('cover')<flux:text class="text-sm text-red-600">{{ $message }}</flux:text>@enderror
                     @if ($recipe->cover)
@@ -337,7 +350,7 @@ new class extends Component {
 
         <section class="space-y-3">
             <div class="flex items-center justify-between">
-                <flux:heading size="lg">Suroviny <span class="text-sm font-normal text-zinc-500">({{ count(array_filter($ingredients, fn ($l) => trim($l['name']) !== '')) }})</span></flux:heading>
+                <flux:heading size="lg" class="font-display">Suroviny <span class="text-sm font-normal text-zinc-500">({{ count(array_filter($ingredients, fn ($l) => trim($l['name']) !== '')) }})</span></flux:heading>
                 <flux:button size="sm" icon="plus" wire:click="addIngredient" data-test="add-ingredient">Pridať riadok</flux:button>
             </div>
             <flux:text class="text-xs text-zinc-500">Množstvo môže byť číslo (2, 1/2, 1,5) alebo text („podľa chuti“, „trochu“) alebo prázdne.</flux:text>
@@ -358,11 +371,11 @@ new class extends Component {
 
         <section class="space-y-3">
             <div class="flex items-center justify-between">
-                <flux:heading size="lg">Postup</flux:heading>
+                <flux:heading size="lg" class="font-display">Postup</flux:heading>
                 <flux:button size="sm" icon="plus" wire:click="addStep" data-test="add-step">Pridať krok</flux:button>
             </div>
             @foreach ($steps as $i => $step)
-                <div class="rounded-lg border border-zinc-200 p-2 dark:border-zinc-700" wire:key="step-{{ $i }}-{{ $step['id'] ?? 'new' }}">
+                <flux:card size="sm" class="!p-2" wire:key="step-{{ $i }}-{{ $step['id'] ?? 'new' }}">
                     <div class="flex gap-2">
                         <span class="mt-2 text-sm font-semibold text-zinc-500">{{ $i + 1 }}.</span>
                         <flux:textarea wire:model="steps.{{ $i }}.text" rows="3" class="flex-1" placeholder="Text kroku" />
@@ -391,12 +404,12 @@ new class extends Component {
                     @else
                         <div class="mt-1 text-xs text-zinc-500">Fotografie kroku sa dajú pridať po uložení.</div>
                     @endif
-                </div>
+                </flux:card>
             @endforeach
         </section>
 
         <section class="space-y-4">
-            <flux:heading size="lg">Ďalšie údaje</flux:heading>
+            <flux:heading size="lg" class="font-display">Ďalšie údaje</flux:heading>
             <flux:select wire:model.live="sideRequirement" label="Potreba prílohy">
                 @foreach (SideRequirement::cases() as $option)
                     <flux:select.option :value="$option->value">{{ $option->label() }}</flux:select.option>
@@ -413,20 +426,34 @@ new class extends Component {
             <flux:textarea wire:model="notes" label="Poznámky" rows="2" />
         </section>
 
-        <div class="sticky bottom-20 z-10 flex gap-2 rounded-xl border border-zinc-200 bg-white/95 p-2 backdrop-blur lg:bottom-4 dark:border-zinc-700 dark:bg-zinc-800/95">
+        <div class="sticky bottom-24 z-10 flex gap-2 rounded-2xl border border-zinc-200 bg-white/95 p-2 shadow-lg backdrop-blur lg:bottom-4 dark:border-zinc-700 dark:bg-zinc-800/95">
             <flux:button type="submit" variant="primary" class="flex-1" data-test="recipe-save">Uložiť</flux:button>
             <flux:button wire:click="save(true)" class="flex-1">Uložiť a pokračovať v úprave</flux:button>
         </div>
     </form>
 
     <section class="space-y-3">
-        <flux:heading size="lg">Úprava textu pomocou AI</flux:heading>
+        <flux:heading size="lg" class="font-display">Úprava textu pomocou AI</flux:heading>
         <livewire:ai-text-assistant :recipe-id="$recipe->id" :key="'ai-text-'.$recipe->id" />
     </section>
 
-    <section class="rounded-xl border border-red-200 p-4 dark:border-red-900">
+    <flux:card class="space-y-3" @input.stop>
+        <flux:heading size="lg" class="font-display">Zdieľanie</flux:heading>
+        <flux:switch wire:model.live="isPublic" label="Verejný recept" description="Zobrazí sa na hlavnej stránke aj neprihláseným. Fotky verejného receptu sú tiež verejné." :disabled="$recipe->isArchived()" data-test="public-switch" />
+        @if ($recipe->isPublic())
+            <flux:input :value="route('public.recipe', $recipe)" readonly copyable label="Verejný odkaz" />
+        @endif
+    </flux:card>
+
+    <flux:card class="space-y-2 border-red-200 dark:border-red-900/60">
         <flux:heading size="sm">Nebezpečná zóna</flux:heading>
-        <flux:text class="mb-2 text-sm">Archivácia je bezpečná (recept zostane v pláne a histórii). Úplné vymazanie ponechá v histórii iba uložený názov.</flux:text>
-        <flux:button variant="danger" size="sm" icon="trash" wire:click="destroy" wire:confirm="Naozaj úplne vymazať recept? História si ponechá iba názov.">Vymazať recept</flux:button>
-    </section>
+        <flux:text class="text-sm">Archivácia je bezpečná (recept zostane v pláne a histórii). Úplné vymazanie ponechá v histórii iba uložený názov.</flux:text>
+        <div>
+            <flux:modal.trigger name="delete-recipe">
+                <flux:button variant="danger" size="sm" icon="trash" data-test="delete">Vymazať recept</flux:button>
+            </flux:modal.trigger>
+        </div>
+    </flux:card>
+
+    <x-confirm-modal name="delete-recipe" title="Naozaj úplne vymazať recept?" text="História si ponechá iba názov. Toto sa nedá vrátiť späť." confirm="Vymazať" action="destroy" />
 </div>

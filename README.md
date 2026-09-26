@@ -2,7 +2,7 @@
 
 Súkromná aplikácia pre jednu domácnosť: knižnica vlastných receptov, chute jednotlivých stravníkov, vážený náhodný výber jedla, plán a história varenia. Voliteľne AI úprava textu receptu a AI ilustrácia jedla (Laravel AI SDK). Zadanie je v `docs/recepty-zadanie-pre-coding-agenta.md`.
 
-Stack: Laravel 13, Livewire 4 (single-file komponenty v `resources/views/pages`), Flux UI (Free + Pro deklarované v `composer.json`), Spatie Media Library, Laravel AI SDK, Pest.
+Stack: Laravel 13, Livewire 4 (single-file komponenty v `resources/views/pages`), Flux UI Pro, Spatie Media Library, Laravel AI SDK, Pest.
 
 ## Spustenie
 
@@ -45,7 +45,8 @@ Vysvetlenie na karte („Obľúbené pre 2 z 3 • 24 dní sa nevarilo“) vznik
 - Plán (`meal_plans`) má práve jeden režim: deň, týždeň bez dňa (pondelok) alebo „Niekedy“. Stav planned/cooked/cancelled.
 - História (`cooking_events`) vzniká iba potvrdením; jeden aktívny záznam na plán (`active_plan_key`), idempotencia cez `idempotency_key`, oprava omylu = zneplatnenie (`voided_at`).
 - Recept má revízie (`recipe_revisions`, nemenné snímky) a `version` na kontrolu súbežnej úpravy. AI návrh sa aplikuje len ak sa revízia medzičasom nezmenila.
-- Obrázky: privátny disk (`MEDIA_DISK=local`), servírované cez `/media/{id}` po overení domácnosti; upload sa prekóduje (oprava orientácie, odstránenie EXIF/GPS), povolené JPG/PNG/WebP do 10 MB a 6000 px. Predchádzajúce hlavné fotky sa dajú obnoviť.
+- Verejné recepty: editor recept zverejní (`published_at`) v detaile alebo v úprave (sekcia Zdieľanie). Zverejnené a nearchivované recepty sa zobrazujú na hlavnej stránke `/` a na `/recept/{id}` aj bez prihlásenia; archivácia zverejnenie skryje.
+- Obrázky: privátny disk (`MEDIA_DISK=local`), servírované cez `/media/{id}` po overení domácnosti (obrázky verejných receptov sú verejné); upload sa prekóduje (oprava orientácie, odstránenie EXIF/GPS), povolené JPG/PNG/WebP do 10 MB a 6000 px. Predchádzajúce hlavné fotky sa dajú obnoviť.
 - Dátumy jedál sú `DATE` (cast `DateOnly`), technické časy UTC. Časová zóna domácnosti (predvolene Europe/Bratislava) určuje „dnes“, „zajtra“ a hranice týždňa.
 
 ## Zálohy, obnova a export
@@ -57,9 +58,9 @@ Vysvetlenie na karte („Obľúbené pre 2 z 3 • 24 dní sa nevarilo“) vznik
 
 Hotové (etapy A–E zadania): domácnosť a profily bez prihlasovania, recepty iba názvom aj úplné, médiá, chute a výluky, generátor s reláciou a kartami, plán v troch režimoch, potvrdenie/odvolanie varenia, história a jej vplyv na váhy, AI text s revíziami a konfliktmi, AI obrázok s rozhodovaním o nádobe a schvaľovaním, rodinné účty s pozvánkami a rolami, export, demo dáta, testy akceptačných scenárov.
 
-Odložené (podľa zadania nezačaté): nákupný zoznam, import z webu/fotky, zásoby, automatický týždenný jedálniček, prílohy ako samostatné recepty, zvyšky, verejné zdieľanie, obmedzenia podľa surovín s normalizovaným zoznamom (kap. 11), PWA/offline.
+Odložené (podľa zadania nezačaté): nákupný zoznam, import z webu/fotky, zásoby, automatický týždenný jedálniček, prílohy ako samostatné recepty, zvyšky, obmedzenia podľa surovín s normalizovaným zoznamom (kap. 11), PWA/offline.
 
 Odchýlky a poznámky:
 - Fotografie krokov, ktoré AI návrh zlúči alebo rozdelí, vyžadujú potvrdenie; nepriradené fotky sa po potvrdení presunú na posledný krok.
 - Jednorazový hosť sa archivuje po ukončení výberu tlačidlom „Hotovo“.
-- Flux Pro komponenty (date-picker, tabs…) zatiaľ nie sú použité; UI je postavené z Free komponentov, Pro zostáva v závislostiach.
+- UI: jedna navigácia (na desktope bočný panel, na mobile spodná lišta s kartou „Viac“ pre účet, históriu a nastavenia), téma s teplými odtieňmi a akcentom, potvrdenia cez Flux modálne okná namiesto prehliadačového `confirm()`. Z Flux Pro sa používajú date-picker, accordion, file-upload, table a timeline.

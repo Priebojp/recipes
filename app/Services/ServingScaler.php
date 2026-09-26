@@ -38,7 +38,7 @@ class ServingScaler
 
                 if ($ratio !== null) {
                     $value = $value * $ratio;
-                    $scaled = $ratio !== 1.0;
+                    $scaled = abs($ratio - 1.0) > 1e-9;
                 }
 
                 $amount = $this->parser->format($value);

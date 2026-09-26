@@ -37,13 +37,14 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
  * @property int|null $active_revision_id
  * @property int $version
  * @property Carbon|null $archived_at
+ * @property Carbon|null $published_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
 #[Fillable([
     'household_id', 'created_by', 'title', 'description', 'base_servings', 'prep_minutes', 'cook_minutes',
     'side_requirement', 'included_side', 'serving_mode', 'raw_text', 'source', 'notes', 'cover_media_id',
-    'active_revision_id', 'version', 'archived_at',
+    'active_revision_id', 'version', 'archived_at', 'published_at',
 ])]
 class Recipe extends Model implements HasMedia
 {
@@ -64,6 +65,7 @@ class Recipe extends Model implements HasMedia
             'side_requirement' => SideRequirement::class,
             'serving_mode' => ServingMode::class,
             'archived_at' => 'datetime',
+            'published_at' => 'datetime',
             'base_servings' => 'integer',
             'prep_minutes' => 'integer',
             'cook_minutes' => 'integer',
@@ -157,6 +159,21 @@ class Recipe extends Model implements HasMedia
     public function isArchived(): bool
     {
         return $this->archived_at !== null;
+    }
+
+    /**
+     * Recipes shared on the public home page: published and not archived.
+     *
+     * @param  Builder<Recipe>  $query
+     */
+    public function scopePublished(Builder $query): void
+    {
+        $query->whereNotNull('published_at')->whereNull('archived_at');
+    }
+
+    public function isPublic(): bool
+    {
+        return $this->published_at !== null && ! $this->isArchived();
     }
 
     /** @return list<MealType> */

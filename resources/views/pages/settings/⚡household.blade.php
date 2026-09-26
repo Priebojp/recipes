@@ -46,7 +46,7 @@ new #[Title('Domácnosť')] class extends Component {
 <div class="mx-auto max-w-xl space-y-6">
     <x-page-header title="Nastavenia domácnosti" :back="route('family.index')" />
 
-    <form wire:submit="save" class="space-y-4">
+    <flux:card as="form" wire:submit="save" class="space-y-4">
         <flux:input wire:model="name" label="Názov domácnosti" />
         <flux:select wire:model="timezone" label="Časová zóna" description="Určuje „dnes“, „zajtra“ aj hranice týždňa.">
             @foreach ($this->timezones as $tz)
@@ -54,20 +54,20 @@ new #[Title('Domácnosť')] class extends Component {
             @endforeach
         </flux:select>
         <flux:button type="submit" variant="primary" :disabled="! auth()->user()->can('manage', $this->household)">Uložiť</flux:button>
-    </form>
+    </flux:card>
 
-    <section class="space-y-2 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
-        <flux:heading size="sm">Export údajov</flux:heading>
+    <flux:card class="space-y-2">
+        <flux:heading size="lg" class="font-display">Export údajov</flux:heading>
         <flux:text class="text-sm">ZIP s JSON (recepty, pôvodné texty, chute, plány, história) a všetkými obrázkami.</flux:text>
         <flux:button :href="route('export')" icon="arrow-down-tray" size="sm">Stiahnuť export</flux:button>
-    </section>
+    </flux:card>
 
-    <section class="space-y-2 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
-        <flux:heading size="sm">AI</flux:heading>
+    <flux:card class="space-y-2">
+        <flux:heading size="lg" class="font-display">AI</flux:heading>
         @php($ai = app(App\Services\Ai\AiAvailability::class))
         <flux:text class="text-sm">
             Text: {{ $ai->textConfigured() ? 'nakonfigurované ('.$ai->textProvider().')' : 'nenakonfigurované – chýba API kľúč' }}<br>
             Obrázky: {{ $ai->imageConfigured() ? 'nakonfigurované ('.$ai->imageProvider().')' : 'nenakonfigurované – chýba API kľúč' }}
         </flux:text>
-    </section>
+    </flux:card>
 </div>

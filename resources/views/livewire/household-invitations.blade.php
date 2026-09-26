@@ -1,25 +1,47 @@
-<section class="space-y-3 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700">
-    <flux:heading size="sm">Účty v domácnosti</flux:heading>
-    <flux:text class="text-sm">Vlastník spravuje domácnosť, editor upravuje recepty a plány, člen spravuje svoje chute a prezerá obsah.</flux:text>
-
-    <div class="space-y-1">
-        @foreach ($this->members as $membership)
-            <div class="flex items-center gap-2 text-sm">
-                <span class="flex-1 truncate">{{ $membership->user?->name }} <span class="text-zinc-500">({{ $membership->user?->email }})</span></span>
-                @if ($this->canManage && $membership->user_id !== $this->household->owner_user_id)
-                    <flux:select size="sm" wire:change="setRole({{ $membership->id }}, $event.target.value)" class="w-32">
-                        <flux:select.option value="editor" :selected="$membership->role->value === 'editor'">Editor</flux:select.option>
-                        <flux:select.option value="member" :selected="$membership->role->value === 'member'">Člen</flux:select.option>
-                    </flux:select>
-                    <flux:button size="xs" variant="ghost" icon="x-mark" wire:click="remove({{ $membership->id }})" wire:confirm="Odobrať účet z domácnosti?" aria-label="Odobrať" />
-                @else
-                    <flux:badge size="sm">{{ $membership->role->label() }}</flux:badge>
-                @endif
-            </div>
-        @endforeach
+<flux:card class="space-y-4">
+    <div>
+        <flux:heading size="lg" class="font-display">Účty v domácnosti</flux:heading>
+        <flux:text class="text-sm">Vlastník spravuje domácnosť, editor upravuje recepty a plány, člen spravuje svoje chute a prezerá obsah.</flux:text>
     </div>
 
+    <x-confirm-modal name="remove-member" title="Odobrať účet z domácnosti?" text="Používateľ stratí prístup k receptom a plánom. Jeho profil stravníka zostane." confirm="Odobrať" action="remove" />
+
+    <flux:table>
+        <flux:table.columns>
+            <flux:table.column>Účet</flux:table.column>
+            <flux:table.column>Rola</flux:table.column>
+            <flux:table.column></flux:table.column>
+        </flux:table.columns>
+        <flux:table.rows>
+            @foreach ($this->members as $membership)
+                <flux:table.row :key="'member-'.$membership->id">
+                    <flux:table.cell class="max-w-56">
+                        <div class="truncate font-medium">{{ $membership->user?->name }}</div>
+                        <div class="truncate text-xs text-zinc-500">{{ $membership->user?->email }}</div>
+                    </flux:table.cell>
+                    <flux:table.cell>
+                        @if ($this->canManage && $membership->user_id !== $this->household->owner_user_id)
+                            <flux:select size="sm" wire:change="setRole({{ $membership->id }}, $event.target.value)" class="w-32">
+                                <flux:select.option value="editor" :selected="$membership->role->value === 'editor'">Editor</flux:select.option>
+                                <flux:select.option value="member" :selected="$membership->role->value === 'member'">Člen</flux:select.option>
+                            </flux:select>
+                        @else
+                            <flux:badge size="sm" color="orange" variant="pill">{{ $membership->role->label() }}</flux:badge>
+                        @endif
+                    </flux:table.cell>
+                    <flux:table.cell align="end">
+                        @if ($this->canManage && $membership->user_id !== $this->household->owner_user_id)
+                            <flux:button size="xs" variant="ghost" icon="x-mark" wire:click="askRemove({{ $membership->id }})" aria-label="Odobrať" data-test="remove-member-{{ $membership->id }}" />
+                        @endif
+                    </flux:table.cell>
+                </flux:table.row>
+            @endforeach
+        </flux:table.rows>
+    </flux:table>
+
     @if ($this->canManage)
+        <flux:separator />
+
         <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
             <flux:select wire:model="role" label="Rola" class="sm:w-32">
                 <flux:select.option value="member">Člen</flux:select.option>
@@ -49,4 +71,4 @@
             </div>
         @endforeach
     @endif
-</section>
+</flux:card>

@@ -131,38 +131,26 @@ new #[Title('Recepty')] class extends Component {
             @endif
         </flux:callout>
     @else
-        <div class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+        <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
             @foreach ($this->recipes as $recipe)
-                <div class="group relative overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700" wire:key="recipe-{{ $recipe->id }}">
-                    <a href="{{ route('recipes.show', $recipe) }}" wire:navigate class="block">
-                        <x-recipe-cover :recipe="$recipe" conversion="thumb" class="aspect-[4/3] w-full" />
-                        <div class="space-y-1 p-2.5">
-                            <div class="line-clamp-2 font-medium leading-tight">{{ $recipe->title }}</div>
-                            @if ($recipe->description)
-                                <div class="line-clamp-2 text-xs text-zinc-500">{{ $recipe->description }}</div>
-                            @endif
-                            <div class="flex flex-wrap items-center gap-1 pt-1">
-                                @foreach ($recipe->mealTypeEnums() as $type)
-                                    <flux:badge size="sm">{{ $type->label() }}</flux:badge>
-                                @endforeach
-                                @if ($recipe->totalMinutes())
-                                    <span class="text-xs text-zinc-500">{{ $recipe->totalMinutes() }} min</span>
-                                @endif
-                                <span class="ml-auto flex -space-x-1">
-                                    @foreach ($recipe->preferences->take(4) as $pref)
-                                        @if ($pref->person)<x-person-avatar :person="$pref->person" size="size-5" />@endif
-                                    @endforeach
-                                </span>
-                            </div>
-                        </div>
-                    </a>
+                <x-recipe-card :recipe="$recipe" :href="route('recipes.show', $recipe)" wire:key="recipe-{{ $recipe->id }}">
+                    <x-slot:meta>
+                        @if ($recipe->isPublic())
+                            <flux:icon name="globe-alt" class="size-3.5 text-zinc-400" title="Verejný recept" />
+                        @endif
+                        <span class="ml-auto flex -space-x-1">
+                            @foreach ($recipe->preferences->take(4) as $pref)
+                                @if ($pref->person)<x-person-avatar :person="$pref->person" size="size-5" />@endif
+                            @endforeach
+                        </span>
+                    </x-slot:meta>
                     @if ($this->activePerson && ! $recipe->isArchived())
                         @php($liked = $recipe->preferences->contains(fn ($p) => $p->person_id === $this->activePerson->id))
-                        <button type="button" wire:click="toggleFavorite({{ $recipe->id }})" class="absolute right-2 top-2 rounded-full bg-white/90 p-1.5 shadow dark:bg-zinc-900/90" aria-label="{{ $liked ? 'Zrušiť obľúbené' : 'Označiť ako obľúbené' }}" data-test="heart-{{ $recipe->id }}">
+                        <button type="button" wire:click="toggleFavorite({{ $recipe->id }})" class="absolute right-2 top-2 rounded-full bg-white/90 p-1.5 shadow transition hover:scale-110 dark:bg-zinc-900/90" aria-label="{{ $liked ? 'Zrušiť obľúbené' : 'Označiť ako obľúbené' }}" data-test="heart-{{ $recipe->id }}">
                             <flux:icon name="heart" :variant="$liked ? 'solid' : 'outline'" class="size-5 {{ $liked ? 'text-red-500' : 'text-zinc-500' }}" />
                         </button>
                     @endif
-                </div>
+                </x-recipe-card>
             @endforeach
         </div>
         <div>{{ $this->recipes->links() }}</div>

@@ -3,7 +3,7 @@
     @if ($this->recipe)
         <div class="space-y-5">
             <div>
-                <flux:heading size="lg">{{ $saved ? 'Naplánované' : 'Chcem variť' }}</flux:heading>
+                <flux:heading size="lg" class="font-display">{{ $saved ? 'Naplánované' : 'Chcem variť' }}</flux:heading>
                 <flux:text class="mt-1">{{ $this->recipe->title }}</flux:text>
             </div>
 
@@ -25,7 +25,7 @@
                         <flux:legend>Pre koho</flux:legend>
                         <div class="flex flex-wrap gap-2">
                             @forelse ($this->people as $person)
-                                <label class="flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-sm {{ in_array($person->id, $personIds) ? 'border-accent bg-accent/10' : 'border-zinc-300 dark:border-zinc-600' }}">
+                                <label class="flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition {{ in_array($person->id, $personIds) ? 'border-accent bg-accent/10 font-medium text-accent-content' : 'border-zinc-300 hover:border-zinc-400 dark:border-zinc-600' }}">
                                     <input type="checkbox" wire:model.live="personIds" value="{{ $person->id }}" class="sr-only" />
                                     <x-person-avatar :person="$person" size="size-5" />
                                     {{ $person->name }}
@@ -53,7 +53,7 @@
                     </flux:radio.group>
 
                     @if ($term === 'date')
-                        <flux:input type="date" wire:model.live="date" label="Dátum" />
+                        <flux:date-picker wire:model.live="date" label="Dátum" with-today />
                     @endif
 
                     <flux:input type="number" min="1" wire:model="servings" label="Porcie" description="Návrh: 1 osoba = 1 porcia. Uprav podľa potreby." />

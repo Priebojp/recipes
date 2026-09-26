@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\IngredientAmountParser;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 
@@ -27,5 +28,17 @@ class IngredientLine extends Model
     public function hasNumericAmount(): bool
     {
         return $this->numeric_amount !== null;
+    }
+
+    /**
+     * Amount as written for the base servings: a formatted number or the free text ("podľa chuti").
+     */
+    public function displayAmount(): string
+    {
+        if ($this->numeric_amount !== null) {
+            return (new IngredientAmountParser)->format((float) $this->numeric_amount);
+        }
+
+        return (string) $this->text_amount;
     }
 }

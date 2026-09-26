@@ -8,42 +8,53 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * Kitchen theme: warm stone neutrals mapped onto the zinc scale (so every Flux component
+ * picks them up), a terracotta accent and a serif display face for titles.
+ */
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-display: 'Fraunces', ui-serif, Georgia, 'Times New Roman', serif;
 
-    --color-zinc-50: #fafafa;
-    --color-zinc-100: #f5f5f5;
-    --color-zinc-200: #e5e5e5;
-    --color-zinc-300: #d4d4d4;
-    --color-zinc-400: #a3a3a3;
-    --color-zinc-500: #737373;
-    --color-zinc-600: #525252;
-    --color-zinc-700: #404040;
-    --color-zinc-800: #262626;
-    --color-zinc-900: #171717;
-    --color-zinc-950: #0a0a0a;
+    --color-zinc-50: #fafaf9;
+    --color-zinc-100: #f5f5f4;
+    --color-zinc-200: #e7e5e4;
+    --color-zinc-300: #d6d3d1;
+    --color-zinc-400: #a8a29e;
+    --color-zinc-500: #78716c;
+    --color-zinc-600: #57534e;
+    --color-zinc-700: #44403c;
+    --color-zinc-800: #292524;
+    --color-zinc-900: #1c1917;
+    --color-zinc-950: #0c0a09;
 
-    --color-accent: var(--color-neutral-800);
-    --color-accent-content: var(--color-neutral-800);
-    --color-accent-foreground: var(--color-white);
+    --color-paper: #faf6f0;
+
+    --color-accent: #c2410c;
+    --color-accent-content: #c2410c;
+    --color-accent-foreground: #ffffff;
 }
 
 @layer theme {
     .dark {
-        --color-accent: var(--color-white);
-        --color-accent-content: var(--color-white);
-        --color-accent-foreground: var(--color-neutral-800);
+        --color-paper: #1c1917;
+        --color-accent: #fb923c;
+        --color-accent-content: #fdba74;
+        --color-accent-foreground: #1c1917;
     }
 }
 
 @layer base {
-
     *,
     ::after,
     ::before,
     ::backdrop,
     ::file-selector-button {
-        border-color: var(--color-gray-200, currentColor);
+        border-color: var(--color-zinc-200, currentColor);
+    }
+
+    body {
+        -webkit-font-smoothing: antialiased;
     }
 }
 
@@ -52,15 +63,16 @@
 }
 
 [data-flux-label] {
-    @apply  !mb-0 !leading-tight;
+    @apply !mb-0 !leading-tight;
 }
 
 input:focus[data-flux-control],
 textarea:focus[data-flux-control],
 select:focus[data-flux-control] {
-    @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
+    @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-paper;
 }
 
-/* \[:where(&)\]:size-4 {
-    @apply size-4;
-} */
+/* Bottom navigation on phones sits above the home indicator. */
+.pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+}

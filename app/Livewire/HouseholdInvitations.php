@@ -8,6 +8,7 @@ use App\Models\HouseholdInvitation;
 use App\Models\HouseholdMembership;
 use App\Models\Person;
 use App\Support\CurrentHousehold;
+use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -30,6 +31,8 @@ class HouseholdInvitations extends Component
     public ?int $personId = null;
 
     public ?string $createdLink = null;
+
+    public ?int $removingId = null;
 
     #[Computed]
     public function household(): Household
@@ -101,10 +104,17 @@ class HouseholdInvitations extends Component
         unset($this->members);
     }
 
-    public function remove(int $membershipId): void
+    public function askRemove(int $membershipId): void
+    {
+        $this->removingId = $membershipId;
+        Flux::modal('remove-member')->show();
+    }
+
+    public function remove(?int $membershipId = null): void
     {
         $this->authorize('manage', $this->household);
-        $membership = HouseholdMembership::query()->where('household_id', $this->household->id)->findOrFail($membershipId);
+        $membership = HouseholdMembership::query()->where('household_id', $this->household->id)->findOrFail($membershipId ?? $this->removingId);
+        $this->removingId = null;
         if ($membership->user_id === $this->household->owner_user_id) {
             return;
         }

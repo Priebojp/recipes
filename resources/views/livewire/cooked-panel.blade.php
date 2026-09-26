@@ -3,7 +3,7 @@
     @if ($this->recipe)
         <div class="space-y-5">
             <div>
-                <flux:heading size="lg">{{ $saved ? 'Uvarené' : 'Uvaril som' }}</flux:heading>
+                <flux:heading size="lg" class="font-display">{{ $saved ? 'Uvarené' : 'Uvaril som' }}</flux:heading>
                 <flux:text class="mt-1">{{ $this->recipe->title }}</flux:text>
             </div>
 
@@ -32,13 +32,13 @@
                 <flux:button variant="primary" wire:click="close" class="w-full" data-test="cooked-done">Hotovo</flux:button>
             @else
                 <form wire:submit="save" class="space-y-4">
-                    <flux:input type="date" wire:model="cookedOn" label="Skutočný dátum" />
+                    <flux:date-picker wire:model="cookedOn" label="Skutočný dátum" with-today />
 
                     <flux:fieldset>
                         <flux:legend>Pre koho sa varilo</flux:legend>
                         <div class="flex flex-wrap gap-2">
                             @foreach ($this->people as $person)
-                                <label class="flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-sm {{ in_array($person->id, $personIds) ? 'border-accent bg-accent/10' : 'border-zinc-300 dark:border-zinc-600' }}">
+                                <label class="flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition {{ in_array($person->id, $personIds) ? 'border-accent bg-accent/10 font-medium text-accent-content' : 'border-zinc-300 hover:border-zinc-400 dark:border-zinc-600' }}">
                                     <input type="checkbox" wire:model.live="personIds" value="{{ $person->id }}" class="sr-only" />
                                     <x-person-avatar :person="$person" size="size-5" />
                                     {{ $person->name }}

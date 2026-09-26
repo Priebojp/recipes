@@ -98,6 +98,19 @@ class RecipeService
     }
 
     /**
+     * Share the recipe on the public home page. Anyone with the link can read it and see its images.
+     */
+    public function publish(Recipe $recipe): void
+    {
+        $recipe->update(['published_at' => now()]);
+    }
+
+    public function unpublish(Recipe $recipe): void
+    {
+        $recipe->update(['published_at' => null]);
+    }
+
+    /**
      * Permanent delete. History keeps the stored title snapshot (recipe_id becomes NULL).
      */
     public function destroy(Recipe $recipe): void

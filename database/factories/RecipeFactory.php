@@ -21,4 +21,9 @@ class RecipeFactory extends Factory
     {
         return $this->state(fn () => ['archived_at' => now()]);
     }
+
+    public function published(): static
+    {
+        return $this->state(fn () => ['published_at' => now()]);
+    }
 }

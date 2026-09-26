@@ -39,3 +39,11 @@ it('parses numeric and textual amounts', function () {
         ->and($parser->parse(''))->toBe(['numeric' => null, 'text' => null])
         ->and($parser->parse(null))->toBe(['numeric' => null, 'text' => null]);
 });
+
+it('does not mark amounts as scaled when the target equals the base servings', function () {
+    $line = new IngredientLine(['name' => 'Múka', 'numeric_amount' => '250']);
+
+    $result = (new ServingScaler)->scale([$line], 4, 4);
+
+    expect($result[0]['scaled'])->toBeFalse()->and($result[0]['amount'])->toBe('250');
+});

@@ -5,9 +5,11 @@ use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\MediaController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return auth()->check() ? redirect()->route('cook.index') : view('welcome');
-})->name('home');
+Route::livewire('/', 'pages::home.index')->name('home');
+Route::livewire('recept/{recipe}', 'pages::home.recipe')->name('public.recipe');
+
+// Images of published recipes are public; the controller checks the household for everything else.
+Route::get('media/{media}/{conversion?}', MediaController::class)->name('media.show');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::redirect('dashboard', 'cook')->name('dashboard');
@@ -27,7 +29,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::livewire('family', 'pages::family.index')->name('family.index');
     Route::livewire('settings/household', 'pages::settings.household')->name('household.edit');
 
-    Route::get('media/{media}/{conversion?}', MediaController::class)->name('media.show');
     Route::get('export', ExportController::class)->name('export');
     Route::get('invite/{token}', [InvitationController::class, 'show'])->name('invite.show');
     Route::post('invite/{token}', [InvitationController::class, 'accept'])->name('invite.accept');

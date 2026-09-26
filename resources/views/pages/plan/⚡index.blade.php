@@ -146,7 +146,7 @@ new #[Title('Plán')] class extends Component {
 
     @if ($this->overdue->isNotEmpty())
         <section class="space-y-2">
-            <flux:heading size="lg">Nepotvrdené z minulosti</flux:heading>
+            <flux:heading size="lg" class="font-display">Nepotvrdené z minulosti</flux:heading>
             <flux:text class="text-sm">Deň v minulosti neznamená uvarené. Potvrď, presuň alebo zruš.</flux:text>
             @foreach ($this->overdue as $plan)
                 @include('pages.plan.partials.plan-item', ['plan' => $plan])
@@ -157,7 +157,7 @@ new #[Title('Plán')] class extends Component {
     <section class="space-y-3">
         <div class="flex items-center justify-between">
             <flux:button wire:click="shiftWeek(-1)" variant="ghost" icon="chevron-left" size="sm" aria-label="Predchádzajúci týždeň" />
-            <flux:heading size="lg">Týždeň {{ $this->weekStart->format('j. n.') }} – {{ $this->weekStart->addDays(6)->format('j. n. Y') }}</flux:heading>
+            <flux:heading size="lg" class="font-display">Týždeň {{ $this->weekStart->format('j. n.') }} – {{ $this->weekStart->addDays(6)->format('j. n. Y') }}</flux:heading>
             <flux:button wire:click="shiftWeek(1)" variant="ghost" icon="chevron-right" size="sm" aria-label="Nasledujúci týždeň" />
         </div>
 
@@ -165,22 +165,22 @@ new #[Title('Plán')] class extends Component {
         @for ($i = 0; $i < 7; $i++)
             @php($day = $this->weekStart->addDays($i))
             @php($items = $this->plans->filter(fn ($p) => $p->scheduled_date?->equalTo($day)))
-            <div class="rounded-xl border p-2 {{ $day->equalTo($today) ? 'border-accent' : 'border-zinc-200 dark:border-zinc-700' }}">
-                <div class="mb-1 flex items-center justify-between px-1 text-sm font-medium">
-                    <span>{{ $day->translatedFormat('l j. n.') }}</span>
-                    @if ($day->equalTo($today))<flux:badge size="sm">Dnes</flux:badge>@endif
+            <flux:card size="sm" class="!p-2 {{ $day->equalTo($today) ? 'border-accent ring-1 ring-accent' : '' }}">
+                <div class="mb-1 flex items-center justify-between px-1 text-sm font-semibold">
+                    <span class="capitalize">{{ $day->translatedFormat('l j. n.') }}</span>
+                    @if ($day->equalTo($today))<flux:badge size="sm" color="orange" variant="pill">Dnes</flux:badge>@endif
                 </div>
                 @forelse ($items as $plan)
                     @include('pages.plan.partials.plan-item', ['plan' => $plan])
                 @empty
                     <div class="px-1 text-xs text-zinc-400">–</div>
                 @endforelse
-            </div>
+            </flux:card>
         @endfor
 
         @php($weekItems = $this->plans->filter(fn ($p) => $p->mode === PlanMode::Week))
         <div class="rounded-xl border border-dashed border-zinc-300 p-2 dark:border-zinc-600">
-            <div class="mb-1 px-1 text-sm font-medium">Tento týždeň – bez dňa</div>
+            <div class="mb-1 px-1 text-sm font-semibold">Tento týždeň – bez dňa</div>
             @forelse ($weekItems as $plan)
                 @include('pages.plan.partials.plan-item', ['plan' => $plan])
             @empty
@@ -193,7 +193,7 @@ new #[Title('Plán')] class extends Component {
 
     @if ($this->someday->isNotEmpty())
         <section class="space-y-2">
-            <flux:heading size="lg">Niekedy</flux:heading>
+            <flux:heading size="lg" class="font-display">Niekedy</flux:heading>
             @foreach ($this->someday as $plan)
                 @include('pages.plan.partials.plan-item', ['plan' => $plan])
             @endforeach

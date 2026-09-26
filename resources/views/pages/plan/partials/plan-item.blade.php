@@ -1,5 +1,5 @@
-<div class="mb-1 flex items-center gap-2 rounded-lg p-1.5 {{ $plan->status === App\Enums\PlanStatus::Cancelled ? 'opacity-50' : '' }} {{ $plan->status === App\Enums\PlanStatus::Cooked ? 'bg-green-50 dark:bg-green-900/20' : '' }}" wire:key="plan-{{ $plan->id }}" data-test="plan-{{ $plan->id }}">
-    <x-recipe-cover :recipe="$plan->recipe" conversion="thumb" class="size-12 shrink-0 rounded-md" />
+<div class="mb-1 flex items-center gap-2 rounded-xl p-1.5 transition hover:bg-zinc-50 dark:hover:bg-zinc-700/40 {{ $plan->status === App\Enums\PlanStatus::Cancelled ? 'opacity-50' : '' }} {{ $plan->status === App\Enums\PlanStatus::Cooked ? 'bg-green-50 dark:bg-green-900/20' : '' }}" wire:key="plan-{{ $plan->id }}" data-test="plan-{{ $plan->id }}">
+    <x-recipe-cover :recipe="$plan->recipe" conversion="thumb" class="size-12 shrink-0 rounded-lg" />
     <div class="min-w-0 flex-1">
         <a href="{{ route('recipes.show', $plan->recipe) }}" wire:navigate class="block truncate text-sm font-medium">{{ $plan->recipe->title }}</a>
         <div class="flex flex-wrap items-center gap-1 text-xs text-zinc-500">
