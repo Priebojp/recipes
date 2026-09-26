@@ -58,7 +58,7 @@
                 <flux:button size="sm" variant="primary" icon="sparkles" wire:click="generate" :disabled="$preview['needs_description'] || (bool) $this->unavailable" data-test="ai-image-generate">Vygenerovať obrázok</flux:button>
                 @if ($balance = $this->balance)
                     <flux:text class="text-xs text-zinc-500" data-test="ai-image-balance">
-                        Spotrebuje 1 použitie ({{ $balance->kind->unitLabel() }} Standard) · zostáva {{ $balance->available() }}
+                        Spotrebuje 1 použitie ({{ $balance->kind->unitLabel() }}) · zostáva {{ $balance->available() }}
                         @if ($balance->includedTotal > 0) – {{ $balance->includedSourceLabel }}: {{ $balance->includedAvailable }}/{{ $balance->includedTotal }}@endif
                         @if ($balance->purchasedAvailable > 0), dokúpené: {{ $balance->purchasedAvailable }}@endif
                     </flux:text>

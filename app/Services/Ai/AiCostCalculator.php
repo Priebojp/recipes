@@ -115,11 +115,20 @@ class AiCostCalculator
     }
 
     /**
-     * Expected cost of one job with the current settings, for the admin form ("what does one Standard image cost").
+     * Expected cost of one image with the default profile, for the admin form ("what does one Standard image cost").
      */
     public function projectedImageCost(AiSettings $settings): ?int
     {
-        $rate = $this->rateFor($settings->imageProvider(), $settings->imageModel(), AiCostRate::MODALITY_IMAGE, $settings->imageQuality(), $settings->imagePixelSize(), now());
+        return $this->projectedProfileCost($settings->defaultImageProfile(), $settings);
+    }
+
+    /**
+     * Expected list-price cost of one image of the given profile with the configured provider/model, null when the
+     * cost table has no matching rate.
+     */
+    public function projectedProfileCost(ImageProfile $profile, AiSettings $settings, ?string $model = null): ?int
+    {
+        $rate = $this->rateFor($settings->imageProvider(), $model ?? $settings->imageModel(), AiCostRate::MODALITY_IMAGE, $profile->quality(), $profile->pixelSize(), now());
 
         return $rate === null ? null : $this->estimateImage($rate, 1);
     }

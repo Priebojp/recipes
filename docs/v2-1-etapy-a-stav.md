@@ -8,7 +8,7 @@ vystavenie. Nič z v2 sa neprerába – Cashier, ledger, oprávnenia a admin sa 
 
 | # | Etapa | Stav | Obsah |
 |---|---|---|---|
-| 8 | **Profily obrázkov a porovnanie low/medium** | ⏳ naplánované | Verzované profily `image_economy_v1` / `image_standard_v1` / `image_high_v1`, snímka kódu profilu na úlohe, druh použitia `image_economy` v ledgeri, rozšírené `app:ai-measure` o porovnávací beh 10 jedál × (2 low + 2 medium), admin prehľad nákladov podľa profilu; **žiadna zmena ponuky** |
+| 8 | **Profily obrázkov a porovnanie low/medium** | ✅ kód hotový (vetva `v2-1-etapa-8-image-profiles`) · ⏳ porovnávací beh a rozhodnutie prevádzkovateľa | Verzované profily `image_economy_v1` / `image_standard_v1` / `image_high_v1`, snímka kódu profilu na úlohe, druh použitia `image_economy` v ledgeri, rozšírené `app:ai-measure` o porovnávací beh 10 jedál × (2 low + 2 medium), admin prehľad nákladov podľa profilu; **žiadna zmena ponuky** |
 | 9 | **Databáza potravín a priradenie ingrediencií** | ⏳ naplánované | `FoodSourceRecord` (USDA FoodData Central ako jediný prvý zdroj, cache, licencia), ručný SK/CZ slovník bežných surovín, `IngredientFoodMapping` s prevodom jednotiek a stavom suroviny, admin kurátorstvo a neúspešné priradenia |
 | 10 | **Výživové hodnoty receptu** | ⏳ naplánované | `NutritionCalculation` (revízia receptu, kompletnosť, predpoklady, verzia výpočtu), tok „Vypočítať výživové hodnoty“ s potvrdením priradení, zobrazenie na recept / porciu / 100 g, neaktuálnosť po editácii; bez AI a bez použití |
 | 11 | **Rozpoznanie jedla z fotografie** | ⏳ naplánované | `MealAnalysis` + `MealAnalysisItem`, `AiJobKind::MealAnalysis` s obrazovým vstupom gpt-6-luna, druh použitia `meal_analysis` (3 skúšobné na používateľa), obrazovka „Skontroluj jedlo“, súkromné úložisko fotiek s TTL a odstránením EXIF, meranie nákladu analýzy |
@@ -72,10 +72,31 @@ rozlišuje Economy od Standard. Ponuka sa nemení, iba sa pripraví experiment a
    originály a servírovanie sa profilom nemenia (scenár 2); porovnávací beh na `FakeImageProvider` vytvorí 40 úloh
    s správnym profilom a jedným grantom na druh.
 
+### Čo je hotové (kód)
+
+- `App\Services\Ai\ImageProfile` (enum `image_economy_v1` / `image_standard_v1` / `image_high_v1`): kvalita, 1024 × 1024, počet 1,
+  druh použitia (`ImageEconomy` / `ImageStandard`; High ide na Standard nárok, nikdy nie je predvolený ani vystavený), snímka
+  `ai_jobs.profile` s `code`. Snímka bez kódu (v2) sa číta ako Standard, uložená kvalita/rozmer sa pri behu úlohy zachovajú.
+- `UsageKind::ImageEconomy = 'image_economy'`; `fromAiJobKind()` zrušené – `AiJobLifecycle::create()` a `AiAvailability` pracujú
+  s `UsageKind`, obrázok dostane druh z profilu. `AiAvailability::imageProfileFor()` odvodí profil na serveri: predvolený profil,
+  ak naň domácnosť má nárok, inak prvý vystavený profil s nárokom (dnes Standard trial/balík); klient nič neposiela.
+- Admin nastavenia: „Predvolený profil obrázkov“ (Economy/Standard) namiesto kvality a rozmeru; `.env` `RECIPES_AI_IMAGE_QUALITY`
+  ostáva predvoľbou (`low` → Economy, `medium` → Standard), `RECIPES_AI_IMAGE_SIZE` zrušené (rozmer je súčasť profilu).
+- `app:ai-compare-images <domácnosť> [--yes] [--report=]` (`ImageProfileComparison`): 10 jedál × (2 low + 2 medium), odhad
+  z `ai_cost_rates` vopred, granty `compensation:compare-{beh}-{profil}`, úlohy s `input.comparison_run`, obrázky neaktívne.
+  Hodnotenie `/admin/ai/comparisons/{beh}` (áno/nie + poznámka, súčty, kritérium 18/20), rozhodnutie → launch signoff
+  `image_profile` (voliteľný – checklist ho hlási ako upozornenie, nie blokádu) + audit `ai.image_comparison.completed`.
+- `/admin/ai`: tabuľka „Obrázky podľa profilu“ (`AiUsageReport::byImageProfile`) a zoznam porovnaní; `/admin/ai/settings` ukazuje
+  sadzbu každého profilu. Refundácie v `/admin/orders/{id}` odoberajú jednotky ľubovoľného druhu, ktorý objednávka udelila.
+  `/settings/usage` zobrazuje Economy až keď domácnosť nejaký taký grant má. `app:ai-measure` meria s predvoleným profilom.
+- Testy: `tests/Feature/Ai/ImageProfileTest.php` (scenáre 1 a 2, starý job bez kódu, Economy vs. Standard granty, porovnávací
+  beh na fake poskytovateľovi, hodnotenie a rozhodnutie, backfill), upravené `AiSettingsTest`, `RefundAdminTest`, `HouseholdAdminTest`.
+
 ### Migrácia a nasadenie
 
-Bez novej tabuľky; voliteľne backfill `ai_jobs.profile->code` (`app:ai-backfill-image-profiles`, idempotentné).
-Po nasadení spustiť porovnávací beh ručne na testovacej domácnosti; výsledok zapísať do tejto stránky.
+Bez novej tabuľky ani migrácie. Po nasadení: `php artisan app:ai-backfill-image-profiles` (idempotentné, `--dry-run` iba spočíta),
+potom porovnávací beh `php artisan app:ai-compare-images <testovacia domácnosť> --yes` a hodnotenie v admine; výsledok zapísať do
+tejto stránky (sekcia „Otvorené rozhodnutia“).
 
 ## Etapa 9 – Databáza potravín a priradenie ingrediencií
 

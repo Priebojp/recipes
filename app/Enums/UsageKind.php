@@ -3,18 +3,21 @@
 namespace App\Enums;
 
 /**
- * What one granted "use" buys. Text = one delivered text suggestion, ImageStandard = one delivered Standard image.
+ * What one granted "use" buys. Text = one delivered text suggestion, ImageStandard = one delivered Standard image,
+ * ImageEconomy = one delivered Economy image (v2.1 stage 8 – separate so a Standard entitlement is never spent on low).
  */
 enum UsageKind: string
 {
     case Text = 'text';
     case ImageStandard = 'image_standard';
+    case ImageEconomy = 'image_economy';
 
-    public static function fromAiJobKind(AiJobKind $kind): self
+    /** The job kind whose daily frequency cap applies to this use. */
+    public function aiJobKind(): AiJobKind
     {
-        return match ($kind) {
-            AiJobKind::Text => self::Text,
-            AiJobKind::Image => self::ImageStandard,
+        return match ($this) {
+            self::Text => AiJobKind::Text,
+            self::ImageStandard, self::ImageEconomy => AiJobKind::Image,
         };
     }
 
@@ -23,6 +26,7 @@ enum UsageKind: string
         return match ($this) {
             self::Text => 'textové operácie',
             self::ImageStandard => 'obrázky Standard',
+            self::ImageEconomy => 'obrázky Economy',
         };
     }
 
@@ -31,7 +35,8 @@ enum UsageKind: string
     {
         return match ($this) {
             self::Text => 'textová operácia',
-            self::ImageStandard => 'obrázok',
+            self::ImageStandard => 'obrázok Standard',
+            self::ImageEconomy => 'obrázok Economy',
         };
     }
 }

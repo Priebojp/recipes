@@ -2,6 +2,7 @@
 
 namespace App\Services\Ai;
 
+use App\Enums\AiJobKind;
 use App\Enums\AiJobStatus;
 use App\Models\AiJob;
 use Carbon\CarbonImmutable;
@@ -82,6 +83,39 @@ class AiUsageReport
                     'avg_cost_micro' => $succeeded > 0 ? intdiv((int) $row->cost_micro, $succeeded) : null,
                 ];
             });
+    }
+
+    /**
+     * Image jobs per profile code (v2.1 stage 8): how many ran with Economy vs Standard and what they cost.
+     * Pre-v2.1 jobs without a code are reported as Standard ({@see ImageProfile::fromSnapshot()}).
+     *
+     * @return Collection<int, object{code: string, label: string, model: string|null, jobs: int, succeeded: int, failed: int, cost_micro: int, avg_cost_micro: int|null}>
+     */
+    public function byImageProfile(CarbonInterface $from, CarbonInterface $to): Collection
+    {
+        $rows = [];
+        $this->between($from, $to)
+            ->where('kind', AiJobKind::Image)
+            ->select(['model', 'profile', 'status', 'estimated_cost_micro_usd'])
+            ->lazy()
+            ->each(function (AiJob $job) use (&$rows) {
+                $profile = ImageProfile::fromSnapshot($job->profile);
+                $key = $profile->value.'|'.($job->model ?? '');
+                $rows[$key] ??= ['code' => $profile->value, 'label' => $profile->label(), 'model' => $job->model, 'jobs' => 0, 'succeeded' => 0, 'failed' => 0, 'cost_micro' => 0];
+                $rows[$key]['jobs']++;
+                if ($job->status === AiJobStatus::Succeeded) {
+                    $rows[$key]['succeeded']++;
+                }
+                if ($job->status === AiJobStatus::Failed) {
+                    $rows[$key]['failed']++;
+                }
+                $rows[$key]['cost_micro'] += (int) ($job->estimated_cost_micro_usd ?? 0);
+            });
+
+        return collect($rows)
+            ->map(fn (array $r) => (object) [...$r, 'avg_cost_micro' => $r['succeeded'] > 0 ? intdiv($r['cost_micro'], $r['succeeded']) : null])
+            ->sortByDesc('cost_micro')
+            ->values();
     }
 
     /**

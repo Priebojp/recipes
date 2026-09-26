@@ -20,12 +20,12 @@ it('refunds an order from the admin page with the named units, an idempotency ke
     $this->get(route('admin.orders.show', $order))->assertOk()->assertSee('Refundovať')->assertSee('100 × textové operácie');
 
     Livewire::test('pages::admin.order', ['order' => $order])
-        ->set('refund_text', '150')
+        ->set('refund_units.text', '150')
         ->set('refund_amount', '1,00')
         ->set('refund_reason', 'Čiastočná kompenzácia')
         ->call('refund')
         ->assertHasErrors(['refund_amount']) // more units than the order still holds
-        ->set('refund_text', '50')
+        ->set('refund_units.text', '50')
         ->set('refund_kind', 'complaint')
         ->set('refund_key', 'ticket-11')
         ->call('refund')
@@ -55,7 +55,7 @@ it('lets the administrator close a Stripe-dashboard refund by deciding which unu
 
     Livewire::test('pages::admin.order', ['order' => $order])
         ->call('startReview', $case->id)
-        ->set('review_images', '10')
+        ->set('review_units.image_standard', '10')
         ->set('review_note', 'Zákazník dostal späť polovicu, odoberáme 10 obrázkov')
         ->call('review')
         ->assertHasNoErrors()
@@ -71,7 +71,7 @@ it('lets the administrator close a Stripe-dashboard refund by deciding which unu
     // A second review of the same case is refused; nothing moves twice.
     Livewire::test('pages::admin.order', ['order' => $order])
         ->call('startReview', $case->id)
-        ->set('review_images', '5')
+        ->set('review_units.image_standard', '5')
         ->set('review_note', 'ešte raz to isté')
         ->call('review')
         ->assertHasErrors(['review_note']);

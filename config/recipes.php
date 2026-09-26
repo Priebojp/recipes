@@ -49,9 +49,9 @@ return [
         // Reasoning effort sent to OpenAI reasoning models (gpt-5/gpt-6 family): default|low|medium|high.
         // "default" sends nothing and lets the provider decide. Overridable at runtime in /admin → AI nastavenia.
         'text_reasoning_effort' => env('RECIPES_AI_TEXT_REASONING_EFFORT', 'low'),
-        // Image profile "Standard" from the v2 specification: medium quality, 1024 × 1024, one image.
+        // Default image profile for new jobs (v2.1 stage 8): low = image_economy_v1, medium = image_standard_v1.
+        // Profiles fix quality, 1024 × 1024 and one image; the runtime default is overridable in /admin → AI nastavenia.
         'image_quality' => env('RECIPES_AI_IMAGE_QUALITY', 'medium'),
-        'image_size' => env('RECIPES_AI_IMAGE_SIZE', '1:1'),
         'text_prompt_version' => '1',
         'image_prompt_version' => '1',
         // Per household limits; the UI shows exhaustion before another run.
@@ -76,6 +76,8 @@ return [
         'trial' => [
             'text' => (int) env('RECIPES_USAGE_TRIAL_TEXT', 3),
             'image_standard' => (int) env('RECIPES_USAGE_TRIAL_IMAGES', 1),
+            // Economy images are not offered until the v2.1 comparison decides (stage 13); 0 = no trial grant.
+            'image_economy' => 0,
         ],
     ],
 

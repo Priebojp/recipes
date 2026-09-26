@@ -198,7 +198,7 @@ new #[Layout('layouts::admin')] #[Title('Administrácia – prehľad')] class ex
                 <dt class="text-zinc-500">Textový model</dt>
                 <dd>{{ $this->settings->textModel() ?? 'predvolený poskytovateľa' }} · effort {{ $this->settings->textReasoningEffort() }}</dd>
                 <dt class="text-zinc-500">Obrázkový model</dt>
-                <dd>{{ $this->settings->imageModel() ?? 'predvolený poskytovateľa' }} · {{ $this->settings->imageQuality() }} · {{ $this->settings->imagePixelSize() }}</dd>
+                <dd>{{ $this->settings->imageModel() ?? 'predvolený poskytovateľa' }} · predvolený profil {{ $this->settings->defaultImageProfile()->label() }} ({{ $this->settings->imageQuality() }} · {{ $this->settings->imagePixelSize() }})</dd>
                 <dt class="text-zinc-500">Bežiace úlohy</dt>
                 <dd>{{ $s['ai_active'] }}</dd>
                 <dt class="text-zinc-500">Chyby za 24 h</dt>

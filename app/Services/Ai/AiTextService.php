@@ -5,6 +5,7 @@ namespace App\Services\Ai;
 use App\Ai\Agents\RecipeTextAgent;
 use App\Enums\AiJobKind;
 use App\Enums\AiJobStatus;
+use App\Enums\UsageKind;
 use App\Jobs\RunRecipeTextJob;
 use App\Models\AiJob;
 use App\Models\Recipe;
@@ -71,7 +72,7 @@ class AiTextService
             return $existing;
         }
 
-        if ($reason = $this->availability->reasonUnavailable($recipe->household, AiJobKind::Text, $rateLimits)) {
+        if ($reason = $this->availability->reasonUnavailable($recipe->household, UsageKind::Text, $rateLimits)) {
             throw new AiUnavailableException($reason);
         }
 
@@ -90,7 +91,7 @@ class AiTextService
                 'prompt_version' => $version,
                 'input' => ['scope' => $scope, 'recipe' => $this->payload($revision->snapshot)],
                 'created_by' => $by?->id,
-            ], AiJobKind::Text);
+            ], UsageKind::Text);
         } catch (InsufficientUsageException $e) {
             throw new AiUnavailableException($e->getMessage(), previous: $e);
         }

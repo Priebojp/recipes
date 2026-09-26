@@ -1,6 +1,8 @@
 <?php
 
 use App\Services\Ai\AiUsageReport;
+use App\Services\Ai\ImageProfile;
+use App\Services\Ai\ImageProfileComparison;
 use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -59,6 +61,19 @@ new #[Layout('layouts::admin')] #[Title('AI použitie a náklady')] class extend
     public function byHousehold(): Collection
     {
         return $this->report()->byHousehold(...$this->range);
+    }
+
+    #[Computed]
+    public function byImageProfile(): Collection
+    {
+        return $this->report()->byImageProfile(...$this->range);
+    }
+
+    /** Stored low/medium comparison runs (v2.1 stage 8), newest first. */
+    #[Computed]
+    public function comparisons(): Collection
+    {
+        return app(ImageProfileComparison::class)->runs();
     }
 
     /** @return list<array<string, mixed>> */
@@ -195,6 +210,54 @@ new #[Layout('layouts::admin')] #[Title('AI použitie a náklady')] class extend
                     @endforelse
                 </tbody>
             </table>
+        </flux:card>
+    </div>
+
+    <div class="grid gap-4 xl:grid-cols-2">
+        <flux:card class="space-y-3 overflow-x-auto" data-test="by-image-profile">
+            <flux:heading size="lg" class="font-display">Obrázky podľa profilu</flux:heading>
+            <flux:text class="text-xs">Profil je snímkovaný na úlohe (kód, kvalita, rozmer); staršie úlohy bez kódu sú Standard. Predvolený profil pre nové použitia: {{ app(\App\Services\Ai\AiSettings::class)->defaultImageProfile()->label() }}.</flux:text>
+            <table class="w-full text-sm">
+                <thead class="text-left text-xs uppercase text-zinc-500">
+                    <tr><th class="py-1 pe-2">Profil</th><th class="py-1 pe-2">Model</th><th class="py-1 pe-2 text-right">Úlohy</th><th class="py-1 pe-2 text-right">Doručené</th><th class="py-1 pe-2 text-right">Náklad</th><th class="py-1 text-right">Ø / doručenie</th></tr>
+                </thead>
+                <tbody class="divide-y divide-zinc-200/70 dark:divide-zinc-800">
+                    @forelse ($this->byImageProfile as $row)
+                        <tr>
+                            <td class="py-1.5 pe-2">{{ $row->label }} <span class="font-mono text-xs text-zinc-500">{{ $row->code }}</span></td>
+                            <td class="py-1.5 pe-2 font-mono text-xs">{{ $row->model ?? '(predvolený)' }}</td>
+                            <td class="py-1.5 pe-2 text-right">{{ $row->jobs }}</td>
+                            <td class="py-1.5 pe-2 text-right">{{ $row->succeeded }} @if ($row->failed) <span class="text-red-600">/ {{ $row->failed }}</span> @endif</td>
+                            <td class="py-1.5 pe-2 text-right">{{ Money::microUsd($row->cost_micro) }}</td>
+                            <td class="py-1.5 text-right">{{ Money::microUsd($row->avg_cost_micro) }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="6" class="py-3 text-zinc-500">V období nie sú žiadne obrázkové úlohy.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </flux:card>
+
+        <flux:card class="space-y-3" data-test="comparisons">
+            <flux:heading size="lg" class="font-display">Porovnania low / medium</flux:heading>
+            <flux:text class="text-xs">Rozhodovací experiment z dodatku v2.1: 10 jedál × (2 Economy + 2 Standard) na reálnom kľúči (<code>php artisan app:ai-compare-images &lt;domácnosť&gt; --yes</code>). Hodnotí administrátor; výsledok je podklad pre etapu 13, ponuka sa tu nemení.</flux:text>
+            <ul class="divide-y divide-zinc-200/70 text-sm dark:divide-zinc-800">
+                @forelse ($this->comparisons as $run)
+                    <li class="flex flex-wrap items-center justify-between gap-2 py-2">
+                        <div>
+                            <a href="{{ route('admin.ai.comparison', $run['run']) }}" class="font-medium underline" wire:navigate>{{ $run['run'] }}</a>
+                            <span class="text-xs text-zinc-500">· {{ \Carbon\CarbonImmutable::parse($run['at'])->timezone($this->timezone)->format('j. n. Y H:i') }} · domácnosť #{{ $run['household_id'] }} · {{ count($run['job_ids'] ?? []) }} úloh · {{ count($run['evaluations'] ?? []) }} hodnotení</span>
+                        </div>
+                        @if ($run['decision'] ?? null)
+                            <flux:badge size="sm" color="green">rozhodnuté: {{ ImageProfile::tryFrom($run['decision']['profile'] ?? '')?->label() ?? $run['decision']['profile'] }}</flux:badge>
+                        @else
+                            <flux:badge size="sm" color="amber">bez rozhodnutia</flux:badge>
+                        @endif
+                    </li>
+                @empty
+                    <li class="py-2 text-zinc-500">Zatiaľ žiadny beh porovnania.</li>
+                @endforelse
+            </ul>
         </flux:card>
     </div>
 

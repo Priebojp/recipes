@@ -70,7 +70,8 @@ class AiMeasurement
             $this->compensations->grantUses($household, UsageKind::Text, $texts, "Meranie AI nákladov {$run}", null, "measure:{$run}:text", $by);
         }
         if ($images > 0) {
-            $this->compensations->grantUses($household, UsageKind::ImageStandard, $images, "Meranie AI nákladov {$run}", null, "measure:{$run}:image", $by);
+            // The measured images run with the default profile, so the grant is of that profile's kind.
+            $this->compensations->grantUses($household, $this->settings->defaultImageProfile()->usageKind(), $images, "Meranie AI nákladov {$run}", null, "measure:{$run}:image", $by);
         }
 
         $jobIds = [];
@@ -85,7 +86,7 @@ class AiMeasurement
 
         for ($i = 0; $i < $images; $i++) {
             $recipe = $recipes[$i % $recipes->count()];
-            $job = $this->images->create($recipe, $by, $this->descriptionFor($recipe), 'auto', variant: true, rateLimits: false);
+            $job = $this->images->create($recipe, $by, $this->descriptionFor($recipe), 'auto', variant: true, rateLimits: false, profile: $this->settings->defaultImageProfile());
             $this->tag($job, $run);
             $this->images->run($job);
             $jobIds[] = $job->id;

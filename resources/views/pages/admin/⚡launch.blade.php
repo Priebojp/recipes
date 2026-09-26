@@ -162,7 +162,7 @@ new #[Layout('layouts::admin')] #[Title('Launch checklist')] class extends Compo
                 @php($confirmation = $this->signoffs[$key] ?? null)
                 <li class="py-3 space-y-2" data-test="signoff-{{ $key }}">
                     <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-4">
-                        <div class="sm:w-28 shrink-0"><flux:badge size="sm" :color="$confirmation ? 'green' : 'red'">{{ $confirmation ? 'Potvrdené' : 'Chýba' }}</flux:badge></div>
+                        <div class="sm:w-28 shrink-0"><flux:badge size="sm" :color="$confirmation ? 'green' : (LaunchSignoffs::isOptional($key) ? 'amber' : 'red')">{{ $confirmation ? 'Potvrdené' : (LaunchSignoffs::isOptional($key) ? 'Voliteľné' : 'Chýba') }}</flux:badge></div>
                         <div class="min-w-0 flex-1 text-sm">
                             <div class="font-medium">{{ $item['label'] }}</div>
                             <div class="text-xs text-zinc-500">{{ $item['hint'] }}</div>
