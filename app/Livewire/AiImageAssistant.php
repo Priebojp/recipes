@@ -9,6 +9,7 @@ use App\Models\Recipe;
 use App\Services\Ai\AiAvailability;
 use App\Services\Ai\AiImageService;
 use App\Services\Ai\AiUnavailableException;
+use App\Services\Usage\UsageBalance;
 use App\Support\CurrentHousehold;
 use Illuminate\Contracts\View\View;
 use InvalidArgumentException;
@@ -20,6 +21,7 @@ use Livewire\Component;
  * @property-read AiJob|null $job
  * @property-read array{needs_description: bool, serving_mode: string, summary: string, prompt: string|null, auto_suggested: bool} $preview
  * @property-read string|null $unavailable
+ * @property-read UsageBalance|null $balance
  */
 class AiImageAssistant extends Component
 {
@@ -71,6 +73,13 @@ class AiImageAssistant extends Component
         return app(AiAvailability::class)->reasonUnavailable($this->recipe->household, AiJobKind::Image);
     }
 
+    /** Uses left for Standard images; null when the ledger is not enforced. */
+    #[Computed]
+    public function balance(): ?UsageBalance
+    {
+        return app(AiAvailability::class)->balance($this->recipe->household, AiJobKind::Image);
+    }
+
     public function generate(AiImageService $service, bool $variant = false): void
     {
         $this->error = '';
@@ -84,12 +93,12 @@ class AiImageAssistant extends Component
         }
 
         $this->jobId = $job->id;
-        unset($this->job);
+        unset($this->job, $this->balance, $this->unavailable);
     }
 
     public function refreshStatus(): void
     {
-        unset($this->job);
+        unset($this->job, $this->balance, $this->unavailable);
     }
 
     public function approve(AiImageService $service): void

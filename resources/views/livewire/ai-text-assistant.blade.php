@@ -1,4 +1,4 @@
-<div class="space-y-4 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700" @if ($this->job && ! $this->job->status->isFinished()) wire:poll.3s="refreshStatus" @endif>
+<div class="space-y-4 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700" @if ($this->job && $this->job->status->isActive()) wire:poll.3s="refreshStatus" @endif>
     <flux:text class="text-sm">AI opraví jazyk a štruktúru, nepridáva suroviny, množstvá, teploty ani kroky. Výsledok je iba návrh – originál sa nemení, kým ho neprijmeš.</flux:text>
 
     @if ($this->unavailable && ! $this->job)
@@ -14,6 +14,14 @@
         <flux:button wire:click="request" icon="sparkles" :disabled="(bool) $this->unavailable" data-test="ai-text-request">Upraviť text pomocou AI</flux:button>
     </div>
 
+    @if ($balance = $this->balance)
+        <flux:text class="text-xs text-zinc-500" data-test="ai-text-balance">
+            Spotrebuje 1 použitie ({{ $balance->kind->unitLabel() }}) · zostáva {{ $balance->available() }}
+            @if ($balance->includedTotal > 0) – {{ $balance->includedSourceLabel }}: {{ $balance->includedAvailable }}/{{ $balance->includedTotal }}@endif
+            @if ($balance->purchasedAvailable > 0), dokúpené: {{ $balance->purchasedAvailable }}@endif
+        </flux:text>
+    @endif
+
     @if ($error)
         <flux:callout icon="exclamation-circle" variant="danger">{{ $error }}</flux:callout>
     @endif
@@ -22,8 +30,14 @@
     @endif
 
     @if ($job = $this->job)
-        @if (! $job->status->isFinished())
+        @if ($job->status->isActive())
             <div class="flex items-center gap-2 text-sm text-zinc-500"><flux:icon name="arrow-path" class="size-4 animate-spin" /> AI pracuje… recept môžeš ďalej používať.</div>
+        @elseif ($job->status->value === 'reconciling')
+            <flux:callout icon="clock" variant="warning">
+                <flux:callout.heading>Výsledok sa overuje</flux:callout.heading>
+                <flux:callout.text>Spojenie s AI vypršalo a nevieme, či návrh vznikol. Použitie zostáva rezervované, kým to overíme – nebude odpočítané dvakrát. Recept môžeš ďalej upravovať ručne.</flux:callout.text>
+                <x-slot name="actions"><flux:button size="sm" wire:click="dismiss">Zavrieť</flux:button></x-slot>
+            </flux:callout>
         @elseif ($job->status->value === 'failed')
             <flux:callout icon="exclamation-triangle" variant="warning">
                 <flux:callout.heading>AI úprava zlyhala</flux:callout.heading>

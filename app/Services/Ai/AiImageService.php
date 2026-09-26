@@ -11,6 +11,7 @@ use App\Models\RecipeRevision;
 use App\Models\User;
 use App\Services\ImageUploadService;
 use App\Services\RecipeService;
+use App\Services\Usage\InsufficientUsageException;
 use Carbon\CarbonInterface;
 use InvalidArgumentException;
 use Laravel\Ai\Image;
@@ -25,6 +26,7 @@ class AiImageService
         private ImageUploadService $uploads,
         private AiSettings $settings,
         private AiCostCalculator $costs,
+        private AiJobLifecycle $lifecycle,
     ) {}
 
     /**
@@ -44,11 +46,6 @@ class AiImageService
      */
     public function request(Recipe $recipe, ?User $by, string $description, string $mode, bool $variant = false): AiJob
     {
-        $household = $recipe->household;
-        if ($reason = $this->availability->reasonUnavailable($household, AiJobKind::Image)) {
-            throw new AiUnavailableException($reason);
-        }
-
         $preview = $this->preview($recipe, $description, $mode);
         if ($preview['needs_description'] || $preview['prompt'] === null) {
             throw new InvalidArgumentException('Doplň krátky opis jedla, z názvu sa nedá určiť, čo zobraziť.');
@@ -61,26 +58,36 @@ class AiImageService
         $version = (string) config('recipes.ai.image_prompt_version');
         $key = hash('sha256', implode('|', ['image', $recipe->id, $revision->id, $preview['prompt'], $version, $variant ? microtime(true) : '']));
 
+        // A retry of identical input returns the existing job first: it never needs a second use.
         $existing = AiJob::query()->where('request_key', $key)->first();
         if ($existing !== null) {
             return $existing;
         }
 
-        $job = AiJob::create([
-            'household_id' => $recipe->household_id,
-            'recipe_id' => $recipe->id,
-            'kind' => AiJobKind::Image,
-            'input_revision_id' => $revision->id,
-            'status' => AiJobStatus::Queued,
-            'request_key' => $key,
-            'provider' => $this->availability->imageProvider(),
-            'model' => $this->settings->imageModel(),
-            'profile' => $this->settings->imageProfile(),
-            'prompt_version' => $version,
-            'input' => ['description' => $description, 'serving_mode' => $preview['serving_mode'], 'summary' => $preview['summary']],
-            'prompt' => $preview['prompt'],
-            'created_by' => $by?->id,
-        ]);
+        if ($reason = $this->availability->reasonUnavailable($recipe->household, AiJobKind::Image)) {
+            throw new AiUnavailableException($reason);
+        }
+
+        try {
+            // Job and its reserved use are created together; without a free use nothing is created.
+            $job = $this->lifecycle->create([
+                'household_id' => $recipe->household_id,
+                'recipe_id' => $recipe->id,
+                'kind' => AiJobKind::Image,
+                'input_revision_id' => $revision->id,
+                'status' => AiJobStatus::Queued,
+                'request_key' => $key,
+                'provider' => $this->availability->imageProvider(),
+                'model' => $this->settings->imageModel(),
+                'profile' => $this->settings->imageProfile(),
+                'prompt_version' => $version,
+                'input' => ['description' => $description, 'serving_mode' => $preview['serving_mode'], 'summary' => $preview['summary']],
+                'prompt' => $preview['prompt'],
+                'created_by' => $by?->id,
+            ], AiJobKind::Image);
+        } catch (InsufficientUsageException $e) {
+            throw new AiUnavailableException($e->getMessage(), previous: $e);
+        }
 
         GenerateRecipeImageJob::dispatch($job->id);
 
@@ -92,11 +99,10 @@ class AiImageService
      */
     public function run(AiJob $job): void
     {
-        if ($job->status !== AiJobStatus::Queued) {
+        if (! $this->lifecycle->start($job)) {
             return;
         }
         $startedAt = now();
-        $job->update(['status' => AiJobStatus::Running, 'started_at' => $startedAt]);
 
         $temp = null;
 
@@ -118,22 +124,16 @@ class AiImageService
             $recipe = Recipe::findOrFail($job->recipe_id);
             $media = $this->uploads->addCover($recipe, $temp, 'ai', $job->id, activate: false);
 
-            $job->update([
-                'status' => AiJobStatus::Succeeded,
+            // The image is stored and reachable, so the use is consumed together with the delivered state.
+            $this->lifecycle->succeed($job, [
                 'result_media_id' => $media->id,
                 'provider_job_id' => $response->meta->id ?? null,
-                'finished_at' => now(),
                 'duration_ms' => $this->elapsedMs($startedAt),
                 ...$this->costs->attributesFor($job, $response->usage, imagesDelivered: max(1, count($response))),
             ]);
         } catch (\Throwable $e) {
             report($e);
-            $job->update([
-                'status' => AiJobStatus::Failed,
-                'error' => mb_substr($e->getMessage(), 0, 1000),
-                'finished_at' => now(),
-                'duration_ms' => $this->elapsedMs($startedAt),
-            ]);
+            $this->lifecycle->fail($job, $e, ['duration_ms' => $this->elapsedMs($startedAt)]);
         } finally {
             if ($temp && is_file($temp)) {
                 @unlink($temp);

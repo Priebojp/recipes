@@ -7,6 +7,7 @@ use App\Enums\AiJobStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
@@ -85,6 +86,13 @@ class AiJob extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /** The use held for this job (absent when the ledger was not enforced at creation). */
+    /** @return HasOne<UsageReservation, $this> */
+    public function usageReservation(): HasOne
+    {
+        return $this->hasOne(UsageReservation::class);
     }
 
     /**

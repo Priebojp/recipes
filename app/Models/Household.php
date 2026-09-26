@@ -75,4 +75,10 @@ class Household extends Model
     {
         return $this->hasMany(HouseholdInvitation::class);
     }
+
+    /** @return HasMany<UsageGrant, $this> */
+    public function usageGrants(): HasMany
+    {
+        return $this->hasMany(UsageGrant::class);
+    }
 }
