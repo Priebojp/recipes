@@ -28,6 +28,11 @@
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="STRIPE_WEBHOOK_SECRET" value="whsec_test"/>
+        <env name="STRIPE_PRICE_PLUS_MONTHLY" value="price_plus_monthly"/>
+        <env name="STRIPE_PRICE_PLUS_YEARLY" value="price_plus_yearly"/>
+        <env name="STRIPE_PRICE_IMAGES_20_STANDARD" value="price_images_20"/>
+        <env name="STRIPE_PRICE_TEXT_100" value="price_text_100"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>

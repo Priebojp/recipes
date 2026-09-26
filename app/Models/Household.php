@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * @property int $id
@@ -80,5 +81,23 @@ class Household extends Model
     public function usageGrants(): HasMany
     {
         return $this->hasMany(UsageGrant::class);
+    }
+
+    /** @return HasOne<BillingAccount, $this> */
+    public function billingAccount(): HasOne
+    {
+        return $this->hasOne(BillingAccount::class);
+    }
+
+    /** @return HasMany<Order, $this> */
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    /** @return HasMany<PaidEntitlement, $this> */
+    public function paidEntitlements(): HasMany
+    {
+        return $this->hasMany(PaidEntitlement::class);
     }
 }

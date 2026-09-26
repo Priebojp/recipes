@@ -7,8 +7,8 @@ a bezpečná administrácia, potom ledger a Cashier, potom právne stránky, sú
 | # | Etapa | Stav | Obsah |
 |---|---|---|---|
 | 1 | **Administrácia a meranie AI** | ✅ hotové (PR #1) | Rola administrátora platformy, `/admin`, MFA, audit, meranie usage a odhad nákladov AI, prepínanie modelu / reasoning effort / kvality obrázkov, kill switch, cenník sadzieb, účet `support@moje-recepty.sk` |
-| 2 | **Ledger a granty použití** | ✅ hotové (vetva `v2-etapa-2-ledger`) | `UsageGrant`, `UsageReservation`, `UsageLedgerEntry`, rezervácia pod zámkom, spotreba/uvoľnenie, skúšobné granty, `reconciling`, súbežné testy (akceptačné testy 6, 7, 22, 23) |
-| 3 | Cashier a Stripe | ⬜ | `BillingAccount`, katalóg `PlanVersion`/`AddonVersion`, Checkout, webhook inbox, `PaidEntitlement`, mesačné granty pri ročnej platbe, portal, refund workflow (testy 1–5, 8–12, 14) |
+| 2 | **Ledger a granty použití** | ✅ hotové (PR #2) | `UsageGrant`, `UsageReservation`, `UsageLedgerEntry`, rezervácia pod zámkom, spotreba/uvoľnenie, skúšobné granty, `reconciling`, súbežné testy (akceptačné testy 6, 7, 22, 23) |
+| 3 | **Cashier a Stripe** | ✅ hotové (vetva `v2-etapa-3-cashier`) | `BillingAccount`, katalóg `PlanVersion`/`AddonVersion`, Checkout, webhook inbox, `PaidEntitlement`, mesačné granty pri ročnej platbe, portal, refund workflow (testy 1–5, 8–12, 14) |
 | 4 | Admin – finančné moduly | ⬜ | Dashboard MRR/inkaso/refundácie, predplatné, balíky a objednávky, použitia a kompenzácie, synchronizácia so Stripe |
 | 5 | Právne stránky, cookies, súkromie | ⬜ | `/vop`, `/ochrana-osobnych-udajov`, `/cookies`, `/odstupenie-od-zmluvy`, verzie a akceptácie, registrácia služieb, **cookie lišta podľa kap. 10 tohto zadania** (nie z iného projektu), consent receipt, export/výmaz, žiadosti (testy 15–21) |
 | 6 | Plus funkcie | ⬜ | Týždenný jedálniček, nákupný zoznam, uložené skupiny a filtre – bez platenej AI, ak stačí existujúci algoritmus |
@@ -112,6 +112,79 @@ a bezpečná administrácia, potom ledger a Cashier, potom právne stránky, sú
 neopakuje skúšku), plus poradie čerpania, expiráciu počas rezervácie, `reconciling` s CLI rozhodnutím, revokáciu,
 rekonštrukciu počítadiel, kompenzačný príkaz, stránku nastavení a vypnutý flag. Súbežnosť sa v testoch (SQLite,
 jedna transakcia) overuje sekvenčne; v produkcii ju kryje `lockForUpdate` + podmienený update + unikátne kľúče.
+
+## Etapa 3 – čo je hotové
+
+### Cashier a fakturačný účet
+
+- `laravel/cashier` 16.8 (stripe-php 21). Billable je **`BillingAccount`** (1:1 s domácnosťou, `payer_user_id`, Stripe
+  customer, fakturačné údaje), nie používateľ; `Cashier::useCustomerModel()`. Cashier tabuľky `subscriptions` /
+  `subscription_items` sú vlastnou migráciou s FK `billing_account_id`. Mena EUR, locale sk.
+- Cashier routy sú vypnuté (`Cashier::ignoreRoutes`) a registrované v `routes/web.php`: `stripe/payment/{id}` a
+  `stripe/webhook` → `StripeWebhookController`; CSRF výnimka `stripe/*`.
+- Všetky volania do Stripe idú cez rozhranie `StripeGateway` (`CashierStripeGateway`); testy používajú
+  `Tests\Support\FakeStripeGateway`, takže sada beží bez siete a bez kľúčov.
+
+### Katalóg a objednávky
+
+- `plan_versions` (`plus_monthly` 2,49 €, `plus_yearly` 24 €, 30 textov / 5 obrázkov za mesačné obdobie) a
+  `addon_versions` (`images_20_standard` 3,99 €, `text_100` 1,99 €) – `CatalogSeeder`, verzia 1, stav `active`.
+  Stripe price ID prichádzajú z `.env` (`STRIPE_PRICE_*`); bez ID je tlačidlo danej ponuky vypnuté. Nová cena =
+  nová verzia; `import_starter` a `images_high` sa v prvej verzii nezakladajú.
+- `orders`: nemenný snapshot produktu a ceny, Stripe checkout session / payment intent / invoice / subscription ID,
+  stavy `pending → paid | failed | canceled | expired | refunded | partially_refunded`. Klient posiela iba kód ponuky
+  (`POST checkout/plan {plan}`, `POST checkout/addon {addon}`); cena je zo serverového katalógu. Kupovať a otvárať
+  portál môže iba vlastník domácnosti (policy `manage`); druhé predplatné popri živom sa odmietne.
+- Návratová stránka `checkout/success` iba zobrazuje stav objednávky („Platbu overujeme“ → „Zaplatené“) a nikdy
+  nič neaktivuje; `checkout/cancel/{order}` uzavrie čakajúcu objednávku.
+
+### Webhooky a nároky
+
+- Inbox `stripe_events`: udalosť sa najprv trvalo uloží (unikátne `event_id`), potom prebehne Cashier synchronizácia
+  a doménové spracovanie ide do fronty (`ProcessStripeEvent`). Duplicitné doručenie odpovie 200 bez opakovania;
+  zlyhané spracovanie sa opakuje denne (max. 5 pokusov). Neplatný podpis → 403, nič sa neuloží.
+- `StripeEventProcessor`: `checkout.session.completed` / `async_payment_succeeded` (balík sa udelí až pri
+  `payment_status = paid`, grant s kľúčom `order:{id}`), `async_payment_failed` / `expired`, `invoice.paid` +
+  `invoice.payment_succeeded` (zaplatené obdobie iba pre faktúry s riadkom nášho plánu – `PaidEntitlement`
+  s kľúčom `invoice:{id}`), `invoice.payment_failed`, `charge.refunded`, `charge.dispute.created`. Rôzne udalosti
+  o tej istej platbe pridajú granty raz; stará udalosť nikdy neobnoví refundovaný nárok.
+- `PaidEntitlement` = zaplatené obdobie `[starts_at, ends_at)`; `PlanStatus::isPlus()` = aktívne obdobie alebo
+  3-dňová tolerancia po neúspešnej obnove (subscription `past_due`), ktorá nepridáva AI granty. Zrušenie obnovovania
+  obdobie neskracuje; refundácia ho revokuje.
+- Mesačné granty: `MonthlyGrantSchedule` počíta z anchoru n kalendárnych mesiacov v `RECIPES_BILLING_TIMEZONE`
+  s orezaním na koniec mesiaca (31. 1. → 28./29. 2. → 31. 3.), intervaly `[start, end)` v UTC, DST zachováva
+  lokálny čas. `UsageProvisioner` otvára **len aktuálny** interval (kľúč `sub:{household}:{kind}:{start}`) – lenivo
+  pri AI požiadavke, na stránkach nastavení a denne v `app:billing-reconcile`; výpadok scheduleru nevytvorí
+  minulé granty. Zmena plánu na hranici obdobia (rovnaký `period.start`) nepridá druhý grant.
+- Nastavenia → **Predplatné**: plán, zaplatené do, ďalšia platba, zrušiť/obnoviť obnovovanie (cez bránu), správa
+  platby a dokladov (Stripe Customer Portal), dokúpenie balíkov, zoznam objednávok. Verejný cenník `/cennik`
+  s prepínačom mesačne/ročne a textom „24 € účtovaných raz ročne; zodpovedá 2 € mesačne“.
+
+### Refundácie a spory
+
+- `RefundService::request()` (CLI `app:billing-refund {order} {amount} --kind= --reason= --text= --images=
+  --revoke-plus --key=`): idempotentný kľúč, refund cez Stripe, potom odobratie iba **nevyužitých** jednotiek grantov
+  danej objednávky v počte, ktorý určí administrátor (nikdy z iného balíka), voliteľne revokácia zaplateného obdobia
+  (ročný plán tým zastaví ďalšie mesačné granty). Kontrola jednotiek prebieha pred pohybom peňazí; zlyhanie Stripe
+  zostane ako `failed` case bez odobratia. Audit `billing.refund.processed` / `billing.refund.failed`.
+- Refundácia vykonaná v Stripe dashboarde vytvorí `RefundCase` kind `external`, stav `needs_review` – nároky sa
+  neodoberajú automaticky. `charge.dispute.created` pozastaví (revokuje) nevyužité jednotky a obdobie danej
+  objednávky, vytvorí case `disputed`, účet zostáva.
+- Admin UI pre refundácie, objednávky a katalóg je etapa 4; online odstúpenie od zmluvy etapa 5.
+
+### Testy
+
+`tests/Feature/Billing/*` a `tests/Unit/Billing/MonthlyGrantScheduleTest.php` pokrývajú akceptačné testy 1, 2, 3,
+4, 5, 8, 9, 10, 11, 12 a 14 (18 feature + 4 unit testov) s falošnou Stripe bránou a podpísanými webhook payloadmi.
+Cashierova vlastná synchronizácia (`customer.subscription.updated`) volá Stripe API, preto sa zrušenie obnovovania
+testuje cez stránku nastavení a bránu; proti reálnemu test účtu sa overí v etape 7 (test clock).
+
+### Nasadenie
+
+`php artisan migrate`, `php artisan db:seed --class=CatalogSeeder`, doplniť `STRIPE_KEY/SECRET`,
+`STRIPE_WEBHOOK_SECRET` (`php artisan cashier:webhook` alebo Stripe CLI; k Cashier udalostiam pridať
+`checkout.session.*`, `invoice.paid`, `invoice.payment_failed`, `charge.refunded`, `charge.dispute.created`) a
+`STRIPE_PRICE_*`; scheduler spúšťa `app:billing-reconcile` denne o 3:15.
 
 ### Otvorené vstupy pre launch (nezmenené zo zadania, kap. 18)
 
