@@ -17,7 +17,9 @@ use App\Models\Person;
 use App\Models\PrivacyRequest;
 use App\Models\Recipe;
 use App\Models\RecipeStep;
+use App\Models\SelectionPreset;
 use App\Models\SelectionSession;
+use App\Models\ShoppingList;
 use App\Models\User;
 use App\Services\Admin\AdminAuditor;
 use App\Services\Billing\Gateway\StripeGateway;
@@ -224,6 +226,8 @@ class AccountErasure
 
         $counts['ai_jobs'] = AiJob::query()->where('household_id', $household->id)->delete();
         SelectionSession::query()->where('household_id', $household->id)->delete();
+        SelectionPreset::query()->where('household_id', $household->id)->delete();
+        ShoppingList::query()->where('household_id', $household->id)->delete();
         MealPlan::query()->where('household_id', $household->id)->delete();
         CookingEvent::query()->where('household_id', $household->id)->delete();
         HouseholdInvitation::query()->where('household_id', $household->id)->delete();

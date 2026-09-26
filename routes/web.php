@@ -44,6 +44,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::livewire('plan', 'pages::plan.index')->name('plan.index');
     Route::livewire('plan/history', 'pages::plan.history')->name('plan.history');
+    Route::livewire('plan/navrh', 'pages::plan.propose')->name('plan.propose');
+    Route::livewire('plan/nakup', 'pages::plan.shopping')->name('plan.shopping');
 
     Route::livewire('family', 'pages::family.index')->name('family.index');
     Route::livewire('settings/household', 'pages::settings.household')->name('household.edit');

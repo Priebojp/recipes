@@ -2,9 +2,11 @@
 
 use App\Enums\PlanMode;
 use App\Enums\PlanStatus;
+use App\Enums\PlusFeature;
 use App\Models\MealPlan;
 use App\Services\MealPlanningService;
 use App\Services\PlanningCalendar;
+use App\Services\Plus\PlusAccess;
 use App\Support\CurrentHousehold;
 use Carbon\CarbonImmutable;
 use Livewire\Attributes\Computed;
@@ -29,6 +31,12 @@ new #[Title('Plán')] class extends Component {
     public function weekStart(): CarbonImmutable
     {
         return $this->week ? $this->calendar->weekStartOf($this->calendar->date($this->week)) : $this->calendar->thisWeekStart();
+    }
+
+    #[Computed]
+    public function isPlus(): bool
+    {
+        return app(PlusAccess::class)->allows(app(CurrentHousehold::class)->get(), PlusFeature::WeeklyMenu);
     }
 
     #[Computed]
@@ -143,6 +151,19 @@ new #[Title('Plán')] class extends Component {
     <x-page-header title="Plán">
         <flux:button :href="route('plan.history')" wire:navigate variant="ghost" icon="clock" size="sm">História</flux:button>
     </x-page-header>
+
+    <div class="grid grid-cols-2 gap-3">
+        <a href="{{ route('plan.propose', ['week' => $this->weekStart->toDateString()]) }}" wire:navigate class="flex items-center gap-3 rounded-2xl border border-zinc-200/80 bg-white p-3 text-sm font-medium transition hover:border-accent/50 dark:border-zinc-700 dark:bg-zinc-800" data-test="propose-link">
+            <flux:icon name="sparkles" class="size-5 shrink-0 text-accent" />
+            <span class="min-w-0 flex-1">Navrhnúť týždeň</span>
+            @unless ($this->isPlus)<flux:badge size="sm" color="orange">Plus</flux:badge>@endunless
+        </a>
+        <a href="{{ route('plan.shopping', ['week' => $this->weekStart->toDateString()]) }}" wire:navigate class="flex items-center gap-3 rounded-2xl border border-zinc-200/80 bg-white p-3 text-sm font-medium transition hover:border-accent/50 dark:border-zinc-700 dark:bg-zinc-800" data-test="shopping-link">
+            <flux:icon name="shopping-cart" class="size-5 shrink-0 text-accent" />
+            <span class="min-w-0 flex-1">Nákupný zoznam</span>
+            @unless ($this->isPlus)<flux:badge size="sm" color="orange">Plus</flux:badge>@endunless
+        </a>
+    </div>
 
     @if ($this->overdue->isNotEmpty())
         <section class="space-y-2">

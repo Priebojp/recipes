@@ -11,7 +11,7 @@ a bezpečná administrácia, potom ledger a Cashier, potom právne stránky, sú
 | 3 | **Cashier a Stripe** | ✅ hotové (vetva `v2-etapa-3-cashier`) | `BillingAccount`, katalóg `PlanVersion`/`AddonVersion`, Checkout, webhook inbox, `PaidEntitlement`, mesačné granty pri ročnej platbe, portal, refund workflow (testy 1–5, 8–12, 14) |
 | 4 | **Admin – finančné moduly** | ✅ hotové (vetva `v2-etapa-4-admin-financie`) | Dashboard MRR/inkaso/refundácie/príspevok, detail domácnosti s kompenzáciami a blokovaním, predplatné so synchronizáciou, objednávky s refund workflow, posúdenie refundácií zo Stripe, ledger použití, verzovaný katalóg, inbox Stripe udalostí (test 13, 14) |
 | 5 | **Právne stránky, cookies, súkromie** | ✅ hotové (vetva `v2-etapa-5-pravne-sukromie`) | `/vop`, `/ochrana-osobnych-udajov`, `/cookies`, `/odstupenie-od-zmluvy`, `/kontakt`, verzie a akceptácie, identita prevádzkovateľa a blokovanie checkoutu, register služieb, cookie lišta podľa kap. 10, consent receipt, zhrnutie pred platbou a e-mail s VOP, online odstúpenie, export/výmaz účtu, žiadosti (testy 15–21) |
-| 6 | Plus funkcie | ⬜ | Týždenný jedálniček, nákupný zoznam, uložené skupiny a filtre – bez platenej AI, ak stačí existujúci algoritmus |
+| 6 | **Plus funkcie** | ✅ hotové (vetva `v2-etapa-6-plus-funkcie`) | Návrh týždenného jedálnička existujúcim generátorom (bez AI), nákupný zoznam z plánu s explicitným zlučovaním, uložené skupiny a filtre výberu; gating podľa zaplateného obdobia, dáta zostávajú po skončení Plus |
 | 7 | Staging a launch | ⬜ | Test clock, doklady, identita prevádzkovateľa, meranie 30+30 AI úloh, potvrdenie cien, produkčné secrets a webhook |
 
 ## Etapa 1 – čo je hotové
@@ -400,6 +400,82 @@ checkout zablokovaný (test 20). Celá sada: 221 testov.
 prevádzkovateľa a publikovať dokumenty – **bez toho je platený checkout aj lokálne vypnutý**. E-maily sú
 `ShouldQueue`: pri `QUEUE_CONNECTION=database` ich odošle až `php artisan queue:work` (lokálne do Mailpitu).
 Voliteľná analytika: až po výbere poskytovateľa zapnúť službu v `/admin/services` s loaderom.
+
+## Etapa 6 – čo je hotové
+
+Všetky tri funkcie, ktoré cenník a `CatalogSeeder` (`features` plánu) sľubujú, sú dokončené; Plus sa tak nepredáva
+s nehotovými funkciami (kap. 2, 16). Nič z nich nepoužíva platenú AI – týždenný návrh beží na existujúcom
+`SelectionEngine` (kap. 7 zadania v1), nákupný zoznam na `ServingScaler`/`IngredientAmountParser`.
+
+### Gating (`PlusAccess`, `PlusFeature`)
+
+- Prístup = `PlanStatus::isPlus()` (zaplatené obdobie alebo 3-dňová tolerancia po neúspešnej obnove; kompenzačný
+  Plus z administrácie funguje rovnako). Úspešná URL checkoutu nič neodomyká.
+- Free domácnosť vidí stránku s vysvetlením (`x-plus-gate`): čo funkcia robí, odkaz na cenník, pre vlastníka odkaz na
+  predplatné, pre člena informácia, že objednáva vlastník. Žiadny nátlak; recepty, ručný plán a história fungujú ďalej.
+  Akcie na serveri vracajú 403. Na stránke Plán majú odkazy pre Free badge „Plus“.
+- **Po skončení Plus nič nezmizne** (kap. 2: existujúce dáta nesmú byť neprístupné): uložené šablóny zostávajú
+  viditeľné a použiteľné (aplikovanie iba vyplní formulár), existujúci nákupný zoznam sa dá čítať a odškrtávať.
+  Plus vyžaduje iba samotná Plus akcia – nový návrh týždňa, nové zostavenie zoznamu, uloženie/prepis šablóny.
+- Blokovanie domácnosti (etapa 4) Plus funkcie neobmedzuje – blokuje AI a nákupy, nie ručné plánovanie.
+
+### Návrh týždenného jedálnička (`/plan/navrh`, `WeeklyMenuPlanner`)
+
+- Vstupy: týždeň (tento/budúci, prednastavený z Plánu cez `?week=`), stravníci (predvolená skupina domácnosti alebo
+  šablóna), typy jedál (raňajky/obed/večera alebo „jedno jedlo denne, čokoľvek“), dni, porcie (1 osoba = 1 porcia),
+  rovnaké voliteľné filtre ako pri jednom jedle.
+- Pre každý slot (deň × typ) beží engine s referenčným dňom daného dňa (história, plánované jedlá ±3 dni, výluky,
+  chute skupiny) a vážený náhodný výber. **Recept je v týždni najviac raz** – ani dvakrát v návrhu, ani ak už je
+  v tom týždni naplánovaný ručne. Slot, ktorý už má plán, zostáva označený „Už naplánované“ a nemení sa.
+  Keď nezostane kandidát, slot je prázdny s dôvodom (filtre, výluky, všetko použité) – nikdy sa neopakuje potichu.
+- Návrh žije iba v UI: každý slot možno vymeniť (iba ten jeden slot, ostatné zostávajú) alebo vynechať; až
+  „Uložiť do plánu“ vytvorí bežné `meal_plans` cez `MealPlanningService::create` v jednej transakcii. Recepty, ktoré
+  sa medzičasom archivovali alebo dostali výluku, sa vynechajú a vypíšu. Uvarenie sa potvrdzuje ako doteraz.
+- Po uložení sa (pri súhlase s analytikou) vyšle povolená udalosť `meal_planned` s `mode=week`.
+
+### Nákupný zoznam z plánu (`/plan/nakup`, `ShoppingListBuilder`, tabuľky `shopping_lists`, `shopping_list_items`)
+
+- Zoznam na týždeň zo všetkých **naplánovaných** (nie zrušených/uvarených) jedál s dňom v týždni alebo „tento týždeň
+  – bez dňa“. Množstvá sa prepočítajú podľa porcií plánu, keď recept pozná základné porcie; inak sa použijú
+  pôvodné množstvá a zdroj je označený ako neprepočítaný.
+- **Zlučovanie je explicitné** (zadanie v1, kap. 16): sčítajú sa iba riadky s rovnakým normalizovaným názvom
+  a jednotkou (`cibuľa|ks`); „g“ a „kg“ zostávajú dve položky, „podľa chuti“ sa uvádza samostatne s názvom
+  receptu, jednotky sa nekonvertujú. Pri každej položke vidno, z ktorých receptov je.
+- Odškrtávanie (každý člen), vlastné položky (rovnaký názov + jednotka sa pripočíta, nezdvojí), „Kopírovať ako text“.
+  Opätovné zostavenie nahradí generované riadky, **zachová odškrtnutie** položiek, ktoré v pláne ostali, a vlastné
+  položky; riadky, ktoré z plánu vypadli, zmizne. Stránka upozorní, keď sa plán od zostavenia zmenil.
+- Jeden zoznam na domácnosť a týždeň (unikátny index); položky z receptu sa mažú iba zmenou plánu, nie ručne.
+
+### Uložené skupiny a filtre (`SelectionPresets`, tabuľka `selection_presets`)
+
+- Na stránke „Vyber mi jedlo“ blok **Šablóny**: uloženie aktuálnych stravníkov, typu jedla a filtrov pod názvom
+  („Rodina“, „Návšteva“), aplikovanie jedným klikom (aj v týždennom návrhu), odstránenie s potvrdením. Rovnaký názov
+  šablónu prepíše (unikátny index domácnosť + názov). Archivovaní stravníci sa pri aplikovaní vynechajú.
+- Viditeľný limit 30 šablón na domácnosť (`SelectionPresets::LIMIT`) – hlási sa až pri dosiahnutí, nie skrytý.
+- Ukladať a mazať môže vlastník/spolupracovník (`edit` domácnosti); člen s rolou iba na čítanie šablóny používa.
+
+### Export, výmaz, zásady
+
+- `ExportService` schéma **2**: pribudli `selection_presets` a `shopping_lists` (staré kľúče nezmenené).
+- `AccountErasure::purgeHouseholdContent` maže aj šablóny a nákupné zoznamy (FK kaskáda pokrýva úplný výmaz,
+  anonymizovaná domácnosť s dokladmi potrebuje explicitné mazanie).
+- Politiky `SelectionPresetPolicy`, `ShoppingListPolicy` (člen číta/odškrtáva, editor spravuje); všetky dotazy sú
+  ohraničené aktuálnou domácnosťou.
+
+### Testy
+
+`tests/Feature/Plus/{WeeklyMenuTest, ShoppingListTest, SelectionPresetTest}.php` (10 testov) s deterministickým
+`WeightedPicker` a helperom `Tests\Support\PlusScenario::activate()/expire()` (zaplatené obdobie bez objednávky ako pri
+kompenzácii). Pokrývajú: žiadne opakovanie v týždni a rešpekt k ručným plánom, typy jedál/výluky/filtre, výmenu jedného
+slotu, vynechanie archivovaného receptu pri potvrdení, gating (403 + stránka) a tok z Livewire stránky; zlučovanie
+podľa názvu a jednotky, prepočet porcií, neprepočítaný recept, zachovanie odškrtnutia a vlastných položiek pri
+regenerácii, čitateľnosť zoznamu po skončení Plus; uloženie/prepis/aplikovanie/mazanie šablón, Free a člen bez práv,
+limit. `PagesRenderTest` renderuje nové stránky. Celá sada: 231 testov.
+
+### Nasadenie
+
+`php artisan migrate` (tri nové tabuľky). Bez nových závislostí, bez zmeny JS bundlu (kopírovanie do schránky je
+inline Alpine). Cenník a `CatalogSeeder` už funkcie uvádzali; teraz sú skutočne dostupné.
 
 ## Otvorené vstupy pre launch (nezmenené zo zadania, kap. 18)
 

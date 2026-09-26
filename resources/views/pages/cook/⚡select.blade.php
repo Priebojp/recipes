@@ -2,15 +2,26 @@
 
 use App\Enums\MealType;
 use App\Enums\PersonKind;
+use App\Enums\PlusFeature;
 use App\Models\Person;
+use App\Models\SelectionPreset;
 use App\Services\PlanningCalendar;
+use App\Services\Plus\PlusAccess;
+use App\Services\Plus\SelectionPresets;
 use App\Services\RecipeSelectionService;
 use App\Support\CurrentHousehold;
+use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Title('Vyber mi jedlo')] class extends Component {
+    public bool $showPresetForm = false;
+
+    public string $presetName = '';
+
+    public string $presetNotice = '';
+
     /** @var list<int> */
     public array $personIds = [];
 
@@ -59,6 +70,91 @@ new #[Title('Vyber mi jedlo')] class extends Component {
         return Person::query()->where('household_id', app(CurrentHousehold::class)->id())->active()->orderByDesc('kind')->orderBy('name')->get();
     }
 
+    /** @return Collection<int, SelectionPreset> */
+    #[Computed]
+    public function presets(): Collection
+    {
+        return app(SelectionPresets::class)->forHousehold(app(CurrentHousehold::class)->get());
+    }
+
+    #[Computed]
+    public function canSavePresets(): bool
+    {
+        return app(PlusAccess::class)->allows(app(CurrentHousehold::class)->get(), PlusFeature::SelectionPresets);
+    }
+
+    #[Computed]
+    public function canEditPresets(): bool
+    {
+        return auth()->user()->can('edit', app(CurrentHousehold::class)->get());
+    }
+
+    /** Applying a saved preset only fills the form; it stays possible after Plus ends so nothing becomes inaccessible. */
+    public function applyPreset(int $presetId): void
+    {
+        $preset = SelectionPreset::query()->where('household_id', app(CurrentHousehold::class)->id())->findOrFail($presetId);
+        $this->authorize('view', $preset);
+
+        $this->personIds = $preset->activePersonIds();
+        $this->mealType = $preset->meal_type?->value ?? 'any';
+        $filters = $preset->selectionFilters();
+        $this->includeUntyped = $filters->includeUntyped;
+        $this->onlyFavoritesOfAll = $filters->onlyFavoritesOfAll;
+        $this->allowDisliked = $filters->allowDisliked;
+        $this->maxMinutes = $filters->maxMinutes;
+        $this->includeUnknownTime = $filters->includeUnknownTime;
+        $this->noRepeatDays = $filters->noRepeatDays;
+        $this->presetNotice = 'Šablóna „'.$preset->name.'“ je použitá.';
+        $this->error = '';
+    }
+
+    public function savePreset(SelectionPresets $presets): void
+    {
+        $household = app(CurrentHousehold::class)->get();
+        app(PlusAccess::class)->assert($household, PlusFeature::SelectionPresets);
+        $this->authorize('edit', $household);
+        $this->validate(['presetName' => ['required', 'string', 'max:60']], ['presetName.required' => 'Zadaj názov šablóny.']);
+
+        try {
+            $preset = $presets->save($household, $this->presetName, [
+                'person_ids' => $this->personIds,
+                'meal_type' => $this->mealType,
+                'filters' => $this->filters(),
+            ], auth()->user());
+        } catch (\InvalidArgumentException $e) {
+            $this->addError('presetName', $e->getMessage());
+
+            return;
+        }
+
+        $this->presetName = '';
+        $this->showPresetForm = false;
+        $this->presetNotice = 'Šablóna „'.$preset->name.'“ je uložená.';
+        unset($this->presets);
+    }
+
+    public function deletePreset(int $presetId, SelectionPresets $presets): void
+    {
+        $preset = SelectionPreset::query()->where('household_id', app(CurrentHousehold::class)->id())->findOrFail($presetId);
+        $this->authorize('delete', $preset);
+        $presets->delete($preset);
+        $this->presetNotice = '';
+        unset($this->presets);
+    }
+
+    /** @return array<string, mixed> */
+    private function filters(): array
+    {
+        return [
+            'include_untyped' => $this->includeUntyped,
+            'only_favorites_of_all' => $this->onlyFavoritesOfAll,
+            'allow_disliked' => $this->allowDisliked,
+            'max_minutes' => $this->maxMinutes,
+            'include_unknown_time' => $this->includeUnknownTime,
+            'no_repeat_days' => $this->noRepeatDays,
+        ];
+    }
+
     public function addGuest(): void
     {
         $this->validate(['guestName' => ['required', 'string', 'max:100']], ['guestName.required' => 'Zadaj meno hosťa.']);
@@ -98,14 +194,7 @@ new #[Title('Vyber mi jedlo')] class extends Component {
             'meal_type' => $this->mealType,
             'term' => $this->term,
             'date' => $this->date,
-            'filters' => [
-                'include_untyped' => $this->includeUntyped,
-                'only_favorites_of_all' => $this->onlyFavoritesOfAll,
-                'allow_disliked' => $this->allowDisliked,
-                'max_minutes' => $this->maxMinutes,
-                'include_unknown_time' => $this->includeUnknownTime,
-                'no_repeat_days' => $this->noRepeatDays,
-            ],
+            'filters' => $this->filters(),
         ];
 
         try {
@@ -131,6 +220,45 @@ new #[Title('Vyber mi jedlo')] class extends Component {
     <x-page-header title="Vyber mi jedlo" :back="route('cook.index')" />
 
     <form wire:submit="start" class="space-y-6">
+        @if ($this->presets->isNotEmpty() || $this->canEditPresets)
+            <flux:card size="sm" class="space-y-3" data-test="presets">
+                <div class="flex flex-wrap items-center gap-2">
+                    <flux:heading size="sm" class="me-1">Šablóny</flux:heading>
+                    @foreach ($this->presets as $preset)
+                        <span class="inline-flex items-center rounded-full border border-zinc-300 bg-white text-sm dark:border-zinc-600 dark:bg-zinc-800" wire:key="preset-{{ $preset->id }}">
+                            <button type="button" wire:click="applyPreset({{ $preset->id }})" class="flex items-center gap-1.5 rounded-full px-3 py-1.5 hover:text-accent" data-test="apply-preset-{{ $preset->id }}">
+                                <flux:icon name="bookmark" class="size-4" />{{ $preset->name }}
+                            </button>
+                            @if ($this->canEditPresets)
+                                <button type="button" wire:click="deletePreset({{ $preset->id }})" wire:confirm="Odstrániť šablónu „{{ $preset->name }}“?" class="pe-2 text-zinc-400 hover:text-red-600" aria-label="Odstrániť šablónu {{ $preset->name }}" data-test="delete-preset-{{ $preset->id }}">
+                                    <flux:icon name="x-mark" class="size-4" />
+                                </button>
+                            @endif
+                        </span>
+                    @endforeach
+                    @if ($this->presets->isEmpty())
+                        <flux:text class="text-sm">Ulož si skupinu stravníkov a filtre, napr. „Rodina“ alebo „Návšteva“.</flux:text>
+                    @endif
+                    @if ($this->canEditPresets)
+                        @if ($this->canSavePresets)
+                            <flux:button size="sm" variant="ghost" icon="bookmark-square" wire:click="$toggle('showPresetForm')" data-test="save-preset-toggle">Uložiť ako šablónu</flux:button>
+                        @else
+                            <flux:link :href="route('pricing')" wire:navigate class="text-xs">Ukladanie šablón je súčasťou Plus</flux:link>
+                        @endif
+                    @endif
+                </div>
+                @if ($presetNotice)
+                    <flux:text class="text-sm text-accent-content" data-test="preset-notice">{{ $presetNotice }}</flux:text>
+                @endif
+                @if ($showPresetForm && $this->canSavePresets)
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-end">
+                        <flux:input wire:model="presetName" label="Názov šablóny" placeholder="napr. Rodina" description="Uloží aktuálnych stravníkov, typ jedla a filtre. Rovnaký názov šablónu prepíše." class="flex-1" />
+                        <flux:button wire:click="savePreset" size="sm" variant="primary" data-test="save-preset">Uložiť</flux:button>
+                    </div>
+                @endif
+            </flux:card>
+        @endif
+
         <flux:fieldset>
             <flux:legend>1. Pre koho varíš?</flux:legend>
             <div class="flex flex-wrap gap-2">
