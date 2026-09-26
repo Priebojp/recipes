@@ -3,6 +3,7 @@
 Zadanie: `moje-recepty-v2-predplatne-admin-pravne.md`. Táto stránka drží dohodnuté rozdelenie na menšie kusy
 (etapa = samostatná vetva/PR) a čo je z nej hotové. Poradie sleduje kapitolu 16 zadania: najprv merateľná AI
 a bezpečná administrácia, potom ledger a Cashier, potom právne stránky, súhlas a súkromie, nakoniec Plus funkcie.
+Pokračovanie (dodatok v2.1: profily obrázkov, výživa, rozpoznanie jedla, denník) je v `v2-1-etapy-a-stav.md`, etapy 8–13.
 
 | # | Etapa | Stav | Obsah |
 |---|---|---|---|
