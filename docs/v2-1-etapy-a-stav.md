@@ -10,7 +10,7 @@ vystavenie. Nič z v2 sa neprerába – Cashier, ledger, oprávnenia a admin sa 
 |---|---|---|---|
 | 8 | **Profily obrázkov a porovnanie low/medium** | ✅ kód hotový (vetva `v2-1-etapa-8-image-profiles`) · ⏳ porovnávací beh a rozhodnutie prevádzkovateľa | Verzované profily `image_economy_v1` / `image_standard_v1` / `image_high_v1`, snímka kódu profilu na úlohe, druh použitia `image_economy` v ledgeri, rozšírené `app:ai-measure` o porovnávací beh 10 jedál × (2 low + 2 medium), admin prehľad nákladov podľa profilu; **žiadna zmena ponuky** |
 | 9 | **Databáza potravín a priradenie ingrediencií** | ✅ kód hotový (vetva `v2-1-etapa-9-food-database`) · ⏳ `USDA_FDC_API_KEY` a prvý `app:food-sync` na serveri | `FoodSourceRecord` (USDA FoodData Central ako jediný prvý zdroj, cache, licencia), ručný SK/CZ slovník bežných surovín, `IngredientFoodMapping` s prevodom jednotiek a stavom suroviny, admin kurátorstvo a neúspešné priradenia |
-| 10 | **Výživové hodnoty receptu** | ⏳ naplánované | `NutritionCalculation` (revízia receptu, kompletnosť, predpoklady, verzia výpočtu), tok „Vypočítať výživové hodnoty“ s potvrdením priradení, zobrazenie na recept / porciu / 100 g, neaktuálnosť po editácii; bez AI a bez použití |
+| 10 | **Výživové hodnoty receptu** | ✅ kód hotový (vetva `v2-1-etapa-10-nutrition`) | `NutritionCalculation` (revízia receptu, kompletnosť, predpoklady, verzia výpočtu), tok „Vypočítať výživové hodnoty“ s potvrdením priradení, zobrazenie na recept / porciu / 100 g, neaktuálnosť po editácii; bez AI a bez použití |
 | 11 | **Rozpoznanie jedla z fotografie** | ⏳ naplánované | `MealAnalysis` + `MealAnalysisItem`, `AiJobKind::MealAnalysis` s obrazovým vstupom gpt-6-luna, druh použitia `meal_analysis` (3 skúšobné na používateľa), obrazovka „Skontroluj jedlo“, súkromné úložisko fotiek s TTL a odstránením EXIF, meranie nákladu analýzy |
 | 12 | **Súkromný denník „Zjedol som“** | ⏳ naplánované | `MealConsumption` + `ConsumptionNutritionSnapshot` (recept / analýza / manuálne jedlo), zjedený podiel a opravy po zložkách, oprávnenia iba pre vlastníka denníka, export/výmaz/čistenie, oddelenie od `CookingEvent` |
 | 13 | **Ponuka v2.1, admin, právne a Stripe údaje** | ⏳ naplánované · vstupy prevádzkovateľa | Katalóg verzia 2 (Economy obrázky, analýzy jedla, balík analýz) len po rozhodnutí z etapy 8, granty `meal_analysis` z predplatného, admin moduly (profily, náklady analýz, stav kľúčov, kurátorstvo), nová verzia informácií o súkromí, kap. 11 (Stripe údaje) do identity prevádzkovateľa a launch checklistu |
@@ -201,6 +201,41 @@ a je dostupná aj Free domácnostiam (rozhodnutie o gatingu je v otvorených ot�
    koncentráciu (scenár 10); chýbajúca hodnota → partial, nie 0 (scenár 8); surová vs. varená ryža (scenár 7);
    editácia receptu → stale (scenár 11); výpočet nevytvorí AI úlohu ani rezerváciu (scenár 15); kalkulácia obsahuje
    zdroj a gramáž každej zložky (scenár 16); člen s právom čítania vidí výsledok, upraviť priradenie môže editor.
+
+### Čo je hotové (kód)
+
+- Tabuľka `nutrition_calculations` (`2026_09_27_082406`): `recipe_id`, `recipe_revision_id`, `calculation_version`, `servings`, `final_weight_g`,
+  `totals` / `per_serving` / `per_100g` (JSON per živina, `null` = neznáme), `completeness` (`complete|partial`), `components` (každá zložka so zdrojom
+  – provider, external_id, názov, licencia, stav –, gramážou, pôvodom gramáže, podielom a hodnotami na 100 g v čase výpočtu), `missing`, `assumptions`,
+  `stale_at`, `created_by`. Model `NutritionCalculation` (+ factory), enum `NutritionCompleteness`, relácia `Recipe::nutritionCalculations()`.
+- `App\Services\Nutrition\NutritionCalculator` (čistá matematika, bez DB, `VERSION = 1`): `grams × podiel / 100 × hodnota na 100 g`, súčet len
+  započítaných zložiek; kcal vždy z databázy (nie 4/4/9), kJ oddelene; chýbajúca hodnota jadra (kcal, bielkoviny, sacharidy, tuky) = `partial`
+  s dôvodom v `missing`, chýbajúca voliteľná živina (kJ, vláknina) = `null` v súčte; zložka bez potraviny alebo bez gramáže = `missing`;
+  výnimka: potravina s ≤ 5 kcal/100 g bez množstva (soľ „podľa chuti“) sa vynechá s poznámkou v `assumptions`, nie ako chýbajúca. Podiel < 100 %
+  („olej nezjedený celý“) a odhadovaná gramáž sú vždy v `assumptions`. Na porciu = `totals / base_servings`; na 100 g len pri zadanej konečnej hmotnosti
+  (nikdy zo súčtu surových množstiev). `NutritionFormatter` zaokrúhľuje až pri zobrazení (kcal na 5, nad 1 000 na 10; gramy pod 10 g na desatinu),
+  neznáme = „–“, nikdy 0.
+- `RecipeNutrition`: `prepare()` (obnoví gramáže potvrdených priradení podľa aktuálneho množstva v recepte – nové `FoodMappingService::refreshRecipeAmounts()`,
+  ručne zadané/odhadnuté gramáže ostávajú – a navrhne nepriradené riadky), `linesNeedingAmount()` (energeticky významná potravina bez gramáže),
+  `calculate()` (zvyšné návrhy potvrdí, vypočíta, uloží proti aktívnej revízii; recept bez revízie ju dostane), `current()`, `inputsChanged()` +
+  `markStale()`. `RecipeService::snapshotRevision()` označí kalkulácie ako neaktuálne len keď sa zmenili suroviny (názov, množstvo, jednotka) alebo
+  počet porcií – zmena názvu receptu, poznámok či postupu nie. Staré behy sa nikdy neprepisujú.
+- Livewire `NutritionPanel` na detaile receptu (karta „Výživové hodnoty“, bez gatingu, bez AI a bez použití): krok 1 návrh priradení, krok 2 kontrola
+  (výber potraviny/stavu spomedzi kandidátov slovníka alebo „bez potraviny“, gramáž s pôvodom zadané/odhad, „Podľa receptu“, podiel celé/75/50/25/nič,
+  voliteľná konečná hmotnosť), krok 3 výsledok (recept / porcia / 100 g, odznak „Čiastočný súčet“, zoznam chýbajúcich a predpokladov, tabuľka zložiek
+  so zdrojom a gramážou, upozornenie „nie je medicínske meranie“). Energeticky významná surovina bez gramáže výpočet zastaví s výzvou (gramáž alebo
+  „nezapočítať“). Neaktuálny výpočet ukáže „Výpočet je pre staršiu verziu receptu“ + Prepočítať. Člen s právom čítania vidí výsledok, `start`/`compute`/zmeny
+  priradení vyžadujú `update` receptu; recept cudzej domácnosti = 404.
+- Export schéma 3 (`config/recipes.php`): `ingredients[].food_mapping` (provider + external_id, stav, gramáž, pôvod) a `recipes[].nutrition_calculations`;
+  výmaz receptu maže kalkulácie cez FK kaskádu.
+- Testy: `tests/Unit/Nutrition/NutritionCalculatorTest.php` (scenáre 7–10, podiel/odhad/vylúčenie, formátovanie) a
+  `tests/Feature/Nutrition/RecipeNutritionTest.php` (celý tok cez panel, scenáre 7–11, 15, 16, podiely, oprávnenia, export, kaskáda).
+
+### Migrácia a nasadenie
+
+Jedna tabuľka; bez nových `.env` premenných. Kalkulácia pracuje len s uloženými snímkami potravín – bez `app:food-sync` (etapa 9) sú hodnoty
+`null` a výsledok je „Čiastočný súčet“ s dôvodom „Zdroj nemá hodnotu“. Mlieko v ml a vajcia v ks potrebujú potvrdený prevod (hustota / ks) v `/admin/food`,
+inak si panel vyžiada gramáž.
 
 ## Etapa 11 – Rozpoznanie jedla z fotografie
 

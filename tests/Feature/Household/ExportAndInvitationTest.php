@@ -26,7 +26,7 @@ it('exports recipes, raw texts, preferences, plans, history and images with stab
     $files = [];
     $data = app(ExportService::class)->data($h['household'], $files);
 
-    expect($data['schema_version'])->toBe(2)
+    expect($data['schema_version'])->toBe(3)
         ->and($data['selection_presets'])->toBe([])
         ->and($data['shopping_lists'])->toBe([])
         ->and($data['recipes'][0]['raw_text'])->toBe('pôvodný zápis')

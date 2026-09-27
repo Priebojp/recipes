@@ -9,6 +9,7 @@ use App\Models\Recipe;
 use App\Models\RecipeRevision;
 use App\Models\RecipeStep;
 use App\Models\User;
+use App\Services\Nutrition\RecipeNutrition;
 use Illuminate\Support\Facades\DB;
 
 class RecipeService
@@ -209,6 +210,8 @@ class RecipeService
      */
     public function snapshotRevision(Recipe $recipe, ?User $author, string $source): RecipeRevision
     {
+        $previous = $recipe->active_revision_id ? RecipeRevision::query()->find($recipe->active_revision_id) : null;
+
         $revision = RecipeRevision::create([
             'recipe_id' => $recipe->id,
             'author_id' => $author?->id,
@@ -219,6 +222,11 @@ class RecipeService
         ]);
 
         $recipe->forceFill(['active_revision_id' => $revision->id])->saveQuietly();
+
+        // v2.1 stage 10: a nutrition calculation belongs to the ingredients and servings it was computed from.
+        if ($previous !== null && RecipeNutrition::inputsChanged($previous->snapshot, $revision->snapshot)) {
+            RecipeNutrition::markStale($recipe);
+        }
 
         return $revision;
     }

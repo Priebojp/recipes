@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\CookingEvent;
 use App\Models\Household;
 use App\Models\MealPlan;
+use App\Models\NutritionCalculation;
 use App\Models\Person;
 use App\Models\Recipe;
 use App\Models\RecipeStep;
@@ -61,7 +62,7 @@ class ExportService
     private function buildData(Household $household): array
     {
         $recipes = Recipe::query()->where('household_id', $household->id)
-            ->with(['mealTypes', 'ingredients', 'steps.media', 'media', 'revisions', 'preferences', 'exclusions'])
+            ->with(['mealTypes', 'ingredients.foodMapping.record', 'steps.media', 'media', 'revisions', 'preferences', 'exclusions', 'nutritionCalculations'])
             ->get();
 
         return [
@@ -123,6 +124,24 @@ class ExportService
             'ingredients' => $r->ingredients->map(fn ($l) => [
                 'id' => $l->id, 'position' => $l->position, 'name' => $l->name, 'numeric_amount' => $l->numeric_amount,
                 'text_amount' => $l->text_amount, 'unit' => $l->unit, 'note' => $l->note, 'source_text' => $l->source_text,
+                // v2.1 stage 10 (schema 3): the food the line is mapped to, by provider reference – never an internal ID alone.
+                'food_mapping' => $l->foodMapping === null ? null : [
+                    'status' => $l->foodMapping->status->value,
+                    'provider' => $l->foodMapping->record?->provider,
+                    'external_id' => $l->foodMapping->record?->external_id,
+                    'food_name' => $l->foodMapping->record?->name,
+                    'preparation_state' => $l->foodMapping->preparation_state?->value,
+                    'grams' => $l->foodMapping->grams,
+                    'grams_origin' => $l->foodMapping->grams_origin?->value,
+                    'unresolved_reason' => $l->foodMapping->unresolved_reason,
+                    'confirmed_at' => $l->foodMapping->confirmed_at?->toIso8601String(),
+                ],
+            ])->all(),
+            'nutrition_calculations' => $r->nutritionCalculations->map(fn (NutritionCalculation $c) => [
+                'id' => $c->id, 'recipe_revision_id' => $c->recipe_revision_id, 'calculation_version' => $c->calculation_version,
+                'servings' => $c->servings, 'final_weight_g' => $c->final_weight_g, 'totals' => $c->totals, 'per_serving' => $c->per_serving,
+                'per_100g' => $c->per_100g, 'completeness' => $c->completeness->value, 'components' => $c->components, 'missing' => $c->missing,
+                'assumptions' => $c->assumptions, 'stale_at' => $c->stale_at?->toIso8601String(), 'created_at' => $c->created_at?->toIso8601String(),
             ])->all(),
             'steps' => $r->steps->map(fn (RecipeStep $s) => [
                 'id' => $s->id, 'position' => $s->position, 'text' => $s->text,
