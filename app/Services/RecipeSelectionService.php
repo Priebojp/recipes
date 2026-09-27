@@ -67,7 +67,7 @@ class RecipeSelectionService
     {
         $personIds = $this->verifiedPersonIds($household, $inputs['person_ids']);
         if ($personIds === []) {
-            throw new InvalidArgumentException('Vyber aspoň jedného stravníka.');
+            throw new InvalidArgumentException(__('Vyber aspoň jedného stravníka.'));
         }
 
         $mealType = isset($inputs['meal_type']) && $inputs['meal_type'] !== '' && $inputs['meal_type'] !== 'any'

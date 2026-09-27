@@ -37,7 +37,7 @@ new class extends Component {
             try {
                 $this->recoveryCodes = json_decode(decrypt($user->two_factor_recovery_codes), true);
             } catch (Exception) {
-                $this->addError('recoveryCodes', 'Nepodarilo sa načítať záložné kódy');
+                $this->addError('recoveryCodes', __('Nepodarilo sa načítať záložné kódy'));
 
                 $this->recoveryCodes = [];
             }

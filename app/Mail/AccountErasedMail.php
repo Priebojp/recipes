@@ -20,7 +20,7 @@ class AccountErasedMail extends Mailable implements ShouldQueue
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Váš účet bol vymazaný – '.config('app.name'));
+        return new Envelope(subject: __('Váš účet bol vymazaný – :app', ['app' => config('app.name')]));
     }
 
     public function content(): Content

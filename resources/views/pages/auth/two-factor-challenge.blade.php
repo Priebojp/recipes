@@ -53,7 +53,7 @@
                                 x-model="code"
                                 length="6"
                                 name="code"
-                                label="Overovací kód"
+                                :label="__('Overovací kód')"
                                 label:sr-only
                                 class="mx-auto"
                              />

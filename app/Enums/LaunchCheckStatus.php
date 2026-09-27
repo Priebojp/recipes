@@ -12,10 +12,10 @@ enum LaunchCheckStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::Ok => 'OK',
-            self::Warn => 'Upozornenie',
-            self::Fail => 'Blokuje',
-            self::Skip => 'Neoverené',
+            self::Ok => __('OK'),
+            self::Warn => __('Upozornenie'),
+            self::Fail => __('Blokuje'),
+            self::Skip => __('Neoverené'),
         };
     }
 

@@ -17,11 +17,11 @@ enum FoodPreparationState: string
     public function label(): string
     {
         return match ($this) {
-            self::Raw => 'surové',
-            self::Cooked => 'uvarené / tepelne upravené',
-            self::Dry => 'suché',
-            self::Canned => 'konzervované',
-            self::Unknown => 'neurčené',
+            self::Raw => __('surové'),
+            self::Cooked => __('uvarené / tepelne upravené'),
+            self::Dry => __('suché'),
+            self::Canned => __('konzervované'),
+            self::Unknown => __('neurčené'),
         };
     }
 

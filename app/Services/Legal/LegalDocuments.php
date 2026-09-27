@@ -63,7 +63,7 @@ class LegalDocuments
     {
         $existing = $this->draft($type);
         if ($existing !== null) {
-            throw new InvalidArgumentException('Dokument už má rozpracovaný návrh v'.$existing->version.'. Uprav ho alebo ho najprv publikuj.');
+            throw new InvalidArgumentException(__('Dokument už má rozpracovaný návrh v:version. Uprav ho alebo ho najprv publikuj.', ['version' => $existing->version]));
         }
 
         $latest = $this->latest($type);
@@ -92,7 +92,7 @@ class LegalDocuments
     public function updateDraft(LegalDocumentVersion $version, array $values, ?User $by = null): LegalDocumentVersion
     {
         if (! $version->isDraft()) {
-            throw new InvalidArgumentException('Publikovanú alebo archivovanú verziu nemožno upravovať; vytvor novú verziu.');
+            throw new InvalidArgumentException(__('Publikovanú alebo archivovanú verziu nemožno upravovať; vytvor novú verziu.'));
         }
 
         $before = ['title' => $version->title, 'checksum' => $version->checksum, 'effective_at' => $version->effective_at?->toIso8601String()];
@@ -119,13 +119,13 @@ class LegalDocuments
     public function publish(LegalDocumentVersion $version, string $approvalNote, User $by): LegalDocumentVersion
     {
         if (! $version->isDraft()) {
-            throw new InvalidArgumentException('Publikovať možno iba návrh.');
+            throw new InvalidArgumentException(__('Publikovať možno iba návrh.'));
         }
         if ($version->hasPlaceholders()) {
-            throw new InvalidArgumentException('Text obsahuje nevyplnené údaje: '.implode(', ', $version->placeholders()).'. Publikovanie placeholderov ako skutočných údajov nie je dovolené.');
+            throw new InvalidArgumentException(__('Text obsahuje nevyplnené údaje: :placeholders. Publikovanie placeholderov ako skutočných údajov nie je dovolené.', ['placeholders' => implode(', ', $version->placeholders())]));
         }
         if (trim($version->content) === '') {
-            throw new InvalidArgumentException('Prázdny dokument nemožno publikovať.');
+            throw new InvalidArgumentException(__('Prázdny dokument nemožno publikovať.'));
         }
 
         DB::transaction(function () use ($version, $approvalNote, $by) {
@@ -157,7 +157,7 @@ class LegalDocuments
     public function archive(LegalDocumentVersion $version, string $reason, User $by): LegalDocumentVersion
     {
         if (! $version->isPublished()) {
-            throw new InvalidArgumentException('Archivovať možno iba publikovanú verziu.');
+            throw new InvalidArgumentException(__('Archivovať možno iba publikovanú verziu.'));
         }
         $version->update(['state' => LegalDocumentState::Archived, 'archived_at' => now()]);
         $this->audit->record('legal.document.archived', $version, [], ['type' => $version->type->value, 'version' => $version->version], $reason, $by);

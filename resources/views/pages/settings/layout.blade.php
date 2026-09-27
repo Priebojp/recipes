@@ -4,9 +4,9 @@
             <flux:navlist.item :href="route('profile.edit')" wire:navigate>{{ __('Profile') }}</flux:navlist.item>
             <flux:navlist.item :href="route('security.edit')" wire:navigate>{{ __('Security') }}</flux:navlist.item>
             <flux:navlist.item :href="route('appearance.edit')" wire:navigate>{{ __('Appearance') }}</flux:navlist.item>
-            <flux:navlist.item :href="route('subscription.edit')" wire:navigate>Predplatné</flux:navlist.item>
-            <flux:navlist.item :href="route('usage.index')" wire:navigate>AI použitia</flux:navlist.item>
-            <flux:navlist.item :href="route('privacy.edit')" wire:navigate>Súkromie</flux:navlist.item>
+            <flux:navlist.item :href="route('subscription.edit')" wire:navigate>{{ __('Predplatné') }}</flux:navlist.item>
+            <flux:navlist.item :href="route('usage.index')" wire:navigate>{{ __('AI použitia') }}</flux:navlist.item>
+            <flux:navlist.item :href="route('privacy.edit')" wire:navigate>{{ __('Súkromie') }}</flux:navlist.item>
         </flux:navlist>
     </div>
 
@@ -15,8 +15,8 @@
     <div class="flex-1 self-stretch max-md:pt-6">
         @if (session('admin_two_factor_required'))
             <flux:callout variant="warning" icon="shield-exclamation" class="mb-4">
-                <flux:callout.heading>Administrácia vyžaduje dvojfaktorové overenie</flux:callout.heading>
-                <flux:callout.text>Zapni a potvrď dvojfaktorové overenie nižšie; potom sa /admin otvorí.</flux:callout.text>
+                <flux:callout.heading>{{ __('Administrácia vyžaduje dvojfaktorové overenie') }}</flux:callout.heading>
+                <flux:callout.text>{{ __('Zapni a potvrď dvojfaktorové overenie nižšie; potom sa /admin otvorí.') }}</flux:callout.text>
             </flux:callout>
         @endif
 

@@ -17,7 +17,7 @@ class BillingPortalController extends Controller
 
         $account = $household->billingAccount;
         if ($account === null || ! $account->stripe_id) {
-            return redirect()->route('subscription.edit')->with('status', 'Domácnosť zatiaľ nemá žiadnu platbu, portál sa otvorí po prvom nákupe.');
+            return redirect()->route('subscription.edit')->with('status', __('Domácnosť zatiaľ nemá žiadnu platbu, portál sa otvorí po prvom nákupe.'));
         }
 
         return redirect()->away($gateway->billingPortalUrl($account, route('subscription.edit')));

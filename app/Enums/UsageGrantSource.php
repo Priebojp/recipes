@@ -12,10 +12,10 @@ enum UsageGrantSource: string
     public function label(): string
     {
         return match ($this) {
-            self::Trial => 'skúšobné',
-            self::Subscription => 'predplatné',
-            self::Addon => 'dokúpený balík',
-            self::Compensation => 'kompenzácia',
+            self::Trial => __('skúšobné'),
+            self::Subscription => __('predplatné'),
+            self::Addon => __('dokúpený balík'),
+            self::Compensation => __('kompenzácia'),
         };
     }
 

@@ -91,105 +91,105 @@ new #[Title('Súkromie')] class extends Component {
         $logout();
         $erasure->erase($user, $transferTo, $this->erasureMessage ?: null);
 
-        session()->flash('status', 'Účet bol vymazaný. Potvrdenie sme poslali e-mailom.');
+        session()->flash('status', __('Účet bol vymazaný. Potvrdenie sme poslali e-mailom.'));
         $this->redirect('/', navigate: true);
     }
 }; ?>
 
 <section class="w-full">
-    <x-pages::settings.layout heading="Súkromie a podmienky" subheading="Dokumenty, ktoré si prijal(a), tvoja voľba cookies, export údajov a vymazanie účtu.">
+    <x-pages::settings.layout :heading="__('Súkromie a podmienky')" :subheading="__('Dokumenty, ktoré si prijal(a), tvoja voľba cookies, export údajov a vymazanie účtu.')">
         <div class="my-6 space-y-6">
             <flux:card class="space-y-2" data-test="privacy-documents">
-                <flux:heading size="lg" class="font-display">Právne dokumenty</flux:heading>
+                <flux:heading size="lg" class="font-display">{{ __('Právne dokumenty') }}</flux:heading>
                 <ul class="space-y-1 text-sm">
                     @foreach ($this->documents as $row)
                         <li>
                             <a href="{{ route('legal.show', ['slug' => $row['type']->slug()]) }}" wire:navigate class="underline">{{ $row['type']->label() }}</a>
-                            @if ($row['current']) <span class="text-zinc-500">· v{{ $row['current']->version }}, účinná od {{ $row['current']->effective_at?->format('j. n. Y') }}</span> @else <span class="text-zinc-500">· pripravuje sa</span> @endif
+                            @if ($row['current']) <span class="text-zinc-500">· {{ __('v:version, účinná od :date', ['version' => $row['current']->version, 'date' => $row['current']->effective_at?->format('j. n. Y')]) }}</span> @else <span class="text-zinc-500">· {{ __('pripravuje sa') }}</span> @endif
                         </li>
                     @endforeach
                 </ul>
                 @if ($this->acceptances->isNotEmpty())
-                    <flux:heading class="mt-2 font-display">Tvoje akceptácie</flux:heading>
+                    <flux:heading class="mt-2 font-display">{{ __('Tvoje akceptácie') }}</flux:heading>
                     <ul class="space-y-0.5 text-xs text-zinc-600 dark:text-zinc-400">
                         @foreach ($this->acceptances as $acceptance)
-                            <li wire:key="acc-{{ $acceptance->id }}">{{ $acceptance->accepted_at->timezone(config('recipes.default_timezone'))->format('j. n. Y H:i') }} · {{ $acceptance->documentVersion?->label() }} · {{ $acceptance->action->label() }}@if ($acceptance->order_id) · objednávka #{{ $acceptance->order_id }}@endif @if (($acceptance->acknowledgements['early_performance_requested'] ?? false)) · žiadosť o skoré plnenie @endif</li>
+                            <li wire:key="acc-{{ $acceptance->id }}">{{ $acceptance->accepted_at->timezone(config('recipes.default_timezone'))->format('j. n. Y H:i') }} · {{ $acceptance->documentVersion?->label() }} · {{ $acceptance->action->label() }}@if ($acceptance->order_id) · {{ __('objednávka #:order', ['order' => $acceptance->order_id]) }}@endif @if (($acceptance->acknowledgements['early_performance_requested'] ?? false)) · {{ __('žiadosť o skoré plnenie') }} @endif</li>
                         @endforeach
                     </ul>
                 @endif
             </flux:card>
 
             <flux:card class="space-y-2" data-test="privacy-cookies">
-                <flux:heading size="lg" class="font-display">Cookies a voliteľné služby</flux:heading>
+                <flux:heading size="lg" class="font-display">{{ __('Cookies a voliteľné služby') }}</flux:heading>
                 @if (! $this->hasOptional)
-                    <flux:text class="text-sm">Nepoužívame žiadne voliteľné služby, preto nič nežiadame. <a href="{{ route('legal.show', ['slug' => 'cookies']) }}" wire:navigate class="underline">Zoznam nevyhnutných technológií</a>.</flux:text>
+                    <flux:text class="text-sm">{{ __('Nepoužívame žiadne voliteľné služby, preto nič nežiadame.') }} <a href="{{ route('legal.show', ['slug' => 'cookies']) }}" wire:navigate class="underline">{{ __('Zoznam nevyhnutných technológií') }}</a>.</flux:text>
                 @elseif ($this->decision)
                     <flux:text class="text-sm">
-                        Voľba z {{ \Carbon\CarbonImmutable::parse($this->decision['at'])->timezone(config('recipes.default_timezone'))->format('j. n. Y H:i') }}:
-                        @foreach ($this->decision['categories'] as $key => $on) {{ ConsentCategory::from($key)->label() }} {{ $on ? 'zapnuté' : 'vypnuté' }}{{ $loop->last ? '' : ', ' }} @endforeach
+                        {{ __('Voľba z :date:', ['date' => \Carbon\CarbonImmutable::parse($this->decision['at'])->timezone(config('recipes.default_timezone'))->format('j. n. Y H:i')]) }}
+                        @foreach ($this->decision['categories'] as $key => $on) {{ ConsentCategory::from($key)->label() }} {{ $on ? __('zapnuté') : __('vypnuté') }}{{ $loop->last ? '' : ', ' }} @endforeach
                     </flux:text>
-                    <flux:button size="sm" data-consent-open>Zmeniť alebo odvolať</flux:button>
+                    <flux:button size="sm" data-consent-open>{{ __('Zmeniť alebo odvolať') }}</flux:button>
                 @else
-                    <flux:text class="text-sm">Zatiaľ si nerozhodol(a); voliteľné služby sú vypnuté.</flux:text>
-                    <flux:button size="sm" data-consent-open>Nastavenia cookies</flux:button>
+                    <flux:text class="text-sm">{{ __('Zatiaľ si nerozhodol(a); voliteľné služby sú vypnuté.') }}</flux:text>
+                    <flux:button size="sm" data-consent-open>{{ __('Nastavenia cookies') }}</flux:button>
                 @endif
             </flux:card>
 
             <flux:card class="space-y-2" data-test="privacy-export">
-                <flux:heading size="lg" class="font-display">Export údajov</flux:heading>
-                <flux:text class="text-sm">Domácnosť: ZIP s receptami, pôvodnými textami, chuťami, plánmi, históriou a obrázkami. Účet: JSON s profilom, členstvami, akceptáciami, voľbami cookies a žiadosťami.</flux:text>
+                <flux:heading size="lg" class="font-display">{{ __('Export údajov') }}</flux:heading>
+                <flux:text class="text-sm">{{ __('Domácnosť: ZIP s receptami, pôvodnými textami, chuťami, plánmi, históriou a obrázkami. Účet: JSON s profilom, členstvami, akceptáciami, voľbami cookies a žiadosťami.') }}</flux:text>
                 <div class="flex flex-wrap gap-2">
-                    <flux:button :href="route('export')" icon="arrow-down-tray" size="sm">Export domácnosti (ZIP)</flux:button>
-                    <flux:button :href="route('privacy.export')" icon="arrow-down-tray" size="sm" variant="ghost">Export účtu (JSON)</flux:button>
+                    <flux:button :href="route('export')" icon="arrow-down-tray" size="sm">{{ __('Export domácnosti (ZIP)') }}</flux:button>
+                    <flux:button :href="route('privacy.export')" icon="arrow-down-tray" size="sm" variant="ghost">{{ __('Export účtu (JSON)') }}</flux:button>
                 </div>
             </flux:card>
 
             @if ($this->requests->isNotEmpty())
                 <flux:card class="space-y-2" data-test="privacy-requests">
-                    <flux:heading size="lg" class="font-display">Tvoje žiadosti</flux:heading>
+                    <flux:heading size="lg" class="font-display">{{ __('Tvoje žiadosti') }}</flux:heading>
                     <ul class="space-y-0.5 text-sm">
                         @foreach ($this->requests as $request)
-                            <li wire:key="req-{{ $request->id }}">#{{ $request->id }} · {{ $request->kind->label() }} · <flux:badge size="sm" :color="$request->status->badgeColor()">{{ $request->status->label() }}</flux:badge> · prijatá {{ $request->received_at->timezone(config('recipes.default_timezone'))->format('j. n. Y') }}, lehota do {{ $request->deadline_at->timezone(config('recipes.default_timezone'))->format('j. n. Y') }}</li>
+                            <li wire:key="req-{{ $request->id }}">#{{ $request->id }} · {{ $request->kind->label() }} · <flux:badge size="sm" :color="$request->status->badgeColor()">{{ $request->status->label() }}</flux:badge> · {{ __('prijatá :received, lehota do :deadline', ['received' => $request->received_at->timezone(config('recipes.default_timezone'))->format('j. n. Y'), 'deadline' => $request->deadline_at->timezone(config('recipes.default_timezone'))->format('j. n. Y')]) }}</li>
                         @endforeach
                     </ul>
                 </flux:card>
             @endif
 
             <flux:card class="space-y-3 border-red-200 dark:border-red-900" data-test="privacy-erasure">
-                <flux:heading size="lg" class="font-display">Vymazanie účtu</flux:heading>
+                <flux:heading size="lg" class="font-display">{{ __('Vymazanie účtu') }}</flux:heading>
                 @php($impact = $this->impact)
                 <div class="space-y-2 text-sm">
                     @foreach ($impact['owned'] as $row)
                         <div wire:key="own-{{ $row['household']->id }}" class="rounded-lg border border-zinc-200 p-3 dark:border-zinc-700">
-                            <div class="font-medium">{{ $row['household']->name }} (si vlastník)</div>
+                            <div class="font-medium">{{ __(':household (si vlastník)', ['household' => $row['household']->name]) }}</div>
                             <ul class="mt-1 list-inside list-disc text-xs text-zinc-600 dark:text-zinc-400">
-                                <li>Recepty, fotografie, profily, plány a história domácnosti budú zmazané.</li>
-                                @if ($row['plus_until']) <li>Plus zaplatené do {{ $row['plus_until']->timezone(config('recipes.default_timezone'))->format('j. n. Y') }} skončí bez náhrady{{ $row['renewal_active'] ? '; obnovovanie vypneme' : '' }}.</li> @endif
-                                @foreach ($row['unused_purchased'] as $kind => $n) <li>Nevyužité dokúpené použitia: {{ $n }} × {{ App\Enums\UsageKind::from($kind)->label() }} – prepadnú.</li> @endforeach
-                                @if ($row['financial_records']) <li>Účtovné doklady k objednávkam zostanú uchované bez receptov a mien (zákonná povinnosť).</li> @endif
-                                @if ($row['other_members'] > 0) <li>Ďalší členovia domácnosti: {{ $row['other_members'] }}.</li> @endif
+                                <li>{{ __('Recepty, fotografie, profily, plány a história domácnosti budú zmazané.') }}</li>
+                                @if ($row['plus_until']) @php($plusUntil = $row['plus_until']->timezone(config('recipes.default_timezone'))->format('j. n. Y')) <li>{{ $row['renewal_active'] ? __('Plus zaplatené do :date skončí bez náhrady; obnovovanie vypneme.', ['date' => $plusUntil]) : __('Plus zaplatené do :date skončí bez náhrady.', ['date' => $plusUntil]) }}</li> @endif
+                                @foreach ($row['unused_purchased'] as $kind => $n) <li>{{ __('Nevyužité dokúpené použitia: :count × :kind – prepadnú.', ['count' => $n, 'kind' => App\Enums\UsageKind::from($kind)->label()]) }}</li> @endforeach
+                                @if ($row['financial_records']) <li>{{ __('Účtovné doklady k objednávkam zostanú uchované bez receptov a mien (zákonná povinnosť).') }}</li> @endif
+                                @if ($row['other_members'] > 0) <li>{{ __('Ďalší členovia domácnosti: :count.', ['count' => $row['other_members']]) }}</li> @endif
                             </ul>
                             @if ($row['other_members'] > 0)
-                                <flux:radio.group wire:model="householdChoice.{{ $row['household']->id }}" label="Čo s domácnosťou?" class="mt-2" data-test="household-choice-{{ $row['household']->id }}">
-                                    <flux:radio value="erase" label="Zrušiť domácnosť aj pre ostatných členov" />
+                                <flux:radio.group wire:model="householdChoice.{{ $row['household']->id }}" :label="__('Čo s domácnosťou?')" class="mt-2" data-test="household-choice-{{ $row['household']->id }}">
+                                    <flux:radio value="erase" :label="__('Zrušiť domácnosť aj pre ostatných členov')" />
                                     @foreach ($this->membersOf($row['household']->id) as $member)
-                                        <flux:radio :value="(string) $member->id" :label="'Previesť na člena '.$member->name" />
+                                        <flux:radio :value="(string) $member->id" :label="__('Previesť na člena :name', ['name' => $member->name])" />
                                     @endforeach
                                 </flux:radio.group>
                             @endif
                         </div>
                     @endforeach
                     @foreach ($impact['member_of'] as $household)
-                        <div wire:key="mem-{{ $household->id }}" class="rounded-lg border border-zinc-200 p-3 text-xs dark:border-zinc-700">{{ $household->name }}: tvoje členstvo skončí, recepty domácnosti zostanú jej vlastníkovi; tvoj profil stravníka sa anonymizuje.</div>
+                        <div wire:key="mem-{{ $household->id }}" class="rounded-lg border border-zinc-200 p-3 text-xs dark:border-zinc-700">{{ __(':household: tvoje členstvo skončí, recepty domácnosti zostanú jej vlastníkovi; tvoj profil stravníka sa anonymizuje.', ['household' => $household->name]) }}</div>
                     @endforeach
                 </div>
 
                 <form wire:submit="erase" class="space-y-3">
-                    <flux:textarea wire:model="erasureMessage" label="Poznámka k žiadosti (nepovinné)" rows="2" />
-                    <flux:input wire:model="password" type="password" label="Heslo na potvrdenie" viewable data-test="erase-password" />
-                    <flux:button type="submit" variant="danger" wire:confirm="Naozaj vymazať účet? Túto akciu nemožno vrátiť." data-test="erase-submit">Vymazať účet</flux:button>
+                    <flux:textarea wire:model="erasureMessage" :label="__('Poznámka k žiadosti (nepovinné)')" rows="2" />
+                    <flux:input wire:model="password" type="password" :label="__('Heslo na potvrdenie')" viewable data-test="erase-password" />
+                    <flux:button type="submit" variant="danger" wire:confirm="{{ __('Naozaj vymazať účet? Túto akciu nemožno vrátiť.') }}" data-test="erase-submit">{{ __('Vymazať účet') }}</flux:button>
                 </form>
-                <flux:text class="text-xs">Žiadosť sa vybaví ihneď a potvrdenie pošleme e-mailom. Zálohy sa obmieňajú; vybavené výmazy sa z nich neobnovujú.</flux:text>
+                <flux:text class="text-xs">{{ __('Žiadosť sa vybaví ihneď a potvrdenie pošleme e-mailom. Zálohy sa obmieňajú; vybavené výmazy sa z nich neobnovujú.') }}</flux:text>
             </flux:card>
         </div>
     </x-pages::settings.layout>

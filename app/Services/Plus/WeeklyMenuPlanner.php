@@ -88,7 +88,7 @@ class WeeklyMenuPlanner
     {
         $personIds = $this->verifiedPersonIds($household, $personIds);
         if ($personIds === []) {
-            throw new InvalidArgumentException('Vyber aspoň jedného stravníka.');
+            throw new InvalidArgumentException(__('Vyber aspoň jedného stravníka.'));
         }
 
         return DB::transaction(function () use ($household, $slots, $personIds, $servings, $by) {
@@ -217,7 +217,7 @@ class WeeklyMenuPlanner
                     'recipe_id' => $plan?->recipe_id,
                     'title' => $plan?->recipe?->title,
                     'reasons' => [],
-                    'note' => $plan ? 'Už naplánované' : null,
+                    'note' => $plan ? __('Už naplánované') : null,
                     'occupied' => $plan !== null,
                     'existing_plan_id' => $plan?->id,
                 ];
@@ -247,16 +247,16 @@ class WeeklyMenuPlanner
     private function emptyReason(int $scoredCount, array $softCounts, int $candidateCount): string
     {
         if ($candidateCount === 0) {
-            return 'Domácnosť nemá žiadne aktívne recepty.';
+            return __('Domácnosť nemá žiadne aktívne recepty.');
         }
         if ($scoredCount === 0 && $softCounts !== []) {
-            return 'Filtre vylúčili všetky recepty ('.array_sum($softCounts).').';
+            return __('Filtre vylúčili všetky recepty (:count).', ['count' => array_sum($softCounts)]);
         }
         if ($scoredCount === 0) {
-            return 'Pre týchto stravníkov nezostal žiadny vhodný recept.';
+            return __('Pre týchto stravníkov nezostal žiadny vhodný recept.');
         }
 
-        return 'Všetky vhodné recepty už sú v tomto týždni použité.';
+        return __('Všetky vhodné recepty už sú v tomto týždni použité.');
     }
 
     /**
@@ -267,19 +267,19 @@ class WeeklyMenuPlanner
     {
         $request['person_ids'] = $this->verifiedPersonIds($household, $request['person_ids']);
         if ($request['person_ids'] === []) {
-            throw new InvalidArgumentException('Vyber aspoň jedného stravníka.');
+            throw new InvalidArgumentException(__('Vyber aspoň jedného stravníka.'));
         }
 
         $days = array_values(array_unique(array_filter(array_map('intval', $request['days']), fn (int $d) => $d >= 0 && $d <= 6)));
         sort($days);
         if ($days === []) {
-            throw new InvalidArgumentException('Vyber aspoň jeden deň.');
+            throw new InvalidArgumentException(__('Vyber aspoň jeden deň.'));
         }
         $request['days'] = $days;
 
         $types = array_values(array_unique(array_filter($request['meal_types'], fn ($t) => $t === 'any' || MealType::tryFrom((string) $t) !== null)));
         if ($types === []) {
-            throw new InvalidArgumentException('Vyber aspoň jeden typ jedla.');
+            throw new InvalidArgumentException(__('Vyber aspoň jeden typ jedla.'));
         }
         $order = ['breakfast' => 0, 'lunch' => 1, 'dinner' => 2, 'any' => 3];
         usort($types, fn ($a, $b) => $order[$a] <=> $order[$b]);

@@ -13,7 +13,7 @@
                     <flux:badge size="sm" color="orange" variant="pill">{{ $type->label() }}</flux:badge>
                 @endforeach
                 @if ($recipe->totalMinutes())
-                    <span class="inline-flex items-center gap-1 text-xs text-zinc-500"><flux:icon name="clock" class="size-3.5" /> {{ $recipe->totalMinutes() }} min</span>
+                    <span class="inline-flex items-center gap-1 text-xs text-zinc-500"><flux:icon name="clock" class="size-3.5" /> {{ __(':minutes min', ['minutes' => $recipe->totalMinutes()]) }}</span>
                 @endif
                 {{ $meta ?? '' }}
             </div>

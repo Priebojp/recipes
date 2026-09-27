@@ -148,27 +148,27 @@ new #[Title('Plán')] class extends Component {
 }; ?>
 
 <div class="space-y-6">
-    <x-page-header title="Plán">
-        <flux:button :href="route('plan.history')" wire:navigate variant="ghost" icon="clock" size="sm">História</flux:button>
+    <x-page-header :title="__('Plán')">
+        <flux:button :href="route('plan.history')" wire:navigate variant="ghost" icon="clock" size="sm">{{ __('História') }}</flux:button>
     </x-page-header>
 
     <div class="grid grid-cols-2 gap-3">
         <a href="{{ route('plan.propose', ['week' => $this->weekStart->toDateString()]) }}" wire:navigate class="flex items-center gap-3 rounded-2xl border border-zinc-200/80 bg-white p-3 text-sm font-medium transition hover:border-accent/50 dark:border-zinc-700 dark:bg-zinc-800" data-test="propose-link">
             <flux:icon name="sparkles" class="size-5 shrink-0 text-accent" />
-            <span class="min-w-0 flex-1">Navrhnúť týždeň</span>
+            <span class="min-w-0 flex-1">{{ __('Navrhnúť týždeň') }}</span>
             @unless ($this->isPlus)<flux:badge size="sm" color="orange">Plus</flux:badge>@endunless
         </a>
         <a href="{{ route('plan.shopping', ['week' => $this->weekStart->toDateString()]) }}" wire:navigate class="flex items-center gap-3 rounded-2xl border border-zinc-200/80 bg-white p-3 text-sm font-medium transition hover:border-accent/50 dark:border-zinc-700 dark:bg-zinc-800" data-test="shopping-link">
             <flux:icon name="shopping-cart" class="size-5 shrink-0 text-accent" />
-            <span class="min-w-0 flex-1">Nákupný zoznam</span>
+            <span class="min-w-0 flex-1">{{ __('Nákupný zoznam') }}</span>
             @unless ($this->isPlus)<flux:badge size="sm" color="orange">Plus</flux:badge>@endunless
         </a>
     </div>
 
     @if ($this->overdue->isNotEmpty())
         <section class="space-y-2">
-            <flux:heading size="lg" class="font-display">Nepotvrdené z minulosti</flux:heading>
-            <flux:text class="text-sm">Deň v minulosti neznamená uvarené. Potvrď, presuň alebo zruš.</flux:text>
+            <flux:heading size="lg" class="font-display">{{ __('Nepotvrdené z minulosti') }}</flux:heading>
+            <flux:text class="text-sm">{{ __('Deň v minulosti neznamená uvarené. Potvrď, presuň alebo zruš.') }}</flux:text>
             @foreach ($this->overdue as $plan)
                 @include('pages.plan.partials.plan-item', ['plan' => $plan])
             @endforeach
@@ -177,9 +177,9 @@ new #[Title('Plán')] class extends Component {
 
     <section class="space-y-3">
         <div class="flex items-center justify-between">
-            <flux:button wire:click="shiftWeek(-1)" variant="ghost" icon="chevron-left" size="sm" aria-label="Predchádzajúci týždeň" />
-            <flux:heading size="lg" class="font-display">Týždeň {{ $this->weekStart->format('j. n.') }} – {{ $this->weekStart->addDays(6)->format('j. n. Y') }}</flux:heading>
-            <flux:button wire:click="shiftWeek(1)" variant="ghost" icon="chevron-right" size="sm" aria-label="Nasledujúci týždeň" />
+            <flux:button wire:click="shiftWeek(-1)" variant="ghost" icon="chevron-left" size="sm" :aria-label="__('Predchádzajúci týždeň')" />
+            <flux:heading size="lg" class="font-display">{{ __('Týždeň :from – :to', ['from' => $this->weekStart->format('j. n.'), 'to' => $this->weekStart->addDays(6)->format('j. n. Y')]) }}</flux:heading>
+            <flux:button wire:click="shiftWeek(1)" variant="ghost" icon="chevron-right" size="sm" :aria-label="__('Nasledujúci týždeň')" />
         </div>
 
         @php($today = $this->calendar->today())
@@ -189,7 +189,7 @@ new #[Title('Plán')] class extends Component {
             <flux:card size="sm" class="!p-2 {{ $day->equalTo($today) ? 'border-accent ring-1 ring-accent' : '' }}">
                 <div class="mb-1 flex items-center justify-between px-1 text-sm font-semibold">
                     <span class="capitalize">{{ $day->translatedFormat('l j. n.') }}</span>
-                    @if ($day->equalTo($today))<flux:badge size="sm" color="orange" variant="pill">Dnes</flux:badge>@endif
+                    @if ($day->equalTo($today))<flux:badge size="sm" color="orange" variant="pill">{{ __('Dnes') }}</flux:badge>@endif
                 </div>
                 @forelse ($items as $plan)
                     @include('pages.plan.partials.plan-item', ['plan' => $plan])
@@ -201,20 +201,20 @@ new #[Title('Plán')] class extends Component {
 
         @php($weekItems = $this->plans->filter(fn ($p) => $p->mode === PlanMode::Week))
         <div class="rounded-xl border border-dashed border-zinc-300 p-2 dark:border-zinc-600">
-            <div class="mb-1 px-1 text-sm font-semibold">Tento týždeň – bez dňa</div>
+            <div class="mb-1 px-1 text-sm font-semibold">{{ __('Tento týždeň – bez dňa') }}</div>
             @forelse ($weekItems as $plan)
                 @include('pages.plan.partials.plan-item', ['plan' => $plan])
             @empty
-                <div class="px-1 text-xs text-zinc-400">Nič bez určeného dňa.</div>
+                <div class="px-1 text-xs text-zinc-400">{{ __('Nič bez určeného dňa.') }}</div>
             @endforelse
         </div>
 
-        <flux:checkbox wire:model.live="showCancelled" label="Zobraziť aj zrušené" />
+        <flux:checkbox wire:model.live="showCancelled" :label="__('Zobraziť aj zrušené')" />
     </section>
 
     @if ($this->someday->isNotEmpty())
         <section class="space-y-2">
-            <flux:heading size="lg" class="font-display">Niekedy</flux:heading>
+            <flux:heading size="lg" class="font-display">{{ __('Niekedy') }}</flux:heading>
             @foreach ($this->someday as $plan)
                 @include('pages.plan.partials.plan-item', ['plan' => $plan])
             @endforeach

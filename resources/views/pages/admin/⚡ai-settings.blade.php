@@ -100,7 +100,7 @@ new #[Layout('layouts::admin')] #[Title('AI nastavenia')] class extends Componen
 
         $budget = Money::parseUsdToMicro($validated['monthly_budget_usd'] ?? null);
         if (trim((string) ($validated['monthly_budget_usd'] ?? '')) !== '' && $budget === null) {
-            $this->addError('monthly_budget_usd', 'Zadaj sumu v USD, napr. 5 alebo 2,50.');
+            $this->addError('monthly_budget_usd', __('Zadaj sumu v USD, napr. 5 alebo 2,50.'));
 
             return;
         }
@@ -119,7 +119,7 @@ new #[Layout('layouts::admin')] #[Title('AI nastavenia')] class extends Componen
         $this->reason = '';
         $this->fillFrom(app(AiSettings::class)->toArray());
         unset($this->projection);
-        Flux::toast(variant: 'success', text: 'AI nastavenia uložené. Už zaradené úlohy bežia so svojím pôvodným profilom.');
+        Flux::toast(variant: 'success', text: __('AI nastavenia uložené. Už zaradené úlohy bežia so svojím pôvodným profilom.'));
     }
 
     public function resetToDefaults(): void
@@ -129,86 +129,86 @@ new #[Layout('layouts::admin')] #[Title('AI nastavenia')] class extends Componen
         app(AiSettings::class)->update(array_fill_keys(array_keys(AiSettings::KEYS), null), auth()->user(), 'reset na predvolené hodnoty z .env');
         $this->fillFrom(app(AiSettings::class)->toArray());
         unset($this->projection);
-        Flux::toast(variant: 'success', text: 'Nastavenia vrátené na hodnoty z konfigurácie.');
+        Flux::toast(variant: 'success', text: __('Nastavenia vrátené na hodnoty z konfigurácie.'));
     }
 }; ?>
 
 <div class="space-y-6">
-    <x-page-header title="AI nastavenia" subtitle="Model, váha reasoningu a predvolený profil obrázkov pre nové úlohy. Zmena sa audituje; už zaradené úlohy bežia s pôvodným profilom." :back="route('admin.ai')" />
+    <x-page-header :title="__('AI nastavenia')" :subtitle="__('Model, váha reasoningu a predvolený profil obrázkov pre nové úlohy. Zmena sa audituje; už zaradené úlohy bežia s pôvodným profilom.')" :back="route('admin.ai')" />
 
     <form wire:submit="save" class="grid gap-4 lg:grid-cols-3">
         <div class="space-y-4 lg:col-span-2">
             <flux:card class="space-y-4">
-                <flux:heading size="lg" class="font-display">Prevádzka</flux:heading>
-                <flux:checkbox wire:model="enabled" label="AI funkcie zapnuté" description="Vypnutie (kill switch) zastaví nové AI úlohy, zachová dáta a používateľom ukáže dočasnú nedostupnosť. Ručná úprava receptov funguje ďalej." />
+                <flux:heading size="lg" class="font-display">{{ __('Prevádzka') }}</flux:heading>
+                <flux:checkbox wire:model="enabled" :label="__('AI funkcie zapnuté')" :description="__('Vypnutie (kill switch) zastaví nové AI úlohy, zachová dáta a používateľom ukáže dočasnú nedostupnosť. Ručná úprava receptov funguje ďalej.')" />
             </flux:card>
 
             <flux:card class="space-y-4">
-                <flux:heading size="lg" class="font-display">Text</flux:heading>
-                <flux:input wire:model="text_model" label="Textový model" placeholder="{{ $this->defaults['text_model'] ?? 'predvolený model poskytovateľa' }}" description="Predvolené z .env: {{ $this->defaults['text_model'] ?? '(nenastavené)' }}. Prázdne = predvolený model poskytovateľa." />
-                <flux:radio.group wire:model="text_reasoning_effort" label="Váha reasoningu (reasoning effort)" description="Platí pre reasoning modely (gpt-5/gpt-6). Vyššia váha = viac účtovaných výstupných tokenov a dlhšie trvanie. Predvolené z .env: {{ $this->defaults['text_reasoning_effort'] }}.">
-                    <flux:radio value="default" label="Podľa poskytovateľa" description="Parameter sa neposiela." />
-                    <flux:radio value="low" label="Low" description="Najlacnejšie a najrýchlejšie; vhodné na jazykové úpravy." />
-                    <flux:radio value="medium" label="Medium" description="Vyváženie kvality a ceny." />
-                    <flux:radio value="high" label="High" description="Najdrahšie; iba ak medium nestačí." />
+                <flux:heading size="lg" class="font-display">{{ __('Text') }}</flux:heading>
+                <flux:input wire:model="text_model" :label="__('Textový model')" :placeholder="$this->defaults['text_model'] ?? __('predvolený model poskytovateľa')" :description="__('Predvolené z .env: :model.', ['model' => $this->defaults['text_model'] ?? __('(nenastavené)')]).' '.__('Prázdne = predvolený model poskytovateľa.')" />
+                <flux:radio.group wire:model="text_reasoning_effort" :label="__('Váha reasoningu (reasoning effort)')" :description="__('Platí pre reasoning modely (gpt-5/gpt-6). Vyššia váha = viac účtovaných výstupných tokenov a dlhšie trvanie.').' '.__('Predvolené z .env: :effort.', ['effort' => $this->defaults['text_reasoning_effort']])">
+                    <flux:radio value="default" :label="__('Podľa poskytovateľa')" :description="__('Parameter sa neposiela.')" />
+                    <flux:radio value="low" :label="__('Low')" :description="__('Najlacnejšie a najrýchlejšie; vhodné na jazykové úpravy.')" />
+                    <flux:radio value="medium" :label="__('Medium')" :description="__('Vyváženie kvality a ceny.')" />
+                    <flux:radio value="high" :label="__('High')" :description="__('Najdrahšie; iba ak medium nestačí.')" />
                 </flux:radio.group>
             </flux:card>
 
             <flux:card class="space-y-4">
-                <flux:heading size="lg" class="font-display">Obrázky</flux:heading>
-                <flux:input wire:model="image_model" label="Obrázkový model" placeholder="{{ $this->defaults['image_model'] ?? 'predvolený model poskytovateľa' }}" description="Predvolené z .env: {{ $this->defaults['image_model'] ?? '(nenastavené)' }}." />
-                <flux:radio.group wire:model="image_profile" label="Predvolený profil obrázkov" description="Pre nové bezplatné/skúšobné použitia. Profil určuje kvalitu, rozmer 1024 × 1024 a počet; klient ho nevyberá – server ho odvodí z dostupných nárokov (Standard nárok sa nikdy neminie na Economy a naopak). Predvolené z .env RECIPES_AI_IMAGE_QUALITY: {{ ImageProfile::from($this->defaults['image_profile'])->label() }}." data-test="image-profile">
+                <flux:heading size="lg" class="font-display">{{ __('Obrázky') }}</flux:heading>
+                <flux:input wire:model="image_model" :label="__('Obrázkový model')" :placeholder="$this->defaults['image_model'] ?? __('predvolený model poskytovateľa')" :description="__('Predvolené z .env: :model.', ['model' => $this->defaults['image_model'] ?? __('(nenastavené)')])" />
+                <flux:radio.group wire:model="image_profile" :label="__('Predvolený profil obrázkov')" :description="__('Pre nové bezplatné/skúšobné použitia.').' '.__('Profil určuje kvalitu, rozmer 1024 × 1024 a počet; klient ho nevyberá – server ho odvodí z dostupných nárokov (Standard nárok sa nikdy neminie na Economy a naopak).').' '.__('Predvolené z .env RECIPES_AI_IMAGE_QUALITY: :profile.', ['profile' => ImageProfile::from($this->defaults['image_profile'])->label()])" data-test="image-profile">
                     @foreach (ImageProfile::selectable() as $profile)
                         @php($cost = $this->projection['profiles'][$profile->value]['cost'] ?? null)
-                        <flux:radio :value="$profile->value" :label="$profile->label().' ('.$profile->value.')'" :description="$profile->description().' · '.($cost !== null ? Money::microUsd($cost).' / obrázok' : 'bez sadzby v cenníku').' · spotrebúva '.$profile->usageKind()->label()" />
+                        <flux:radio :value="$profile->value" :label="$profile->label().' ('.$profile->value.')'" :description="$profile->description().' · '.($cost !== null ? __(':cost / obrázok', ['cost' => Money::microUsd($cost)]) : __('bez sadzby v cenníku')).' · '.__('spotrebúva :kind', ['kind' => $profile->usageKind()->label()])" />
                     @endforeach
                 </flux:radio.group>
-                <flux:text class="text-xs">{{ ImageProfile::HighV1->label() }} ({{ ImageProfile::HighV1->value }}): {{ ImageProfile::HighV1->description() }}{{ ($this->projection['profiles'][ImageProfile::HighV1->value]['cost'] ?? null) !== null ? ' · '.Money::microUsd($this->projection['profiles'][ImageProfile::HighV1->value]['cost']).' / obrázok' : '' }}.</flux:text>
+                <flux:text class="text-xs">{{ ImageProfile::HighV1->label() }} ({{ ImageProfile::HighV1->value }}): {{ ImageProfile::HighV1->description() }}{{ ($this->projection['profiles'][ImageProfile::HighV1->value]['cost'] ?? null) !== null ? ' · '.__(':cost / obrázok', ['cost' => Money::microUsd($this->projection['profiles'][ImageProfile::HighV1->value]['cost'])]) : '' }}.</flux:text>
             </flux:card>
 
             <flux:card class="space-y-4">
-                <flux:heading size="lg" class="font-display">Limity a rozpočet</flux:heading>
+                <flux:heading size="lg" class="font-display">{{ __('Limity a rozpočet') }}</flux:heading>
                 <div class="grid gap-4 sm:grid-cols-3">
-                    <flux:input wire:model="daily_text_limit" type="number" min="0" label="Denný limit textov / domácnosť" />
-                    <flux:input wire:model="daily_image_limit" type="number" min="0" label="Denný limit obrázkov / domácnosť" />
-                    <flux:input wire:model="monthly_budget_usd" label="Mesačný rozpočet (USD)" placeholder="napr. 5" description="Iba alarm na prehľade, nikdy neskracuje zaplatené použitia." />
+                    <flux:input wire:model="daily_text_limit" type="number" min="0" :label="__('Denný limit textov / domácnosť')" />
+                    <flux:input wire:model="daily_image_limit" type="number" min="0" :label="__('Denný limit obrázkov / domácnosť')" />
+                    <flux:input wire:model="monthly_budget_usd" :label="__('Mesačný rozpočet (USD)')" :placeholder="__('napr. 5')" :description="__('Iba alarm na prehľade, nikdy neskracuje zaplatené použitia.')" />
                 </div>
-                <flux:text class="text-xs">Denné limity sú dočasná ochrana pred etapou „granty a ledger“ (predplatné 30 textov a 5 obrázkov za obdobie).</flux:text>
+                <flux:text class="text-xs">{{ __('Denné limity sú dočasná ochrana pred etapou „granty a ledger“ (predplatné 30 textov a 5 obrázkov za obdobie).') }}</flux:text>
             </flux:card>
 
             <flux:card class="space-y-4">
-                <flux:input wire:model="reason" label="Dôvod zmeny (do auditu)" placeholder="napr. test kvality medium vs. low" />
+                <flux:input wire:model="reason" :label="__('Dôvod zmeny (do auditu)')" :placeholder="__('napr. test kvality medium vs. low')" />
                 <div class="flex flex-wrap gap-2">
-                    <flux:button type="submit" variant="primary">Uložiť nastavenia</flux:button>
-                    <flux:button type="button" variant="ghost" wire:click="resetToDefaults" wire:confirm="Vrátiť všetky AI nastavenia na hodnoty z .env?">Vrátiť na predvolené</flux:button>
+                    <flux:button type="submit" variant="primary">{{ __('Uložiť nastavenia') }}</flux:button>
+                    <flux:button type="button" variant="ghost" wire:click="resetToDefaults" wire:confirm="{{ __('Vrátiť všetky AI nastavenia na hodnoty z .env?') }}">{{ __('Vrátiť na predvolené') }}</flux:button>
                 </div>
             </flux:card>
         </div>
 
         <div class="space-y-4">
             <flux:card class="space-y-3">
-                <flux:heading size="lg" class="font-display">Odhad ceny jednej operácie</flux:heading>
+                <flux:heading size="lg" class="font-display">{{ __('Odhad ceny jednej operácie') }}</flux:heading>
                 <dl class="space-y-2 text-sm">
                     <div>
-                        <dt class="text-zinc-500">Text (3 000 vstupných + 2 000 výstupných tokenov)</dt>
-                        <dd class="font-medium">{{ $this->projection['text'] !== null ? Money::microUsd($this->projection['text']) : 'chýba sadzba pre „'.($this->text_model ?: 'predvolený').'“' }}</dd>
+                        <dt class="text-zinc-500">{{ __('Text (3 000 vstupných + 2 000 výstupných tokenov)') }}</dt>
+                        <dd class="font-medium">{{ $this->projection['text'] !== null ? Money::microUsd($this->projection['text']) : __('chýba sadzba pre „:model“', ['model' => $this->text_model ?: __('predvolený')]) }}</dd>
                         @if ($this->projection['text_rate']) <dd class="text-xs text-zinc-500">{{ $this->projection['text_rate'] }}</dd> @endif
                     </div>
                     @foreach (ImageProfile::cases() as $profile)
                         @php($p = $this->projection['profiles'][$profile->value])
                         <div>
-                            <dt class="text-zinc-500">Obrázok {{ $profile->label() }} · {{ $profile->quality() }} · {{ $profile->pixelSize() }}</dt>
-                            <dd class="font-medium">{{ $p['cost'] !== null ? Money::microUsd($p['cost']) : 'chýba sadzba pre „'.($this->image_model ?: 'predvolený').'“' }}</dd>
+                            <dt class="text-zinc-500">{{ __('Obrázok :profile', ['profile' => $profile->label()]) }} · {{ $profile->quality() }} · {{ $profile->pixelSize() }}</dt>
+                            <dd class="font-medium">{{ $p['cost'] !== null ? Money::microUsd($p['cost']) : __('chýba sadzba pre „:model“', ['model' => $this->image_model ?: __('predvolený')]) }}</dd>
                             @if ($p['rate']) <dd class="text-xs text-zinc-500">{{ $p['rate'] }}</dd> @endif
                         </div>
                     @endforeach
                 </dl>
-                <flux:text class="text-xs">Odhad z cenníka bez vstupov obrázka; skutočné usage je autoritatívne. Sadzby spravuješ v <a href="{{ route('admin.ai.rates') }}" class="underline" wire:navigate>Cenníku AI</a>.</flux:text>
+                <flux:text class="text-xs">{{ __('Odhad z cenníka bez vstupov obrázka; skutočné usage je autoritatívne.') }} {!! __('Sadzby spravuješ v :link.', ['link' => '<a href="'.route('admin.ai.rates').'" class="underline" wire:navigate>'.__('Cenníku AI').'</a>']) !!}</flux:text>
             </flux:card>
 
             <flux:card class="space-y-2">
-                <flux:heading size="lg" class="font-display">Kľúče a poskytovateľ</flux:heading>
-                <flux:text class="text-sm">API kľúče a poskytovateľ (`RECIPES_AI_TEXT_PROVIDER`, `OPENAI_API_KEY`) sa menia iba v .env na serveri – nikdy cez administráciu.</flux:text>
+                <flux:heading size="lg" class="font-display">{{ __('Kľúče a poskytovateľ') }}</flux:heading>
+                <flux:text class="text-sm">{{ __('API kľúče a poskytovateľ (`RECIPES_AI_TEXT_PROVIDER`, `OPENAI_API_KEY`) sa menia iba v .env na serveri – nikdy cez administráciu.') }}</flux:text>
             </flux:card>
         </div>
     </form>

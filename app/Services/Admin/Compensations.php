@@ -30,7 +30,7 @@ class Compensations
     {
         $reason = trim($reason);
         if ($quantity < 1 || $reason === '') {
-            throw new InvalidArgumentException('Kompenzácia potrebuje počet ≥ 1 a dôvod.');
+            throw new InvalidArgumentException(__('Kompenzácia potrebuje počet ≥ 1 a dôvod.'));
         }
 
         $sourceKey = 'compensation:'.($key ? Str::slug($key) : Str::uuid());
@@ -56,7 +56,7 @@ class Compensations
     {
         $reason = trim($reason);
         if ($to <= $from || $reason === '') {
-            throw new InvalidArgumentException('Plus grant potrebuje obdobie s koncom po začiatku a dôvod.');
+            throw new InvalidArgumentException(__('Plus grant potrebuje obdobie s koncom po začiatku a dôvod.'));
         }
 
         $entitlement = PaidEntitlement::create([
@@ -84,7 +84,7 @@ class Compensations
     public function revokePlus(PaidEntitlement $entitlement, string $reason, ?User $by = null): PaidEntitlement
     {
         if ($entitlement->order_id !== null || ! str_starts_with($entitlement->source_key, 'compensation:')) {
-            throw new InvalidArgumentException('Zaplatené obdobie sa odoberá refundáciou, nie tu.');
+            throw new InvalidArgumentException(__('Zaplatené obdobie sa odoberá refundáciou, nie tu.'));
         }
         if ($entitlement->revoked_at !== null) {
             return $entitlement;

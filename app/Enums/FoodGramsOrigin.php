@@ -20,9 +20,9 @@ enum FoodGramsOrigin: string
     public function label(): string
     {
         return match ($this) {
-            self::UnitConversion => 'z receptu',
-            self::UserEntered => 'zadané',
-            self::Estimated => 'odhad',
+            self::UnitConversion => __('z receptu'),
+            self::UserEntered => __('zadané'),
+            self::Estimated => __('odhad'),
         };
     }
 }

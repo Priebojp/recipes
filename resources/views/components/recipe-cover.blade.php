@@ -5,7 +5,7 @@
     <div {{ $attributes->merge(['class' => 'relative overflow-hidden bg-zinc-100 dark:bg-zinc-700 '.$class]) }}>
         <img src="{{ route('media.show', [$cover, $conversion]) }}" alt="{{ $recipe->title }}" class="size-full object-cover" loading="lazy" />
         @if ($recipe->coverIsAi())
-            <span class="absolute bottom-1 right-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">AI ilustrácia jedla</span>
+            <span class="absolute bottom-1 right-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">{{ __('AI ilustrácia jedla') }}</span>
         @endif
     </div>
 @else

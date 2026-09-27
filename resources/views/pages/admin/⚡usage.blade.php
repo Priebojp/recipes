@@ -120,19 +120,19 @@ new #[Layout('layouts::admin')] #[Title('AI použitia')] class extends Component
         }
 
         unset($this->grants, $this->totals);
-        Flux::toast(text: $consistent ? "Grant #{$grantId}: počítadlá sedia s ledgerom." : "Grant #{$grantId}: počítadlá opravené z ledgeru (zapísané v audite).");
+        Flux::toast(text: $consistent ? __('Grant #:id: počítadlá sedia s ledgerom.', ['id' => $grantId]) : __('Grant #:id: počítadlá opravené z ledgeru (zapísané v audite).', ['id' => $grantId]));
     }
 }; ?>
 
 <div class="space-y-6">
-    <x-page-header title="AI použitia (ledger)" subtitle="Granty, rezervácie, spotreba a kompenzácie s dôvodmi. Zostatky sa neupravujú priamo – iba novými grantmi, refundáciou alebo prepočtom z ledgeru." />
+    <x-page-header :title="__('AI použitia (ledger)')" :subtitle="__('Granty, rezervácie, spotreba a kompenzácie s dôvodmi. Zostatky sa neupravujú priamo – iba novými grantmi, refundáciou alebo prepočtom z ledgeru.')" />
 
     <div class="grid gap-4 sm:grid-cols-2">
         @foreach (UsageKind::cases() as $kind)
             <flux:card class="space-y-1">
-                <flux:text class="text-xs uppercase tracking-wide">{{ $kind->label() }} – platné granty</flux:text>
-                <flux:heading size="xl" class="font-display">{{ $this->totals[$kind->value]['available'] }} <span class="text-base font-normal text-zinc-500">voľných z {{ $this->totals[$kind->value]['granted'] }}</span></flux:heading>
-                <flux:text class="text-xs">{{ $this->totals[$kind->value]['consumed'] }} spotrebovaných · {{ $this->totals[$kind->value]['reserved'] }} rezervovaných</flux:text>
+                <flux:text class="text-xs uppercase tracking-wide">{{ __(':kind – platné granty', ['kind' => $kind->label()]) }}</flux:text>
+                <flux:heading size="xl" class="font-display">{{ $this->totals[$kind->value]['available'] }} <span class="text-base font-normal text-zinc-500">{{ __('voľných z :granted', ['granted' => $this->totals[$kind->value]['granted']]) }}</span></flux:heading>
+                <flux:text class="text-xs">{{ __(':consumed spotrebovaných · :reserved rezervovaných', ['consumed' => $this->totals[$kind->value]['consumed'], 'reserved' => $this->totals[$kind->value]['reserved']]) }}</flux:text>
             </flux:card>
         @endforeach
     </div>
@@ -140,18 +140,18 @@ new #[Layout('layouts::admin')] #[Title('AI použitia')] class extends Component
     @if ($this->openReservations->isNotEmpty())
         <flux:card class="space-y-2 overflow-x-auto" data-test="open-reservations">
             <div class="flex items-center justify-between">
-                <flux:heading size="lg" class="font-display">Otvorené rezervácie {{ $open ? '' : '(dlhšie ako deň)' }}</flux:heading>
-                <flux:switch wire:model.live="open" label="všetky otvorené" />
+                <flux:heading size="lg" class="font-display">{{ $open ? __('Otvorené rezervácie') : __('Otvorené rezervácie (dlhšie ako deň)') }}</flux:heading>
+                <flux:switch wire:model.live="open" :label="__('všetky otvorené')" />
             </div>
-            <flux:text class="text-xs">Rezervácia zostáva pri úlohe v stave „overuje sa“. Rozhodnutie robí <code>php artisan app:ai-reconcile</code>; uvoľnenie zapíše ledger a audit.</flux:text>
+            <flux:text class="text-xs">{!! __('Rezervácia zostáva pri úlohe v stave „overuje sa“. Rozhodnutie robí :command; uvoľnenie zapíše ledger a audit.', ['command' => '<code>php artisan app:ai-reconcile</code>']) !!}</flux:text>
             <table class="w-full text-sm">
                 <tbody class="divide-y divide-zinc-200/70 dark:divide-zinc-800">
                     @foreach ($this->openReservations as $r)
                         <tr wire:key="res-{{ $r->id }}">
-                            <td class="py-1.5 pe-2">rezervácia {{ $r->id }}</td>
-                            <td class="py-1.5 pe-2">dom. <a href="{{ route('admin.households.show', $r->household_id) }}" class="underline" wire:navigate>#{{ $r->household_id }}</a></td>
-                            <td class="py-1.5 pe-2">grant {{ $r->usage_grant_id }} ({{ $r->grant?->kind->label() }})</td>
-                            <td class="py-1.5 pe-2">AI úloha {{ $r->ai_job_id ?? '–' }} · {{ $r->aiJob?->status->label() ?? 'bez úlohy' }}</td>
+                            <td class="py-1.5 pe-2">{{ __('rezervácia :id', ['id' => $r->id]) }}</td>
+                            <td class="py-1.5 pe-2">{{ __('dom.') }} <a href="{{ route('admin.households.show', $r->household_id) }}" class="underline" wire:navigate>#{{ $r->household_id }}</a></td>
+                            <td class="py-1.5 pe-2">{{ __('grant :id (:kind)', ['id' => $r->usage_grant_id, 'kind' => $r->grant?->kind->label()]) }}</td>
+                            <td class="py-1.5 pe-2">{{ __('AI úloha :id · :status', ['id' => $r->ai_job_id ?? '–', 'status' => $r->aiJob?->status->label() ?? __('bez úlohy')]) }}</td>
                             <td class="py-1.5 whitespace-nowrap">{{ $r->reserved_at->setTimezone(config('recipes.default_timezone'))->format('d.m.Y H:i') }}</td>
                         </tr>
                     @endforeach
@@ -159,19 +159,19 @@ new #[Layout('layouts::admin')] #[Title('AI použitia')] class extends Component
             </table>
         </flux:card>
     @elseif ($open)
-        <flux:callout icon="check-circle" variant="success" class="text-sm"><flux:callout.text>Žiadne otvorené rezervácie.</flux:callout.text></flux:callout>
+        <flux:callout icon="check-circle" variant="success" class="text-sm"><flux:callout.text>{{ __('Žiadne otvorené rezervácie.') }}</flux:callout.text></flux:callout>
     @endif
 
     <div class="flex flex-wrap items-end gap-3">
-        <flux:input wire:model.live.debounce.400ms="household" placeholder="ID domácnosti" class="w-40" />
+        <flux:input wire:model.live.debounce.400ms="household" :placeholder="__('ID domácnosti')" class="w-40" />
         <flux:select wire:model.live="source" class="w-48">
-            <flux:select.option value="">všetky zdroje</flux:select.option>
+            <flux:select.option value="">{{ __('všetky zdroje') }}</flux:select.option>
             @foreach (UsageGrantSource::cases() as $case)
                 <flux:select.option :value="$case->value">{{ $case->label() }}</flux:select.option>
             @endforeach
         </flux:select>
         <flux:select wire:model.live="kind" class="w-48">
-            <flux:select.option value="">oba druhy</flux:select.option>
+            <flux:select.option value="">{{ __('oba druhy') }}</flux:select.option>
             @foreach (UsageKind::cases() as $case)
                 <flux:select.option :value="$case->value">{{ $case->label() }}</flux:select.option>
             @endforeach
@@ -181,7 +181,7 @@ new #[Layout('layouts::admin')] #[Title('AI použitia')] class extends Component
     <flux:card class="space-y-3 overflow-x-auto">
         <table class="w-full text-sm">
             <thead class="text-left text-xs uppercase text-zinc-500">
-                <tr><th class="py-1 pe-2">#</th><th class="py-1 pe-2">Domácnosť</th><th class="py-1 pe-2">Druh</th><th class="py-1 pe-2">Zdroj</th><th class="py-1 pe-2 text-right">Množstvo</th><th class="py-1 pe-2 text-right">Rezerv.</th><th class="py-1 pe-2 text-right">Spotreb.</th><th class="py-1 pe-2 text-right">Odobr.</th><th class="py-1 pe-2 text-right">Voľné</th><th class="py-1 pe-2">Platnosť</th><th class="py-1 pe-2">Poznámka / dôvod</th><th class="py-1"></th></tr>
+                <tr><th class="py-1 pe-2">#</th><th class="py-1 pe-2">{{ __('Domácnosť') }}</th><th class="py-1 pe-2">{{ __('Druh') }}</th><th class="py-1 pe-2">{{ __('Zdroj') }}</th><th class="py-1 pe-2 text-right">{{ __('Množstvo') }}</th><th class="py-1 pe-2 text-right">{{ __('Rezerv.') }}</th><th class="py-1 pe-2 text-right">{{ __('Spotreb.') }}</th><th class="py-1 pe-2 text-right">{{ __('Odobr.') }}</th><th class="py-1 pe-2 text-right">{{ __('Voľné') }}</th><th class="py-1 pe-2">{{ __('Platnosť') }}</th><th class="py-1 pe-2">{{ __('Poznámka / dôvod') }}</th><th class="py-1"></th></tr>
             </thead>
             <tbody class="divide-y divide-zinc-200/70 dark:divide-zinc-800">
                 @forelse ($this->grants as $g)
@@ -198,15 +198,15 @@ new #[Layout('layouts::admin')] #[Title('AI použitia')] class extends Component
                         <td class="py-1.5 pe-2 whitespace-nowrap text-xs">{{ $g->valid_from->setTimezone(config('recipes.default_timezone'))->format('d.m.Y') }} – {{ $g->expires_at?->setTimezone(config('recipes.default_timezone'))->format('d.m.Y') ?? '∞' }}</td>
                         <td class="py-1.5 pe-2 max-w-xs truncate text-xs" title="{{ $g->source_key }}">{{ $g->note }}</td>
                         <td class="py-1.5 whitespace-nowrap text-right">
-                            <flux:button size="xs" variant="ghost" wire:click="toggle({{ $g->id }})">{{ $expanded === $g->id ? 'skryť' : 'ledger' }}</flux:button>
-                            <flux:button size="xs" variant="ghost" icon="calculator" wire:click="reconcile({{ $g->id }})" title="Prepočítať počítadlá z ledgeru" />
+                            <flux:button size="xs" variant="ghost" wire:click="toggle({{ $g->id }})">{{ $expanded === $g->id ? __('skryť') : __('ledger') }}</flux:button>
+                            <flux:button size="xs" variant="ghost" icon="calculator" wire:click="reconcile({{ $g->id }})" :title="__('Prepočítať počítadlá z ledgeru')" />
                         </td>
                     </tr>
                     @if ($expanded === $g->id)
                         <tr wire:key="ledger-{{ $g->id }}">
                             <td colspan="12" class="bg-zinc-50 p-2 dark:bg-zinc-800/50">
                                 <table class="w-full text-xs">
-                                    <thead class="text-left uppercase text-zinc-500"><tr><th class="py-0.5 pe-2">Čas</th><th class="py-0.5 pe-2">Dôvod</th><th class="py-0.5 pe-2 text-right">Pohyb</th><th class="py-0.5 pe-2">Rezervácia</th><th class="py-0.5 pe-2">Kto</th><th class="py-0.5 pe-2">Kľúč</th><th class="py-0.5">Poznámka</th></tr></thead>
+                                    <thead class="text-left uppercase text-zinc-500"><tr><th class="py-0.5 pe-2">{{ __('Čas') }}</th><th class="py-0.5 pe-2">{{ __('Dôvod') }}</th><th class="py-0.5 pe-2 text-right">{{ __('Pohyb') }}</th><th class="py-0.5 pe-2">{{ __('Rezervácia') }}</th><th class="py-0.5 pe-2">{{ __('Kto') }}</th><th class="py-0.5 pe-2">{{ __('Kľúč') }}</th><th class="py-0.5">{{ __('Poznámka') }}</th></tr></thead>
                                     <tbody>
                                         @foreach ($this->entries as $e)
                                             <tr wire:key="entry-{{ $e->id }}">
@@ -214,7 +214,7 @@ new #[Layout('layouts::admin')] #[Title('AI použitia')] class extends Component
                                                 <td class="py-0.5 pe-2">{{ $e->reason->value }}</td>
                                                 <td class="py-0.5 pe-2 text-right tabular-nums {{ $e->movement < 0 ? 'text-red-600' : ($e->movement > 0 ? 'text-green-700' : '') }}">{{ $e->movement > 0 ? '+' : '' }}{{ $e->movement }}</td>
                                                 <td class="py-0.5 pe-2">{{ $e->usage_reservation_id ?? '–' }}</td>
-                                                <td class="py-0.5 pe-2">{{ $e->actor?->email ?? 'systém' }}</td>
+                                                <td class="py-0.5 pe-2">{{ $e->actor?->email ?? __('systém') }}</td>
                                                 <td class="py-0.5 pe-2 font-mono">{{ $e->source_key }}</td>
                                                 <td class="py-0.5">{{ $e->note }}</td>
                                             </tr>
@@ -225,7 +225,7 @@ new #[Layout('layouts::admin')] #[Title('AI použitia')] class extends Component
                         </tr>
                     @endif
                 @empty
-                    <tr><td colspan="12" class="py-3 text-zinc-500">Žiadne granty.</td></tr>
+                    <tr><td colspan="12" class="py-3 text-zinc-500">{{ __('Žiadne granty.') }}</td></tr>
                 @endforelse
             </tbody>
         </table>

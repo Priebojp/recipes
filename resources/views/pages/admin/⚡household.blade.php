@@ -157,7 +157,7 @@ new #[Layout('layouts::admin')] #[Title('Domácnosť')] class extends Component 
         $this->reset(['comp_quantity', 'comp_expires', 'comp_key', 'comp_reason']);
         $this->comp_quantity = '1';
         unset($this->grants, $this->balances);
-        Flux::toast(variant: 'success', text: $grant->wasRecentlyCreated ? "Kompenzácia #{$grant->id} vystavená." : "Grant s týmto kľúčom už existuje (#{$grant->id}); nič nové sa nevystavilo.");
+        Flux::toast(variant: 'success', text: $grant->wasRecentlyCreated ? __('Kompenzácia #:id vystavená.', ['id' => $grant->id]) : __('Grant s týmto kľúčom už existuje (#:id); nič nové sa nevystavilo.', ['id' => $grant->id]));
     }
 
     public function grantPlus(Compensations $compensations): void
@@ -172,7 +172,7 @@ new #[Layout('layouts::admin')] #[Title('Domácnosť')] class extends Component 
 
         $plan = PlanVersion::query()->active()->where('code', $validated['plus_plan'])->orderByDesc('version')->first();
         if ($plan === null) {
-            $this->addError('plus_plan', 'Neznámy plán.');
+            $this->addError('plus_plan', __('Neznámy plán.'));
 
             return;
         }
@@ -184,7 +184,7 @@ new #[Layout('layouts::admin')] #[Title('Domácnosť')] class extends Component 
 
         $this->reset('plus_reason');
         unset($this->status, $this->entitlements, $this->grants, $this->balances);
-        Flux::toast(variant: 'success', text: 'Plus obdobie udelené. Nie je to platba – objednávka ani doklad nevznikli.');
+        Flux::toast(variant: 'success', text: __('Plus obdobie udelené. Nie je to platba – objednávka ani doklad nevznikli.'));
     }
 
     public function revokePlus(int $entitlementId, Compensations $compensations): void
@@ -201,7 +201,7 @@ new #[Layout('layouts::admin')] #[Title('Domácnosť')] class extends Component 
         }
 
         unset($this->status, $this->entitlements);
-        Flux::toast(text: 'Kompenzačné Plus obdobie ukončené.');
+        Flux::toast(text: __('Kompenzačné Plus obdobie ukončené.'));
     }
 
     public function block(HouseholdModeration $moderation): void
@@ -212,7 +212,7 @@ new #[Layout('layouts::admin')] #[Title('Domácnosť')] class extends Component 
         $moderation->block($this->household, $this->block_reason, auth()->user());
         $this->household->refresh();
         $this->reset('block_reason');
-        Flux::toast(variant: 'success', text: 'Domácnosť je blokovaná: bez nových AI úloh a nákupov. Recepty a nároky zostávajú.');
+        Flux::toast(variant: 'success', text: __('Domácnosť je blokovaná: bez nových AI úloh a nákupov. Recepty a nároky zostávajú.'));
     }
 
     public function unblock(HouseholdModeration $moderation): void
@@ -223,7 +223,7 @@ new #[Layout('layouts::admin')] #[Title('Domácnosť')] class extends Component 
         $moderation->unblock($this->household, $this->block_reason, auth()->user());
         $this->household->refresh();
         $this->reset('block_reason');
-        Flux::toast(variant: 'success', text: 'Blokovanie zrušené.');
+        Flux::toast(variant: 'success', text: __('Blokovanie zrušené.'));
     }
 
     public function syncSubscription(StripeGateway $gateway, AdminAuditor $audit): void
@@ -239,7 +239,7 @@ new #[Layout('layouts::admin')] #[Title('Domácnosť')] class extends Component 
         $audit->record('billing.subscription.synced', $subscription, $before, $subscription->fresh()->only(['stripe_status', 'ends_at']), 'Ručná synchronizácia zo Stripe');
 
         unset($this->status);
-        Flux::toast(text: 'Predplatné synchronizované zo Stripe.');
+        Flux::toast(text: __('Predplatné synchronizované zo Stripe.'));
     }
 
     public function cancelRenewal(StripeGateway $gateway, AdminAuditor $audit): void
@@ -256,7 +256,7 @@ new #[Layout('layouts::admin')] #[Title('Domácnosť')] class extends Component 
 
         $this->reset('subscription_reason');
         unset($this->status);
-        Flux::toast(text: 'Obnovovanie zrušené; Plus platí do konca zaplateného obdobia.');
+        Flux::toast(text: __('Obnovovanie zrušené; Plus platí do konca zaplateného obdobia.'));
     }
 
     public function resumeRenewal(StripeGateway $gateway, AdminAuditor $audit): void
@@ -273,7 +273,7 @@ new #[Layout('layouts::admin')] #[Title('Domácnosť')] class extends Component 
 
         $this->reset('subscription_reason');
         unset($this->status);
-        Flux::toast(text: 'Obnovovanie znova zapnuté.');
+        Flux::toast(text: __('Obnovovanie znova zapnuté.'));
     }
 }; ?>
 
@@ -282,9 +282,9 @@ new #[Layout('layouts::admin')] #[Title('Domácnosť')] class extends Component 
     @php($tz = $this->timezone())
     @php($account = $this->household->billingAccount)
 
-    <x-page-header :title="'Domácnosť #'.$this->household->id.' – '.$this->household->name" subtitle="Podpora bez obsahu receptov a mien členov. Každá akcia tu má dôvod a audit." :back="route('admin.households')">
+    <x-page-header :title="__('Domácnosť #:id – :name', ['id' => $this->household->id, 'name' => $this->household->name])" :subtitle="__('Podpora bez obsahu receptov a mien členov. Každá akcia tu má dôvod a audit.')" :back="route('admin.households')">
         @if ($this->household->isBlocked())
-            <flux:badge color="red" icon="no-symbol">blokovaná</flux:badge>
+            <flux:badge color="red" icon="no-symbol">{{ __('blokovaná') }}</flux:badge>
         @endif
     </x-page-header>
 
@@ -292,44 +292,44 @@ new #[Layout('layouts::admin')] #[Title('Domácnosť')] class extends Component 
         <flux:card class="space-y-2" data-test="household-plan">
             <div class="flex items-center justify-between">
                 <flux:heading size="lg" class="font-display">{{ $status['is_plus'] ? 'Plus' : 'Free' }}</flux:heading>
-                @if ($status['grace'])<flux:badge color="amber" size="sm">obnova zlyhala</flux:badge>
-                @elseif ($status['subscription']?->onGracePeriod())<flux:badge color="zinc" size="sm">bez obnovy</flux:badge>
-                @elseif ($status['is_plus'])<flux:badge color="green" size="sm">aktívne</flux:badge>@endif
+                @if ($status['grace'])<flux:badge color="amber" size="sm">{{ __('obnova zlyhala') }}</flux:badge>
+                @elseif ($status['subscription']?->onGracePeriod())<flux:badge color="zinc" size="sm">{{ __('bez obnovy') }}</flux:badge>
+                @elseif ($status['is_plus'])<flux:badge color="green" size="sm">{{ __('aktívne') }}</flux:badge>@endif
             </div>
             <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
                 @if ($status['current'])
-                    <dt class="text-zinc-500">Plán</dt><dd>{{ $status['current']->planVersion->name }} v{{ $status['current']->planVersion->version }}@if ($status['current']->order_id === null) · <span class="text-amber-600">kompenzácia</span>@endif</dd>
+                    <dt class="text-zinc-500">{{ __('Plán') }}</dt><dd>{{ $status['current']->planVersion->name }} v{{ $status['current']->planVersion->version }}@if ($status['current']->order_id === null) · <span class="text-amber-600">{{ __('kompenzácia') }}</span>@endif</dd>
                 @endif
-                <dt class="text-zinc-500">Zaplatené do</dt><dd>{{ $status['paid_through']?->setTimezone($tz)->format('d.m.Y H:i') ?? '–' }}</dd>
-                <dt class="text-zinc-500">Vlastník</dt><dd>{{ $this->household->owner?->email }} {!! $this->household->owner?->email_verified_at ? '<span class="text-xs text-green-700">overený</span>' : '<span class="text-xs text-amber-600">neoverený</span>' !!}</dd>
-                <dt class="text-zinc-500">Časová zóna</dt><dd>{{ $this->household->timezone }}</dd>
-                <dt class="text-zinc-500">Vytvorená</dt><dd>{{ $this->household->created_at?->setTimezone($tz)->format('d.m.Y') }}</dd>
+                <dt class="text-zinc-500">{{ __('Zaplatené do') }}</dt><dd>{{ $status['paid_through']?->setTimezone($tz)->format('d.m.Y H:i') ?? '–' }}</dd>
+                <dt class="text-zinc-500">{{ __('Vlastník') }}</dt><dd>{{ $this->household->owner?->email }} {!! $this->household->owner?->email_verified_at ? '<span class="text-xs text-green-700">'.__('overený').'</span>' : '<span class="text-xs text-amber-600">'.__('neoverený').'</span>' !!}</dd>
+                <dt class="text-zinc-500">{{ __('Časová zóna') }}</dt><dd>{{ $this->household->timezone }}</dd>
+                <dt class="text-zinc-500">{{ __('Vytvorená') }}</dt><dd>{{ $this->household->created_at?->setTimezone($tz)->format('d.m.Y') }}</dd>
             </dl>
         </flux:card>
 
         <flux:card class="space-y-2" data-test="household-subscription">
-            <flux:heading size="lg" class="font-display">Predplatné (Stripe)</flux:heading>
+            <flux:heading size="lg" class="font-display">{{ __('Predplatné (Stripe)') }}</flux:heading>
             @if ($status['subscription'])
                 @php($sub = $status['subscription'])
                 <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-                    <dt class="text-zinc-500">Stav</dt><dd><code>{{ $sub->stripe_status }}</code>@if ($sub->ends_at) · končí {{ $sub->ends_at->setTimezone($tz)->format('d.m.Y') }}@endif</dd>
-                    <dt class="text-zinc-500">Subscription</dt><dd class="truncate"><a href="{{ StripeDashboard::subscription($sub->stripe_id) }}" class="underline" target="_blank" rel="noopener noreferrer">{{ $sub->stripe_id }}</a></dd>
-                    <dt class="text-zinc-500">Price</dt><dd class="truncate font-mono text-xs">{{ $sub->stripe_price }}</dd>
-                    <dt class="text-zinc-500">Zákazník</dt><dd class="truncate"><a href="{{ StripeDashboard::customer($account?->stripe_id) }}" class="underline" target="_blank" rel="noopener noreferrer">{{ $account?->stripe_id }}</a></dd>
+                    <dt class="text-zinc-500">{{ __('Stav') }}</dt><dd><code>{{ $sub->stripe_status }}</code>@if ($sub->ends_at) · {{ __('končí :date', ['date' => $sub->ends_at->setTimezone($tz)->format('d.m.Y')]) }}@endif</dd>
+                    <dt class="text-zinc-500">{{ __('Subscription') }}</dt><dd class="truncate"><a href="{{ StripeDashboard::subscription($sub->stripe_id) }}" class="underline" target="_blank" rel="noopener noreferrer">{{ $sub->stripe_id }}</a></dd>
+                    <dt class="text-zinc-500">{{ __('Price') }}</dt><dd class="truncate font-mono text-xs">{{ $sub->stripe_price }}</dd>
+                    <dt class="text-zinc-500">{{ __('Zákazník') }}</dt><dd class="truncate"><a href="{{ StripeDashboard::customer($account?->stripe_id) }}" class="underline" target="_blank" rel="noopener noreferrer">{{ $account?->stripe_id }}</a></dd>
                 </dl>
                 <div class="space-y-2 pt-1">
-                    <flux:button size="sm" variant="ghost" icon="arrow-path" wire:click="syncSubscription" data-test="sync-subscription">Synchronizovať zo Stripe</flux:button>
+                    <flux:button size="sm" variant="ghost" icon="arrow-path" wire:click="syncSubscription" data-test="sync-subscription">{{ __('Synchronizovať zo Stripe') }}</flux:button>
                     @unless ($sub->ended())
-                        <flux:input wire:model="subscription_reason" size="sm" placeholder="Dôvod (povinný pre zmenu obnovovania)" />
+                        <flux:input wire:model="subscription_reason" size="sm" :placeholder="__('Dôvod (povinný pre zmenu obnovovania)')" />
                         @if ($sub->onGracePeriod())
-                            <flux:button size="sm" wire:click="resumeRenewal" data-test="admin-resume-renewal">Obnovovať znova</flux:button>
+                            <flux:button size="sm" wire:click="resumeRenewal" data-test="admin-resume-renewal">{{ __('Obnovovať znova') }}</flux:button>
                         @elseif (! $sub->canceled())
-                            <flux:button size="sm" variant="danger" wire:click="cancelRenewal" wire:confirm="Zrušiť automatické obnovovanie? Zaplatené obdobie sa neskracuje." data-test="admin-cancel-renewal">Zrušiť obnovovanie</flux:button>
+                            <flux:button size="sm" variant="danger" wire:click="cancelRenewal" wire:confirm="{{ __('Zrušiť automatické obnovovanie? Zaplatené obdobie sa neskracuje.') }}" data-test="admin-cancel-renewal">{{ __('Zrušiť obnovovanie') }}</flux:button>
                         @endif
                     @endunless
                 </div>
             @else
-                <flux:text class="text-sm">Bez Cashier predplatného.@if ($account?->stripe_id) Zákazník <a href="{{ StripeDashboard::customer($account->stripe_id) }}" class="underline" target="_blank" rel="noopener noreferrer">{{ $account->stripe_id }}</a>.@endif</flux:text>
+                <flux:text class="text-sm">{{ __('Bez Cashier predplatného.') }}@if ($account?->stripe_id) {!! __('Zákazník :link.', ['link' => '<a href="'.StripeDashboard::customer($account->stripe_id).'" class="underline" target="_blank" rel="noopener noreferrer">'.e($account->stripe_id).'</a>']) !!}@endif</flux:text>
             @endif
         </flux:card>
 
@@ -337,72 +337,72 @@ new #[Layout('layouts::admin')] #[Title('Domácnosť')] class extends Component 
             <flux:heading size="lg" class="font-display">AI</flux:heading>
             <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
                 @foreach (UsageKind::cases() as $kind)
-                    <dt class="text-zinc-500">{{ ucfirst($kind->label()) }}</dt><dd>{{ $this->balances[$kind->value]['available'] }} voľných z {{ $this->balances[$kind->value]['total'] }} platných</dd>
+                    <dt class="text-zinc-500">{{ ucfirst($kind->label()) }}</dt><dd>{{ __(':available voľných z :total platných', ['available' => $this->balances[$kind->value]['available'], 'total' => $this->balances[$kind->value]['total']]) }}</dd>
                 @endforeach
-                <dt class="text-zinc-500">Úlohy 30 dní</dt><dd>{{ $this->ai['jobs'] }} · {{ $this->ai['failed'] }} chýb · {{ Money::microUsd($this->ai['cost_micro']) }}</dd>
+                <dt class="text-zinc-500">{{ __('Úlohy 30 dní') }}</dt><dd>{{ $this->ai['jobs'] }} · {{ __(':count chýb', ['count' => $this->ai['failed']]) }} · {{ Money::microUsd($this->ai['cost_micro']) }}</dd>
             </dl>
-            <flux:text class="text-xs"><a href="{{ route('admin.ai') }}" class="underline" wire:navigate>AI úlohy</a> · <a href="{{ route('admin.usage', ['household' => $this->household->id]) }}" class="underline" wire:navigate>Ledger použití</a></flux:text>
+            <flux:text class="text-xs"><a href="{{ route('admin.ai') }}" class="underline" wire:navigate>{{ __('AI úlohy') }}</a> · <a href="{{ route('admin.usage', ['household' => $this->household->id]) }}" class="underline" wire:navigate>{{ __('Ledger použití') }}</a></flux:text>
         </flux:card>
     </div>
 
     <div class="grid gap-4 lg:grid-cols-3">
         <flux:card class="space-y-3" data-test="compensation-form">
             <form wire:submit="grantUses" class="space-y-3">
-                <flux:heading size="lg" class="font-display">Kompenzačné použitia</flux:heading>
-                <flux:text class="text-xs">Samostatný grant s dôvodom v audite. Nemení Stripe ani existujúce zostatky.</flux:text>
+                <flux:heading size="lg" class="font-display">{{ __('Kompenzačné použitia') }}</flux:heading>
+                <flux:text class="text-xs">{{ __('Samostatný grant s dôvodom v audite. Nemení Stripe ani existujúce zostatky.') }}</flux:text>
                 <div class="grid grid-cols-2 gap-3">
-                    <flux:select wire:model="comp_kind" label="Druh">
+                    <flux:select wire:model="comp_kind" :label="__('Druh')">
                         @foreach (UsageKind::cases() as $kind)
                             <flux:select.option :value="$kind->value">{{ $kind->label() }}</flux:select.option>
                         @endforeach
                     </flux:select>
-                    <flux:input wire:model="comp_quantity" type="number" min="1" max="1000" label="Počet" />
-                    <flux:input wire:model="comp_expires" type="date" label="Platí do" />
-                    <flux:input wire:model="comp_key" label="Kľúč (tiket)" />
+                    <flux:input wire:model="comp_quantity" type="number" min="1" max="1000" :label="__('Počet')" />
+                    <flux:input wire:model="comp_expires" type="date" :label="__('Platí do')" />
+                    <flux:input wire:model="comp_key" :label="__('Kľúč (tiket)')" />
                 </div>
-                <flux:textarea wire:model="comp_reason" rows="2" label="Dôvod" placeholder="napr. výpadok AI 12. 3., tiket #42" />
-                <flux:button type="submit" variant="primary" size="sm">Vystaviť kompenzáciu</flux:button>
+                <flux:textarea wire:model="comp_reason" rows="2" :label="__('Dôvod')" :placeholder="__('napr. výpadok AI 12. 3., tiket #42')" />
+                <flux:button type="submit" variant="primary" size="sm">{{ __('Vystaviť kompenzáciu') }}</flux:button>
             </form>
         </flux:card>
 
         <flux:card class="space-y-3" data-test="plus-grant-form">
             <form wire:submit="grantPlus" class="space-y-3">
-                <flux:heading size="lg" class="font-display">Časovo obmedzený Plus</flux:heading>
-                <flux:text class="text-xs">Plus funkcie a mesačné použitia plánu na dané obdobie bez platby. Nevytvára objednávku ani doklad.</flux:text>
-                <flux:select wire:model="plus_plan" label="Plán">
+                <flux:heading size="lg" class="font-display">{{ __('Časovo obmedzený Plus') }}</flux:heading>
+                <flux:text class="text-xs">{{ __('Plus funkcie a mesačné použitia plánu na dané obdobie bez platby. Nevytvára objednávku ani doklad.') }}</flux:text>
+                <flux:select wire:model="plus_plan" :label="__('Plán')">
                     @foreach ($this->plans as $plan)
                         <flux:select.option :value="$plan->code">{{ $plan->name }} (v{{ $plan->version }})</flux:select.option>
                     @endforeach
                 </flux:select>
-                <flux:input wire:model="plus_from" type="date" label="Od" />
-                <flux:input wire:model="plus_to" type="date" label="Do (exkluzívne)" />
-                <flux:textarea wire:model="plus_reason" rows="2" label="Dôvod" />
-                <flux:button type="submit" variant="primary" size="sm">Udeliť Plus</flux:button>
+                <flux:input wire:model="plus_from" type="date" :label="__('Od')" />
+                <flux:input wire:model="plus_to" type="date" :label="__('Do (exkluzívne)')" />
+                <flux:textarea wire:model="plus_reason" rows="2" :label="__('Dôvod')" />
+                <flux:button type="submit" variant="primary" size="sm">{{ __('Udeliť Plus') }}</flux:button>
             </form>
         </flux:card>
 
         <flux:card class="space-y-3" data-test="block-form">
-            <flux:heading size="lg" class="font-display">{{ $this->household->isBlocked() ? 'Blokovanie aktívne' : 'Blokovanie zneužitia' }}</flux:heading>
+            <flux:heading size="lg" class="font-display">{{ $this->household->isBlocked() ? __('Blokovanie aktívne') : __('Blokovanie zneužitia') }}</flux:heading>
             @if ($this->household->isBlocked())
                 <flux:callout variant="danger" icon="no-symbol" class="text-sm">
-                    <flux:callout.text>Od {{ $this->household->blocked_at->setTimezone($tz)->format('d.m.Y H:i') }}: {{ $this->household->blocked_reason }}</flux:callout.text>
+                    <flux:callout.text>{{ __('Od :date: :reason', ['date' => $this->household->blocked_at->setTimezone($tz)->format('d.m.Y H:i'), 'reason' => $this->household->blocked_reason]) }}</flux:callout.text>
                 </flux:callout>
             @else
-                <flux:text class="text-xs">Zastaví nové AI úlohy a nákupy. Recepty, účty ani zaplatené nároky sa nemažú.</flux:text>
+                <flux:text class="text-xs">{{ __('Zastaví nové AI úlohy a nákupy. Recepty, účty ani zaplatené nároky sa nemažú.') }}</flux:text>
             @endif
-            <flux:textarea wire:model="block_reason" rows="2" label="Dôvod" />
+            <flux:textarea wire:model="block_reason" rows="2" :label="__('Dôvod')" />
             @if ($this->household->isBlocked())
-                <flux:button size="sm" wire:click="unblock" data-test="unblock">Zrušiť blokovanie</flux:button>
+                <flux:button size="sm" wire:click="unblock" data-test="unblock">{{ __('Zrušiť blokovanie') }}</flux:button>
             @else
-                <flux:button size="sm" variant="danger" wire:click="block" wire:confirm="Blokovať domácnosť? Nové AI úlohy a nákupy budú odmietnuté." data-test="block">Blokovať</flux:button>
+                <flux:button size="sm" variant="danger" wire:click="block" wire:confirm="{{ __('Blokovať domácnosť? Nové AI úlohy a nákupy budú odmietnuté.') }}" data-test="block">{{ __('Blokovať') }}</flux:button>
             @endif
         </flux:card>
     </div>
 
     <flux:card class="space-y-3 overflow-x-auto" data-test="entitlements">
-        <flux:heading size="lg" class="font-display">Zaplatené obdobia</flux:heading>
+        <flux:heading size="lg" class="font-display">{{ __('Zaplatené obdobia') }}</flux:heading>
         <table class="w-full text-sm">
-            <thead class="text-left text-xs uppercase text-zinc-500"><tr><th class="py-1 pe-2">Plán</th><th class="py-1 pe-2">Od</th><th class="py-1 pe-2">Do</th><th class="py-1 pe-2">Zdroj</th><th class="py-1 pe-2">Stav</th><th class="py-1"></th></tr></thead>
+            <thead class="text-left text-xs uppercase text-zinc-500"><tr><th class="py-1 pe-2">{{ __('Plán') }}</th><th class="py-1 pe-2">{{ __('Od') }}</th><th class="py-1 pe-2">{{ __('Do') }}</th><th class="py-1 pe-2">{{ __('Zdroj') }}</th><th class="py-1 pe-2">{{ __('Stav') }}</th><th class="py-1"></th></tr></thead>
             <tbody class="divide-y divide-zinc-200/70 dark:divide-zinc-800">
                 @forelse ($this->entitlements as $e)
                     <tr wire:key="ent-{{ $e->id }}">
@@ -410,32 +410,32 @@ new #[Layout('layouts::admin')] #[Title('Domácnosť')] class extends Component 
                         <td class="py-1.5 pe-2 whitespace-nowrap">{{ $e->starts_at->setTimezone($tz)->format('d.m.Y H:i') }}</td>
                         <td class="py-1.5 pe-2 whitespace-nowrap">{{ $e->ends_at->setTimezone($tz)->format('d.m.Y H:i') }}</td>
                         <td class="py-1.5 pe-2 text-xs">
-                            @if ($e->order_id)<a href="{{ route('admin.orders.show', $e->order_id) }}" class="underline" wire:navigate>objednávka #{{ $e->order_id }}</a>@else kompenzácia @endif
-                            @if ($e->stripe_invoice_id) · <a href="{{ StripeDashboard::invoice($e->stripe_invoice_id) }}" class="underline" target="_blank" rel="noopener noreferrer">faktúra</a>@endif
+                            @if ($e->order_id)<a href="{{ route('admin.orders.show', $e->order_id) }}" class="underline" wire:navigate>{{ __('objednávka #:id', ['id' => $e->order_id]) }}</a>@else {{ __('kompenzácia') }} @endif
+                            @if ($e->stripe_invoice_id) · <a href="{{ StripeDashboard::invoice($e->stripe_invoice_id) }}" class="underline" target="_blank" rel="noopener noreferrer">{{ __('faktúra') }}</a>@endif
                         </td>
                         <td class="py-1.5 pe-2">
-                            @if ($e->revoked_at)<flux:badge color="red" size="sm">odobrané</flux:badge><div class="text-xs text-zinc-500">{{ $e->revoke_reason }}</div>
-                            @elseif ($e->isActiveAt(now()))<flux:badge color="green" size="sm">aktívne</flux:badge>
-                            @elseif ($e->starts_at > now())<flux:badge color="amber" size="sm">budúce</flux:badge>
-                            @else<flux:badge color="zinc" size="sm">skončené</flux:badge>@endif
+                            @if ($e->revoked_at)<flux:badge color="red" size="sm">{{ __('odobrané') }}</flux:badge><div class="text-xs text-zinc-500">{{ $e->revoke_reason }}</div>
+                            @elseif ($e->isActiveAt(now()))<flux:badge color="green" size="sm">{{ __('aktívne') }}</flux:badge>
+                            @elseif ($e->starts_at > now())<flux:badge color="amber" size="sm">{{ __('budúce') }}</flux:badge>
+                            @else<flux:badge color="zinc" size="sm">{{ __('skončené') }}</flux:badge>@endif
                         </td>
                         <td class="py-1.5 text-right">
                             @if ($e->order_id === null && $e->revoked_at === null && $e->ends_at > now())
-                                <flux:button size="xs" variant="ghost" wire:click="revokePlus({{ $e->id }})" wire:confirm="Ukončiť kompenzačné Plus obdobie teraz?">Ukončiť</flux:button>
+                                <flux:button size="xs" variant="ghost" wire:click="revokePlus({{ $e->id }})" wire:confirm="{{ __('Ukončiť kompenzačné Plus obdobie teraz?') }}">{{ __('Ukončiť') }}</flux:button>
                             @endif
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="py-2 text-zinc-500">Žiadne zaplatené obdobia.</td></tr>
+                    <tr><td colspan="6" class="py-2 text-zinc-500">{{ __('Žiadne zaplatené obdobia.') }}</td></tr>
                 @endforelse
             </tbody>
         </table>
     </flux:card>
 
     <flux:card class="space-y-3 overflow-x-auto" data-test="grants">
-        <flux:heading size="lg" class="font-display">Granty použití</flux:heading>
+        <flux:heading size="lg" class="font-display">{{ __('Granty použití') }}</flux:heading>
         <table class="w-full text-sm">
-            <thead class="text-left text-xs uppercase text-zinc-500"><tr><th class="py-1 pe-2">#</th><th class="py-1 pe-2">Druh</th><th class="py-1 pe-2">Zdroj</th><th class="py-1 pe-2 text-right">Množstvo</th><th class="py-1 pe-2 text-right">Rezerv.</th><th class="py-1 pe-2 text-right">Spotreb.</th><th class="py-1 pe-2 text-right">Odobr.</th><th class="py-1 pe-2 text-right">Voľné</th><th class="py-1 pe-2">Platnosť</th><th class="py-1">Poznámka</th></tr></thead>
+            <thead class="text-left text-xs uppercase text-zinc-500"><tr><th class="py-1 pe-2">#</th><th class="py-1 pe-2">{{ __('Druh') }}</th><th class="py-1 pe-2">{{ __('Zdroj') }}</th><th class="py-1 pe-2 text-right">{{ __('Množstvo') }}</th><th class="py-1 pe-2 text-right">{{ __('Rezerv.') }}</th><th class="py-1 pe-2 text-right">{{ __('Spotreb.') }}</th><th class="py-1 pe-2 text-right">{{ __('Odobr.') }}</th><th class="py-1 pe-2 text-right">{{ __('Voľné') }}</th><th class="py-1 pe-2">{{ __('Platnosť') }}</th><th class="py-1">{{ __('Poznámka') }}</th></tr></thead>
             <tbody class="divide-y divide-zinc-200/70 dark:divide-zinc-800">
                 @forelse ($this->grants as $g)
                     <tr wire:key="grant-{{ $g->id }}" class="{{ $g->isValidAt(now()) ? '' : 'text-zinc-400' }}">
@@ -447,11 +447,11 @@ new #[Layout('layouts::admin')] #[Title('Domácnosť')] class extends Component 
                         <td class="py-1.5 pe-2 text-right tabular-nums">{{ $g->consumed_quantity }}</td>
                         <td class="py-1.5 pe-2 text-right tabular-nums">{{ $g->revoked_quantity }}</td>
                         <td class="py-1.5 pe-2 text-right font-medium tabular-nums">{{ $g->available() }}</td>
-                        <td class="py-1.5 pe-2 whitespace-nowrap text-xs">{{ $g->valid_from->setTimezone($tz)->format('d.m.Y') }} – {{ $g->expires_at?->setTimezone($tz)->format('d.m.Y') ?? 'bez expirácie' }}</td>
+                        <td class="py-1.5 pe-2 whitespace-nowrap text-xs">{{ $g->valid_from->setTimezone($tz)->format('d.m.Y') }} – {{ $g->expires_at?->setTimezone($tz)->format('d.m.Y') ?? __('bez expirácie') }}</td>
                         <td class="py-1.5 max-w-xs truncate text-xs" title="{{ $g->source_key }}">{{ $g->note }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="10" class="py-2 text-zinc-500">Žiadne granty.</td></tr>
+                    <tr><td colspan="10" class="py-2 text-zinc-500">{{ __('Žiadne granty.') }}</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -459,7 +459,7 @@ new #[Layout('layouts::admin')] #[Title('Domácnosť')] class extends Component 
 
     <div class="grid gap-4 lg:grid-cols-2">
         <flux:card class="space-y-3 overflow-x-auto" data-test="orders">
-            <flux:heading size="lg" class="font-display">Objednávky</flux:heading>
+            <flux:heading size="lg" class="font-display">{{ __('Objednávky') }}</flux:heading>
             <table class="w-full text-sm">
                 <tbody class="divide-y divide-zinc-200/70 dark:divide-zinc-800">
                     @forelse ($this->orders as $o)
@@ -471,14 +471,14 @@ new #[Layout('layouts::admin')] #[Title('Domácnosť')] class extends Component 
                             <td class="py-1.5 text-right"><flux:badge size="sm" :color="$o->status->badgeColor()">{{ $o->status->label() }}</flux:badge></td>
                         </tr>
                     @empty
-                        <tr><td class="py-2 text-zinc-500">Žiadne objednávky.</td></tr>
+                        <tr><td class="py-2 text-zinc-500">{{ __('Žiadne objednávky.') }}</td></tr>
                     @endforelse
                 </tbody>
             </table>
         </flux:card>
 
         <flux:card class="space-y-3 overflow-x-auto" data-test="refunds">
-            <flux:heading size="lg" class="font-display">Refundácie a spory</flux:heading>
+            <flux:heading size="lg" class="font-display">{{ __('Refundácie a spory') }}</flux:heading>
             <table class="w-full text-sm">
                 <tbody class="divide-y divide-zinc-200/70 dark:divide-zinc-800">
                     @forelse ($this->refunds as $r)
@@ -489,7 +489,7 @@ new #[Layout('layouts::admin')] #[Title('Domácnosť')] class extends Component 
                             <td class="py-1.5 text-right"><flux:badge size="sm" :color="$r->status->badgeColor()">{{ $r->status->label() }}</flux:badge></td>
                         </tr>
                     @empty
-                        <tr><td class="py-2 text-zinc-500">Žiadne refundácie.</td></tr>
+                        <tr><td class="py-2 text-zinc-500">{{ __('Žiadne refundácie.') }}</td></tr>
                     @endforelse
                 </tbody>
             </table>

@@ -10,8 +10,8 @@ enum PlanInterval: string
     public function label(): string
     {
         return match ($this) {
-            self::Month => 'mesačne',
-            self::Year => 'ročne',
+            self::Month => __('mesačne'),
+            self::Year => __('ročne'),
         };
     }
 }

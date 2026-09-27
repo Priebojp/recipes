@@ -75,7 +75,7 @@ new #[Layout('layouts::admin')] #[Title('Cenník AI')] class extends Component {
             $raw = trim((string) ($validated[$field] ?? ''));
             $money[$field] = Money::parseUsdToMicro($raw);
             if ($raw !== '' && $money[$field] === null) {
-                $this->addError($field, 'Zadaj sumu v USD, napr. 0,053.');
+                $this->addError($field, __('Zadaj sumu v USD, napr. 0,053.'));
 
                 return;
             }
@@ -83,12 +83,12 @@ new #[Layout('layouts::admin')] #[Title('Cenník AI')] class extends Component {
 
         $isImage = $validated['modality'] === AiCostRate::MODALITY_IMAGE;
         if (! $isImage && $money['input_usd'] === null && $money['output_usd'] === null) {
-            $this->addError('input_usd', 'Textová sadzba potrebuje cenu za vstupné a/alebo výstupné tokeny.');
+            $this->addError('input_usd', __('Textová sadzba potrebuje cenu za vstupné a/alebo výstupné tokeny.'));
 
             return;
         }
         if ($isImage && $money['per_unit_usd'] === null && $money['output_usd'] === null) {
-            $this->addError('per_unit_usd', 'Obrázková sadzba potrebuje cenu za obrázok alebo za výstupné tokeny.');
+            $this->addError('per_unit_usd', __('Obrázková sadzba potrebuje cenu za obrázok alebo za výstupné tokeny.'));
 
             return;
         }
@@ -116,28 +116,28 @@ new #[Layout('layouts::admin')] #[Title('Cenník AI')] class extends Component {
 
         $this->reset(['model', 'quality', 'size', 'input_usd', 'cached_input_usd', 'output_usd', 'per_unit_usd', 'source', 'note']);
         unset($this->rates);
-        Flux::toast(variant: 'success', text: 'Sadzba pridaná. Staršie úlohy ostávajú ocenené pôvodnou sadzbou.');
+        Flux::toast(variant: 'success', text: __('Sadzba pridaná. Staršie úlohy ostávajú ocenené pôvodnou sadzbou.'));
     }
 }; ?>
 
 <div class="space-y-6">
-    <x-page-header title="Cenník AI" subtitle="Verzované cenníkové ceny poskytovateľa v USD. Nová cena = nový riadok s dátumom účinnosti; existujúce úlohy sa neprepočítavajú." :back="route('admin.ai')" />
+    <x-page-header :title="__('Cenník AI')" :subtitle="__('Verzované cenníkové ceny poskytovateľa v USD. Nová cena = nový riadok s dátumom účinnosti; existujúce úlohy sa neprepočítavajú.')" :back="route('admin.ai')" />
 
     <flux:card class="space-y-3 overflow-x-auto">
-        <flux:heading size="lg" class="font-display">Platné sadzby</flux:heading>
+        <flux:heading size="lg" class="font-display">{{ __('Platné sadzby') }}</flux:heading>
         <table class="w-full text-sm">
             <thead class="text-left text-xs uppercase text-zinc-500">
                 <tr>
-                    <th class="py-1 pe-2">Model</th><th class="py-1 pe-2">Druh</th><th class="py-1 pe-2">Kvalita · rozmer</th>
-                    <th class="py-1 pe-2 text-right">Vstup / 1M</th><th class="py-1 pe-2 text-right">Cache / 1M</th><th class="py-1 pe-2 text-right">Výstup / 1M</th><th class="py-1 pe-2 text-right">Za obrázok</th>
-                    <th class="py-1 pe-2">Účinnosť od</th><th class="py-1">Zdroj</th>
+                    <th class="py-1 pe-2">{{ __('Model') }}</th><th class="py-1 pe-2">{{ __('Druh') }}</th><th class="py-1 pe-2">{{ __('Kvalita · rozmer') }}</th>
+                    <th class="py-1 pe-2 text-right">{{ __('Vstup / 1M') }}</th><th class="py-1 pe-2 text-right">{{ __('Cache / 1M') }}</th><th class="py-1 pe-2 text-right">{{ __('Výstup / 1M') }}</th><th class="py-1 pe-2 text-right">{{ __('Za obrázok') }}</th>
+                    <th class="py-1 pe-2">{{ __('Účinnosť od') }}</th><th class="py-1">{{ __('Zdroj') }}</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-zinc-200/70 dark:divide-zinc-800">
                 @forelse ($this->rates as $rate)
                     <tr>
                         <td class="py-1.5 pe-2 font-mono text-xs">{{ $rate->provider }} / {{ $rate->model }}</td>
-                        <td class="py-1.5 pe-2">{{ $rate->modality === 'image' ? 'Obrázok' : 'Text' }}</td>
+                        <td class="py-1.5 pe-2">{{ $rate->modality === 'image' ? __('Obrázok') : __('Text') }}</td>
                         <td class="py-1.5 pe-2">{{ $rate->quality ?? '–' }} · {{ $rate->size ?? '–' }}</td>
                         <td class="py-1.5 pe-2 text-right">{{ $rate->input_per_million !== null ? Money::microUsd($rate->input_per_million, 2) : '–' }}</td>
                         <td class="py-1.5 pe-2 text-right">{{ $rate->cached_input_per_million !== null ? Money::microUsd($rate->cached_input_per_million, 2) : '–' }}</td>
@@ -145,12 +145,12 @@ new #[Layout('layouts::admin')] #[Title('Cenník AI')] class extends Component {
                         <td class="py-1.5 pe-2 text-right">{{ $rate->per_unit !== null ? Money::microUsd($rate->per_unit, 3) : '–' }}</td>
                         <td class="py-1.5 pe-2 whitespace-nowrap">{{ $rate->effective_from->setTimezone(config('recipes.default_timezone'))->format('d.m.Y') }}</td>
                         <td class="py-1.5 max-w-xs truncate text-xs text-zinc-500" title="{{ $rate->note }}">
-                            @if ($rate->source)<a href="{{ $rate->source }}" class="underline" target="_blank" rel="noopener noreferrer">odkaz</a>@endif
+                            @if ($rate->source)<a href="{{ $rate->source }}" class="underline" target="_blank" rel="noopener noreferrer">{{ __('odkaz') }}</a>@endif
                             {{ $rate->note }}
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="9" class="py-3 text-zinc-500">Žiadne sadzby – spusti <code>php artisan db:seed --class=AiCostRateSeeder</code> alebo pridaj sadzbu nižšie.</td></tr>
+                    <tr><td colspan="9" class="py-3 text-zinc-500">{!! __('Žiadne sadzby – spusti :command alebo pridaj sadzbu nižšie.', ['command' => '<code>php artisan db:seed --class=AiCostRateSeeder</code>']) !!}</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -158,38 +158,38 @@ new #[Layout('layouts::admin')] #[Title('Cenník AI')] class extends Component {
 
     <flux:card class="space-y-4">
         <form wire:submit="save" class="space-y-4">
-            <flux:heading size="lg" class="font-display">Pridať sadzbu</flux:heading>
+            <flux:heading size="lg" class="font-display">{{ __('Pridať sadzbu') }}</flux:heading>
             <div class="grid gap-4 sm:grid-cols-3">
-                <flux:input wire:model="provider" label="Poskytovateľ" placeholder="openai" />
-                <flux:input wire:model="model" label="Model" placeholder="gpt-6-luna" />
-                <flux:select wire:model.live="modality" label="Druh">
-                    <flux:select.option value="text">Text (tokeny)</flux:select.option>
-                    <flux:select.option value="image">Obrázok</flux:select.option>
+                <flux:input wire:model="provider" :label="__('Poskytovateľ')" placeholder="openai" />
+                <flux:input wire:model="model" :label="__('Model')" placeholder="gpt-6-luna" />
+                <flux:select wire:model.live="modality" :label="__('Druh')">
+                    <flux:select.option value="text">{{ __('Text (tokeny)') }}</flux:select.option>
+                    <flux:select.option value="image">{{ __('Obrázok') }}</flux:select.option>
                 </flux:select>
             </div>
             @if ($modality === 'image')
                 <div class="grid gap-4 sm:grid-cols-3">
-                    <flux:select wire:model="quality" label="Kvalita">
-                        <flux:select.option value="">ľubovoľná</flux:select.option>
+                    <flux:select wire:model="quality" :label="__('Kvalita')">
+                        <flux:select.option value="">{{ __('ľubovoľná') }}</flux:select.option>
                         @foreach (AiSettings::IMAGE_QUALITIES as $q)
                             <flux:select.option :value="$q">{{ $q }}</flux:select.option>
                         @endforeach
                     </flux:select>
-                    <flux:input wire:model="size" label="Rozmer (px)" placeholder="1024x1024" />
-                    <flux:input wire:model="per_unit_usd" label="USD za obrázok" placeholder="0,053" />
+                    <flux:input wire:model="size" :label="__('Rozmer (px)')" placeholder="1024x1024" />
+                    <flux:input wire:model="per_unit_usd" :label="__('USD za obrázok')" placeholder="0,053" />
                 </div>
             @endif
             <div class="grid gap-4 sm:grid-cols-3">
-                <flux:input wire:model="input_usd" label="USD za 1M vstupných tokenov" placeholder="0,10" />
-                <flux:input wire:model="cached_input_usd" label="USD za 1M cache vstupných" placeholder="voliteľné" />
-                <flux:input wire:model="output_usd" label="USD za 1M výstupných tokenov" placeholder="0,50" />
+                <flux:input wire:model="input_usd" :label="__('USD za 1M vstupných tokenov')" placeholder="0,10" />
+                <flux:input wire:model="cached_input_usd" :label="__('USD za 1M cache vstupných')" :placeholder="__('voliteľné')" />
+                <flux:input wire:model="output_usd" :label="__('USD za 1M výstupných tokenov')" placeholder="0,50" />
             </div>
             <div class="grid gap-4 sm:grid-cols-3">
-                <flux:input wire:model="effective_from" type="date" label="Účinnosť od" />
-                <flux:input wire:model="source" label="Zdroj (URL cenníka)" placeholder="https://…" />
-                <flux:input wire:model="note" label="Poznámka" />
+                <flux:input wire:model="effective_from" type="date" :label="__('Účinnosť od')" />
+                <flux:input wire:model="source" :label="__('Zdroj (URL cenníka)')" placeholder="https://…" />
+                <flux:input wire:model="note" :label="__('Poznámka')" />
             </div>
-            <flux:button type="submit" variant="primary">Pridať sadzbu</flux:button>
+            <flux:button type="submit" variant="primary">{{ __('Pridať sadzbu') }}</flux:button>
         </form>
     </flux:card>
 </div>

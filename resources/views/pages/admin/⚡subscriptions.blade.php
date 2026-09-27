@@ -82,7 +82,7 @@ new #[Layout('layouts::admin')] #[Title('Predplatné')] class extends Component 
         $audit->record('billing.subscription.synced', $subscription, $before, $subscription->fresh()->only(['stripe_status', 'ends_at']), 'Ručná synchronizácia zo Stripe');
 
         unset($this->subscriptions, $this->counts);
-        Flux::toast(text: "Predplatné {$subscription->stripe_id} synchronizované.");
+        Flux::toast(text: __('Predplatné :id synchronizované.', ['id' => $subscription->stripe_id]));
     }
 
     public function cancelRenewal(int $id, StripeGateway $gateway, AdminAuditor $audit): void
@@ -99,7 +99,7 @@ new #[Layout('layouts::admin')] #[Title('Predplatné')] class extends Component 
 
         $this->reset('reason');
         unset($this->subscriptions, $this->counts);
-        Flux::toast(text: 'Obnovovanie zrušené; zaplatené obdobie sa neskracuje.');
+        Flux::toast(text: __('Obnovovanie zrušené; zaplatené obdobie sa neskracuje.'));
     }
 
     public function resumeRenewal(int $id, StripeGateway $gateway, AdminAuditor $audit): void
@@ -116,29 +116,29 @@ new #[Layout('layouts::admin')] #[Title('Predplatné')] class extends Component 
 
         $this->reset('reason');
         unset($this->subscriptions, $this->counts);
-        Flux::toast(text: 'Obnovovanie znova zapnuté.');
+        Flux::toast(text: __('Obnovovanie znova zapnuté.'));
     }
 }; ?>
 
 <div class="space-y-6">
-    <x-page-header title="Predplatné" subtitle="Cashier záznamy synchronizované zo Stripe. Zaplatené obdobia určujú nároky; tu sa nič neaktivuje ručne." />
+    <x-page-header :title="__('Predplatné')" :subtitle="__('Cashier záznamy synchronizované zo Stripe. Zaplatené obdobia určujú nároky; tu sa nič neaktivuje ručne.')" />
 
     <div class="flex flex-wrap items-end gap-3">
-        <flux:input wire:model.live.debounce.400ms="search" icon="magnifying-glass" placeholder="Stripe ID, zákazník, domácnosť, e-mail" clearable class="max-w-md" />
+        <flux:input wire:model.live.debounce.400ms="search" icon="magnifying-glass" :placeholder="__('Stripe ID, zákazník, domácnosť, e-mail')" clearable class="max-w-md" />
         <flux:select wire:model.live="status" class="w-52">
-            <flux:select.option value="">všetky stavy</flux:select.option>
+            <flux:select.option value="">{{ __('všetky stavy') }}</flux:select.option>
             @foreach ($this->counts as $state => $n)
                 <flux:select.option :value="$state">{{ $state }} ({{ $n }})</flux:select.option>
             @endforeach
-            <flux:select.option value="canceling">bez obnovy (cancel at period end)</flux:select.option>
+            <flux:select.option value="canceling">{{ __('bez obnovy (cancel at period end)') }}</flux:select.option>
         </flux:select>
-        <flux:input wire:model="reason" placeholder="Dôvod pre zmenu obnovovania" class="max-w-xs" />
+        <flux:input wire:model="reason" :placeholder="__('Dôvod pre zmenu obnovovania')" class="max-w-xs" />
     </div>
 
     <flux:card class="space-y-3 overflow-x-auto">
         <table class="w-full text-sm">
             <thead class="text-left text-xs uppercase text-zinc-500">
-                <tr><th class="py-1 pe-2">Domácnosť</th><th class="py-1 pe-2">Stripe</th><th class="py-1 pe-2">Stav</th><th class="py-1 pe-2">Zaplatené do</th><th class="py-1 pe-2">Končí</th><th class="py-1">Akcie</th></tr>
+                <tr><th class="py-1 pe-2">{{ __('Domácnosť') }}</th><th class="py-1 pe-2">Stripe</th><th class="py-1 pe-2">{{ __('Stav') }}</th><th class="py-1 pe-2">{{ __('Zaplatené do') }}</th><th class="py-1 pe-2">{{ __('Končí') }}</th><th class="py-1">{{ __('Akcie') }}</th></tr>
             </thead>
             <tbody class="divide-y divide-zinc-200/70 dark:divide-zinc-800">
                 @forelse ($this->subscriptions as $sub)
@@ -160,19 +160,19 @@ new #[Layout('layouts::admin')] #[Title('Predplatné')] class extends Component 
                         <td class="py-1.5 pe-2 whitespace-nowrap">{{ $sub->ends_at?->setTimezone(config('recipes.default_timezone'))->format('d.m.Y') ?? '–' }}</td>
                         <td class="py-1.5">
                             <div class="flex flex-wrap gap-1">
-                                <flux:button size="xs" variant="ghost" icon="arrow-path" wire:click="sync({{ $sub->id }})">Sync</flux:button>
+                                <flux:button size="xs" variant="ghost" icon="arrow-path" wire:click="sync({{ $sub->id }})">{{ __('Sync') }}</flux:button>
                                 @unless ($sub->ended())
                                     @if ($sub->onGracePeriod())
-                                        <flux:button size="xs" wire:click="resumeRenewal({{ $sub->id }})">Obnovovať znova</flux:button>
+                                        <flux:button size="xs" wire:click="resumeRenewal({{ $sub->id }})">{{ __('Obnovovať znova') }}</flux:button>
                                     @elseif (! $sub->canceled())
-                                        <flux:button size="xs" variant="danger" wire:click="cancelRenewal({{ $sub->id }})" wire:confirm="Zrušiť obnovovanie tohto predplatného?">Zrušiť obnovovanie</flux:button>
+                                        <flux:button size="xs" variant="danger" wire:click="cancelRenewal({{ $sub->id }})" wire:confirm="{{ __('Zrušiť obnovovanie tohto predplatného?') }}">{{ __('Zrušiť obnovovanie') }}</flux:button>
                                     @endif
                                 @endunless
                             </div>
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="py-3 text-zinc-500">Žiadne predplatné.</td></tr>
+                    <tr><td colspan="6" class="py-3 text-zinc-500">{{ __('Žiadne predplatné.') }}</td></tr>
                 @endforelse
             </tbody>
         </table>

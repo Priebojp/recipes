@@ -18,7 +18,7 @@ class EnsurePlatformAdmin
         $user = $request->user();
 
         if (! $user instanceof User || ! $user->isPlatformAdmin()) {
-            abort(403, 'Administrácia je dostupná iba správcovi platformy.');
+            abort(403, __('Administrácia je dostupná iba správcovi platformy.'));
         }
 
         if (! $user->canAccessAdmin()) {

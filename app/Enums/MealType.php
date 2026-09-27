@@ -11,9 +11,9 @@ enum MealType: string
     public function label(): string
     {
         return match ($this) {
-            self::Breakfast => 'Raňajky',
-            self::Lunch => 'Obed',
-            self::Dinner => 'Večera',
+            self::Breakfast => __('Raňajky'),
+            self::Lunch => __('Obed'),
+            self::Dinner => __('Večera'),
         };
     }
 

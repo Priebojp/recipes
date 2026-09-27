@@ -12,10 +12,10 @@ enum PrivacyRequestKind: string
     public function label(): string
     {
         return match ($this) {
-            self::Export => 'export údajov',
-            self::Erasure => 'výmaz účtu',
-            self::Rectification => 'oprava údajov',
-            self::Other => 'iná žiadosť',
+            self::Export => __('export údajov'),
+            self::Erasure => __('výmaz účtu'),
+            self::Rectification => __('oprava údajov'),
+            self::Other => __('iná žiadosť'),
         };
     }
 }

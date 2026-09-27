@@ -108,7 +108,7 @@ class LaunchSignoffs
         $this->assertKnown($key);
         $note = trim($note);
         if ($note === '') {
-            throw new InvalidArgumentException('Potvrdenie potrebuje poznámku (kto/čo overil, dátum, dokument).');
+            throw new InvalidArgumentException(__('Potvrdenie potrebuje poznámku (kto/čo overil, dátum, dokument).'));
         }
 
         $before = $this->get($key);
@@ -122,7 +122,7 @@ class LaunchSignoffs
         $this->assertKnown($key);
         $reason = trim($reason);
         if ($reason === '') {
-            throw new InvalidArgumentException('Odvolanie potvrdenia potrebuje dôvod.');
+            throw new InvalidArgumentException(__('Odvolanie potvrdenia potrebuje dôvod.'));
         }
 
         $before = $this->get($key);
@@ -137,7 +137,7 @@ class LaunchSignoffs
     private function assertKnown(string $key): void
     {
         if (! array_key_exists($key, self::ITEMS)) {
-            throw new InvalidArgumentException('Neznáma položka launch checklistu: '.$key);
+            throw new InvalidArgumentException(__('Neznáma položka launch checklistu: :key', ['key' => $key]));
         }
     }
 }

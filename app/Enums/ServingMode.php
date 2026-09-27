@@ -14,12 +14,12 @@ enum ServingMode: string
     public function label(): string
     {
         return match ($this) {
-            self::Auto => 'Automaticky',
-            self::Plate => 'Tanier',
-            self::Bowl => 'Miska',
-            self::Pot => 'Hrniec',
-            self::Casserole => 'Kastról',
-            self::BakingDish => 'Pekáč',
+            self::Auto => __('Automaticky'),
+            self::Plate => __('Tanier'),
+            self::Bowl => __('Miska'),
+            self::Pot => __('Hrniec'),
+            self::Casserole => __('Kastról'),
+            self::BakingDish => __('Pekáč'),
         };
     }
 

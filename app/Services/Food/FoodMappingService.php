@@ -74,11 +74,11 @@ class FoodMappingService
     {
         if ($grams !== null) {
             if ($grams <= 0) {
-                throw new InvalidArgumentException('Gramáž musí byť väčšia ako nula.');
+                throw new InvalidArgumentException(__('Gramáž musí byť väčšia ako nula.'));
             }
             $origin ??= FoodGramsOrigin::UserEntered;
             if ($origin === FoodGramsOrigin::UnitConversion) {
-                throw new InvalidArgumentException('Ručne zadaná gramáž musí byť označená ako zadaná alebo odhad.');
+                throw new InvalidArgumentException(__('Ručne zadaná gramáž musí byť označená ako zadaná alebo odhad.'));
             }
             $resolved = ['grams' => round($grams, 2), 'origin' => $origin, 'conversion' => null, 'reason' => null];
         } else {
@@ -139,7 +139,7 @@ class FoodMappingService
             }
             $groups[$key] ??= ['name' => trim((string) $row->name), 'count' => 0, 'reasons' => []];
             $groups[$key]['count']++;
-            $reason = FoodMappingStatus::tryFrom((string) $row->status) === FoodMappingStatus::Rejected ? 'návrh odmietnutý' : (string) $row->unresolved_reason;
+            $reason = FoodMappingStatus::tryFrom((string) $row->status) === FoodMappingStatus::Rejected ? __('návrh odmietnutý') : (string) $row->unresolved_reason;
             if ($reason !== '' && ! in_array($reason, $groups[$key]['reasons'], true) && count($groups[$key]['reasons']) < 3) {
                 $groups[$key]['reasons'][] = $reason;
             }

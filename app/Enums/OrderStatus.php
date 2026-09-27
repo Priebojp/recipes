@@ -15,13 +15,13 @@ enum OrderStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::Pending => 'čaká na úhradu',
-            self::Paid => 'zaplatená',
-            self::Failed => 'platba zlyhala',
-            self::Canceled => 'zrušená',
-            self::Expired => 'nedokončená',
-            self::Refunded => 'refundovaná',
-            self::PartiallyRefunded => 'čiastočne refundovaná',
+            self::Pending => __('čaká na úhradu'),
+            self::Paid => __('zaplatená'),
+            self::Failed => __('platba zlyhala'),
+            self::Canceled => __('zrušená'),
+            self::Expired => __('nedokončená'),
+            self::Refunded => __('refundovaná'),
+            self::PartiallyRefunded => __('čiastočne refundovaná'),
         };
     }
 

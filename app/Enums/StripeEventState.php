@@ -12,10 +12,10 @@ enum StripeEventState: string
     public function label(): string
     {
         return match ($this) {
-            self::Received => 'prijatá',
-            self::Processed => 'spracovaná',
-            self::Ignored => 'bez účinku',
-            self::Failed => 'zlyhala',
+            self::Received => __('prijatá'),
+            self::Processed => __('spracovaná'),
+            self::Ignored => __('bez účinku'),
+            self::Failed => __('zlyhala'),
         };
     }
 

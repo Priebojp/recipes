@@ -111,7 +111,7 @@ class CookedPanel extends Component
             'cookedOn' => ['required', 'date_format:Y-m-d', 'before_or_equal:'.$today],
             'servings' => ['nullable', 'integer', 'min:1', 'max:200'],
             'note' => ['nullable', 'string', 'max:500'],
-        ], ['cookedOn.before_or_equal' => 'Dátum uvarenia nemôže byť v budúcnosti.']);
+        ], ['cookedOn.before_or_equal' => __('Dátum uvarenia nemôže byť v budúcnosti.')]);
 
         $data = [
             'cooked_on' => $this->cookedOn,

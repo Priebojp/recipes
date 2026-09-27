@@ -24,9 +24,9 @@ enum UsageKind: string
     public function label(): string
     {
         return match ($this) {
-            self::Text => 'textové operácie',
-            self::ImageStandard => 'obrázky Standard',
-            self::ImageEconomy => 'obrázky Economy',
+            self::Text => __('textové operácie'),
+            self::ImageStandard => __('obrázky Standard'),
+            self::ImageEconomy => __('obrázky Economy'),
         };
     }
 
@@ -34,9 +34,9 @@ enum UsageKind: string
     public function unitLabel(): string
     {
         return match ($this) {
-            self::Text => 'textová operácia',
-            self::ImageStandard => 'obrázok Standard',
-            self::ImageEconomy => 'obrázok Economy',
+            self::Text => __('textová operácia'),
+            self::ImageStandard => __('obrázok Standard'),
+            self::ImageEconomy => __('obrázok Economy'),
         };
     }
 }

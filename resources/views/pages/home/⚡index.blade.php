@@ -45,18 +45,18 @@ new #[Layout('layouts::public')] #[Title('Čo dnes navarím?')] class extends Co
         <div class="pointer-events-none absolute -right-24 -top-24 size-96 rounded-full bg-accent/40 blur-3xl"></div>
         <div class="pointer-events-none absolute -bottom-32 -left-16 size-80 rounded-full bg-amber-300/20 blur-3xl"></div>
         <div class="relative max-w-2xl space-y-6">
-            <flux:badge color="orange" variant="pill" icon="sparkles">Rodinná kuchárka</flux:badge>
-            <h1 class="font-display text-4xl font-bold leading-tight sm:text-6xl">Čo dnes navarím?</h1>
-            <p class="max-w-xl text-lg text-zinc-300">Tvoje recepty, chute celej rodiny a výber, ktorý si pamätá, čo sa varilo naposledy. Keď nevieš, čo dať na stôl, nechaj to na múdru náhodu. Plán na týždeň a história varenia sú bonus.</p>
+            <flux:badge color="orange" variant="pill" icon="sparkles">{{ __('Rodinná kuchárka') }}</flux:badge>
+            <h1 class="font-display text-4xl font-bold leading-tight sm:text-6xl">{{ __('Čo dnes navarím?') }}</h1>
+            <p class="max-w-xl text-lg text-zinc-300">{{ __('Tvoje recepty, chute celej rodiny a výber, ktorý si pamätá, čo sa varilo naposledy. Keď nevieš, čo dať na stôl, nechaj to na múdru náhodu. Plán na týždeň a história varenia sú bonus.') }}</p>
             <div class="flex flex-wrap gap-3">
                 @auth
-                    <flux:button :href="route('cook.index')" wire:navigate variant="primary" icon="sparkles">Vyber mi jedlo</flux:button>
-                    <flux:button :href="route('recipes.index')" wire:navigate variant="ghost" icon="book-open" class="!bg-white/10 !text-white hover:!bg-white/20">Moje recepty</flux:button>
+                    <flux:button :href="route('cook.index')" wire:navigate variant="primary" icon="sparkles">{{ __('Vyber mi jedlo') }}</flux:button>
+                    <flux:button :href="route('recipes.index')" wire:navigate variant="ghost" icon="book-open" class="!bg-white/10 !text-white hover:!bg-white/20">{{ __('Moje recepty') }}</flux:button>
                 @else
                     @if (Route::has('register'))
-                        <flux:button :href="route('register')" wire:navigate variant="primary" icon="user-plus">Založ si domácnosť</flux:button>
+                        <flux:button :href="route('register')" wire:navigate variant="primary" icon="user-plus">{{ __('Založ si domácnosť') }}</flux:button>
                     @endif
-                    <flux:button :href="route('login')" wire:navigate variant="ghost" class="!bg-white/10 !text-white hover:!bg-white/20">Prihlás sa</flux:button>
+                    <flux:button :href="route('login')" wire:navigate variant="ghost" class="!bg-white/10 !text-white hover:!bg-white/20">{{ __('Prihlás sa') }}</flux:button>
                 @endauth
             </div>
         </div>
@@ -64,9 +64,9 @@ new #[Layout('layouts::public')] #[Title('Čo dnes navarím?')] class extends Co
 
     <section class="grid gap-4 sm:grid-cols-3">
         @foreach ([
-            ['icon' => 'book-open', 'title' => 'Všetky recepty na jednom mieste', 'text' => 'Na začiatok stačí názov. Suroviny, postup a fotky doplníš, keď budeš mať chvíľu.'],
-            ['icon' => 'heart', 'title' => 'Každý v rodine má svoje chute', 'text' => 'Kto čo miluje, kto čo zje a kto čo ani náhodou. Výber to všetko berie do úvahy.'],
-            ['icon' => 'sparkles', 'title' => 'Múdra náhoda', 'text' => 'Čo sa varilo nedávno, ide na chvíľu bokom. Čo má celá rodina rada, dostane prednosť.'],
+            ['icon' => 'book-open', 'title' => __('Všetky recepty na jednom mieste'), 'text' => __('Na začiatok stačí názov. Suroviny, postup a fotky doplníš, keď budeš mať chvíľu.')],
+            ['icon' => 'heart', 'title' => __('Každý v rodine má svoje chute'), 'text' => __('Kto čo miluje, kto čo zje a kto čo ani náhodou. Výber to všetko berie do úvahy.')],
+            ['icon' => 'sparkles', 'title' => __('Múdra náhoda'), 'text' => __('Čo sa varilo nedávno, ide na chvíľu bokom. Čo má celá rodina rada, dostane prednosť.')],
         ] as $feature)
             <flux:card class="space-y-2">
                 <span class="inline-flex size-10 items-center justify-center rounded-xl bg-accent/10 text-accent">
@@ -81,16 +81,16 @@ new #[Layout('layouts::public')] #[Title('Čo dnes navarím?')] class extends Co
     <section class="space-y-6" id="recepty">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-                <h2 class="font-display text-3xl font-bold">Verejné recepty</h2>
-                <flux:text class="mt-1">Recepty, o ktoré sa s tebou delia iné rodiny. Inšpiruj sa.</flux:text>
+                <h2 class="font-display text-3xl font-bold">{{ __('Verejné recepty') }}</h2>
+                <flux:text class="mt-1">{{ __('Recepty, o ktoré sa s tebou delia iné rodiny. Inšpiruj sa.') }}</flux:text>
             </div>
-            <flux:input wire:model.live.debounce.300ms="q" icon="magnifying-glass" placeholder="Hľadaj recept…" clearable class="sm:w-72" />
+            <flux:input wire:model.live.debounce.300ms="q" icon="magnifying-glass" :placeholder="__('Hľadaj recept…')" clearable class="sm:w-72" />
         </div>
 
         @if ($this->recipes->isEmpty())
             <flux:callout icon="book-open">
-                <flux:callout.heading>{{ trim($q) !== '' ? 'Nič sme nenašli' : 'Zatiaľ tu nič nie je' }}</flux:callout.heading>
-                <flux:callout.text>{{ trim($q) !== '' ? 'Skús iné slovo.' : 'Ak chceš, aby tu bol tvoj recept, zverejni ho pri úprave v časti Zdieľanie.' }}</flux:callout.text>
+                <flux:callout.heading>{{ trim($q) !== '' ? __('Nič sme nenašli') : __('Zatiaľ tu nič nie je') }}</flux:callout.heading>
+                <flux:callout.text>{{ trim($q) !== '' ? __('Skús iné slovo.') : __('Ak chceš, aby tu bol tvoj recept, zverejni ho pri úprave v časti Zdieľanie.') }}</flux:callout.text>
             </flux:callout>
         @else
             <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">

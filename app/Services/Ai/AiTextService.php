@@ -54,7 +54,7 @@ class AiTextService
     public function create(Recipe $recipe, ?User $by, string $scope, bool $fresh = false, bool $rateLimits = true): AiJob
     {
         if (! in_array($scope, self::SCOPES, true)) {
-            throw new InvalidArgumentException('Neznámy rozsah úpravy.');
+            throw new InvalidArgumentException(__('Neznámy rozsah úpravy.'));
         }
 
         $recipe->load(['ingredients', 'steps', 'mealTypes']);
@@ -240,14 +240,14 @@ class AiTextService
     public function apply(AiJob $job, array $fields, ?User $by, bool $confirmPhotoAssignment = false): Recipe
     {
         if ($job->status !== AiJobStatus::Succeeded || $job->output === null) {
-            throw new InvalidArgumentException('Návrh ešte nie je hotový.');
+            throw new InvalidArgumentException(__('Návrh ešte nie je hotový.'));
         }
 
         return DB::transaction(function () use ($job, $fields, $by, $confirmPhotoAssignment) {
             $recipe = Recipe::query()->lockForUpdate()->with(['steps.media', 'ingredients'])->findOrFail($job->recipe_id);
 
             if ($recipe->active_revision_id !== $job->input_revision_id) {
-                throw new AiConflictException('Recept bol medzitým upravený. Návrh vychádza zo staršej verzie – porovnaj ho a spusti úpravu znova.');
+                throw new AiConflictException(__('Recept bol medzitým upravený. Návrh vychádza zo staršej verzie – porovnaj ho a spusti úpravu znova.'));
             }
 
             $output = $job->output;
@@ -265,7 +265,7 @@ class AiTextService
             if (in_array('steps', $fields, true)) {
                 $needsConfirmation = $this->stepsNeedingPhotoConfirmation($job);
                 if ($needsConfirmation !== [] && ! $confirmPhotoAssignment) {
-                    throw new InvalidArgumentException('Kroky s fotografiami boli zlúčené alebo rozdelené. Potvrď priradenie fotografií pred použitím postupu.');
+                    throw new InvalidArgumentException(__('Kroky s fotografiami boli zlúčené alebo rozdelené. Potvrď priradenie fotografií pred použitím postupu.'));
                 }
 
                 $seen = [];

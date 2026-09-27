@@ -22,14 +22,14 @@ class CookingHistoryService
     public function record(Household $household, Recipe $recipe, array $data, ?User $by, ?string $idempotencyKey = null): CookingEvent
     {
         if ($recipe->household_id !== $household->id) {
-            throw new InvalidArgumentException('Recept nepatrí do tejto domácnosti.');
+            throw new InvalidArgumentException(__('Recept nepatrí do tejto domácnosti.'));
         }
 
         $calendar = new PlanningCalendar($household->timezone);
         $cookedOn = isset($data['cooked_on']) && $data['cooked_on'] ? $calendar->date($data['cooked_on']) : $calendar->today();
 
         if ($cookedOn->greaterThan($calendar->today())) {
-            throw new InvalidArgumentException('Dátum uvarenia nemôže byť v budúcnosti.');
+            throw new InvalidArgumentException(__('Dátum uvarenia nemôže byť v budúcnosti.'));
         }
 
         if ($idempotencyKey !== null) {
@@ -108,7 +108,7 @@ class CookingHistoryService
             if (! empty($data['cooked_on'])) {
                 $date = $calendar->date($data['cooked_on']);
                 if ($date->greaterThan($calendar->today())) {
-                    throw new InvalidArgumentException('Dátum uvarenia nemôže byť v budúcnosti.');
+                    throw new InvalidArgumentException(__('Dátum uvarenia nemôže byť v budúcnosti.'));
                 }
                 $event->cooked_on = $date;
             }

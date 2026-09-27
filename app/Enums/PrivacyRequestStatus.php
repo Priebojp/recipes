@@ -12,10 +12,10 @@ enum PrivacyRequestStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::Received => 'prijatá',
-            self::InProgress => 'v riešení',
-            self::Completed => 'vybavená',
-            self::Rejected => 'zamietnutá',
+            self::Received => __('prijatá'),
+            self::InProgress => __('v riešení'),
+            self::Completed => __('vybavená'),
+            self::Rejected => __('zamietnutá'),
         };
     }
 

@@ -17,11 +17,11 @@ enum RefundKind: string
     public function label(): string
     {
         return match ($this) {
-            self::Withdrawal => 'odstúpenie od zmluvy',
-            self::Complaint => 'reklamácia',
-            self::Goodwill => 'dobrovoľná refundácia',
-            self::Dispute => 'spor (chargeback)',
-            self::External => 'refundácia zo Stripe',
+            self::Withdrawal => __('odstúpenie od zmluvy'),
+            self::Complaint => __('reklamácia'),
+            self::Goodwill => __('dobrovoľná refundácia'),
+            self::Dispute => __('spor (chargeback)'),
+            self::External => __('refundácia zo Stripe'),
         };
     }
 }

@@ -50,11 +50,11 @@ class RefundService
         }
 
         if (! $order->status->isSettled() || ! $order->stripe_payment_intent_id) {
-            throw new InvalidArgumentException('Objednávka nie je zaplatená alebo nemá platbu, ktorú by bolo možné vrátiť.');
+            throw new InvalidArgumentException(__('Objednávka nie je zaplatená alebo nemá platbu, ktorú by bolo možné vrátiť.'));
         }
         $refundable = $order->amount_cents - $this->refundedCents($order);
         if ($amountCents < 1 || $amountCents > $refundable) {
-            throw new InvalidArgumentException("Suma musí byť 1 až {$refundable} centov.");
+            throw new InvalidArgumentException(__('Suma musí byť 1 až :max centov.', ['max' => $refundable]));
         }
 
         // Units are checked before any money moves: a refund must never succeed in Stripe and fail here.
@@ -185,7 +185,7 @@ class RefundService
     public function review(RefundCase $case, array $unitsToRevoke, bool $revokeEntitlement, string $note, ?User $by = null): RefundCase
     {
         if ($case->status !== RefundStatus::NeedsReview) {
-            throw new InvalidArgumentException('Posúdiť možno iba refundáciu v stave „čaká na posúdenie“.');
+            throw new InvalidArgumentException(__('Posúdiť možno iba refundáciu v stave „čaká na posúdenie“.'));
         }
 
         $order = $case->order;
@@ -263,11 +263,11 @@ class RefundService
         foreach ($units as $kindValue => $wanted) {
             $kind = UsageKind::tryFrom((string) $kindValue);
             if ($kind === null) {
-                throw new InvalidArgumentException("Neznámy druh použitia {$kindValue}.");
+                throw new InvalidArgumentException(__('Neznámy druh použitia :kind.', ['kind' => $kindValue]));
             }
             $available = (int) $grants->where('kind', $kind)->sum(fn (UsageGrant $g) => $g->available());
             if ((int) $wanted > $available) {
-                throw new InvalidArgumentException("Objednávka má iba {$available} nevyužitých použití ({$kind->label()}), nie {$wanted}.");
+                throw new InvalidArgumentException(__('Objednávka má iba :available nevyužitých použití (:kind), nie :wanted.', ['available' => $available, 'kind' => $kind->label(), 'wanted' => $wanted]));
             }
         }
     }
@@ -294,7 +294,7 @@ class RefundService
                 }
             }
             if ($remaining > 0) {
-                throw new InvalidArgumentException("Objednávka nemá {$wanted} nevyužitých použití ({$kind->label()}); chýba {$remaining}.");
+                throw new InvalidArgumentException(__('Objednávka nemá :wanted nevyužitých použití (:kind); chýba :remaining.', ['wanted' => $wanted, 'kind' => $kind->label(), 'remaining' => $remaining]));
             }
         }
     }

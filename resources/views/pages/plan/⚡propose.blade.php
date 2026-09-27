@@ -163,12 +163,12 @@ new #[Title('Návrh týždenného jedálnička')] class extends Component {
             'noRepeatDays' => ['nullable', 'integer', 'min:1', 'max:365'],
             'servings' => ['nullable', 'integer', 'min:1', 'max:200'],
         ], [
-            'personIds.required' => 'Vyber aspoň jedného stravníka.',
-            'personIds.min' => 'Vyber aspoň jedného stravníka.',
-            'mealTypes.required' => 'Vyber aspoň jeden typ jedla.',
-            'mealTypes.min' => 'Vyber aspoň jeden typ jedla.',
-            'days.required' => 'Vyber aspoň jeden deň.',
-            'days.min' => 'Vyber aspoň jeden deň.',
+            'personIds.required' => __('Vyber aspoň jedného stravníka.'),
+            'personIds.min' => __('Vyber aspoň jedného stravníka.'),
+            'mealTypes.required' => __('Vyber aspoň jeden typ jedla.'),
+            'mealTypes.min' => __('Vyber aspoň jeden typ jedla.'),
+            'days.required' => __('Vyber aspoň jeden deň.'),
+            'days.min' => __('Vyber aspoň jeden deň.'),
         ]);
 
         try {
@@ -198,7 +198,7 @@ new #[Title('Návrh týždenného jedálnička')] class extends Component {
     public function clearSlot(int $index): void
     {
         if (isset($this->proposal[$index]) && ! $this->proposal[$index]['occupied']) {
-            $this->proposal[$index] = array_merge($this->proposal[$index], ['recipe_id' => null, 'title' => null, 'reasons' => [], 'note' => 'Vynechané']);
+            $this->proposal[$index] = array_merge($this->proposal[$index], ['recipe_id' => null, 'title' => null, 'reasons' => [], 'note' => __('Vynechané')]);
         }
     }
 
@@ -251,38 +251,38 @@ new #[Title('Návrh týždenného jedálnička')] class extends Component {
 }; ?>
 
 <div class="space-y-6">
-    <x-page-header title="Návrh týždenného jedálnička" :back="route('plan.index', ['week' => $week])" subtitle="Rovnaký generátor ako pri jednom jedle, len pre celý týždeň naraz. Bez AI." />
+    <x-page-header :title="__('Návrh týždenného jedálnička')" :back="route('plan.index', ['week' => $week])" :subtitle="__('Rovnaký generátor ako pri jednom jedle, len pre celý týždeň naraz. Bez AI.')" />
 
     @if (! $this->isPlus)
         <x-plus-gate :feature="App\Enums\PlusFeature::WeeklyMenu" :household="$this->household" />
     @elseif (! $this->canEdit)
-        <flux:callout icon="lock-closed">Plán môže meniť vlastník alebo spolupracovník domácnosti.</flux:callout>
+        <flux:callout icon="lock-closed">{{ __('Plán môže meniť vlastník alebo spolupracovník domácnosti.') }}</flux:callout>
     @elseif ($confirmed)
         <flux:callout icon="check-circle" variant="success" data-test="menu-confirmed">
             <flux:callout.heading>{{ trans_choice('{0} Nič sa nenaplánovalo|{1} 1 jedlo je v pláne|[2,4] :count jedlá sú v pláne|[5,*] :count jedál je v pláne', $createdCount) }}</flux:callout.heading>
             <flux:callout.text>
-                Uvarenie potvrdíš neskôr v Pláne – naplánovanie sa do histórie nepočíta.
+                {{ __('Uvarenie potvrdíš neskôr v Pláne – naplánovanie sa do histórie nepočíta.') }}
                 @if ($skipped !== [])
-                    <div class="mt-2">Vynechané, lebo sa medzičasom zmenili (archív alebo výluka): {{ implode(', ', $skipped) }}.</div>
+                    <div class="mt-2">{{ __('Vynechané, lebo sa medzičasom zmenili (archív alebo výluka): :titles.', ['titles' => implode(', ', $skipped)]) }}</div>
                 @endif
             </flux:callout.text>
             <x-slot name="actions">
-                <flux:button :href="route('plan.index', ['week' => $week])" wire:navigate variant="primary" size="sm">Otvoriť plán</flux:button>
-                <flux:button :href="route('plan.shopping', ['week' => $week])" wire:navigate size="sm" icon="shopping-cart">Nákupný zoznam</flux:button>
+                <flux:button :href="route('plan.index', ['week' => $week])" wire:navigate variant="primary" size="sm">{{ __('Otvoriť plán') }}</flux:button>
+                <flux:button :href="route('plan.shopping', ['week' => $week])" wire:navigate size="sm" icon="shopping-cart">{{ __('Nákupný zoznam') }}</flux:button>
             </x-slot>
         </flux:callout>
         <script type="application/json" id="mr-analytics-event">@json(['name' => 'meal_planned', 'properties' => ['mode' => 'week']])</script>
     @else
         <form wire:submit="propose" class="space-y-6">
-            <flux:radio.group wire:model.live="week" label="Týždeň" variant="segmented">
-                <flux:radio :value="$this->calendar->thisWeekStart()->toDateString()" label="Tento týždeň" />
-                <flux:radio :value="$this->calendar->nextWeekStart()->toDateString()" label="Budúci týždeň" />
+            <flux:radio.group wire:model.live="week" :label="__('Týždeň')" variant="segmented">
+                <flux:radio :value="$this->calendar->thisWeekStart()->toDateString()" :label="__('Tento týždeň')" />
+                <flux:radio :value="$this->calendar->nextWeekStart()->toDateString()" :label="__('Budúci týždeň')" />
             </flux:radio.group>
-            <flux:text class="-mt-4 text-sm">Od {{ $this->weekStart->format('j. n.') }} do {{ $this->weekStart->addDays(6)->format('j. n. Y') }}</flux:text>
+            <flux:text class="-mt-4 text-sm">{{ __('Od :from do :to', ['from' => $this->weekStart->format('j. n.'), 'to' => $this->weekStart->addDays(6)->format('j. n. Y')]) }}</flux:text>
 
             @if ($this->presets->isNotEmpty())
                 <flux:fieldset>
-                    <flux:legend>Šablóna</flux:legend>
+                    <flux:legend>{{ __('Šablóna') }}</flux:legend>
                     <div class="flex flex-wrap gap-2">
                         @foreach ($this->presets as $preset)
                             <flux:button size="sm" wire:click="applyPreset({{ $preset->id }})" icon="bookmark" wire:key="preset-{{ $preset->id }}" data-test="apply-preset-{{ $preset->id }}">{{ $preset->name }}</flux:button>
@@ -292,14 +292,14 @@ new #[Title('Návrh týždenného jedálnička')] class extends Component {
             @endif
 
             <flux:fieldset>
-                <flux:legend>Pre koho varíš?</flux:legend>
+                <flux:legend>{{ __('Pre koho varíš?') }}</flux:legend>
                 <div class="flex flex-wrap gap-2">
                     @foreach ($this->people as $person)
                         <label class="flex cursor-pointer items-center gap-2 rounded-full border px-3 py-2 text-sm transition {{ in_array($person->id, $personIds) ? 'border-accent bg-accent/10 font-medium text-accent-content' : 'border-zinc-300 bg-white hover:border-zinc-400 dark:border-zinc-600 dark:bg-zinc-800' }}">
                             <input type="checkbox" wire:model.live="personIds" value="{{ $person->id }}" class="sr-only" />
                             <x-person-avatar :person="$person" size="size-6" />
                             {{ $person->name }}
-                            @if ($person->isGuest())<flux:badge size="sm" color="zinc">hosť</flux:badge>@endif
+                            @if ($person->isGuest())<flux:badge size="sm" color="zinc">{{ __('hosť') }}</flux:badge>@endif
                         </label>
                     @endforeach
                 </div>
@@ -307,14 +307,14 @@ new #[Title('Návrh týždenného jedálnička')] class extends Component {
             </flux:fieldset>
 
             <div class="grid gap-6 sm:grid-cols-2">
-                <flux:checkbox.group wire:model="mealTypes" label="Ktoré jedlá">
+                <flux:checkbox.group wire:model="mealTypes" :label="__('Ktoré jedlá')">
                     @foreach (MealType::cases() as $type)
                         <flux:checkbox :value="$type->value" :label="$type->label()" />
                     @endforeach
-                    <flux:checkbox value="any" label="Jedno jedlo denne, čokoľvek" />
+                    <flux:checkbox value="any" :label="__('Jedno jedlo denne, čokoľvek')" />
                 </flux:checkbox.group>
 
-                <flux:checkbox.group wire:model="days" label="Ktoré dni">
+                <flux:checkbox.group wire:model="days" :label="__('Ktoré dni')">
                     @for ($i = 0; $i < 7; $i++)
                         <flux:checkbox :value="(string) $i" :label="ucfirst($this->weekStart->addDays($i)->translatedFormat('l j. n.'))" />
                     @endfor
@@ -323,20 +323,20 @@ new #[Title('Návrh týždenného jedálnička')] class extends Component {
             @error('mealTypes')<flux:text class="text-sm text-red-600">{{ $message }}</flux:text>@enderror
             @error('days')<flux:text class="text-sm text-red-600">{{ $message }}</flux:text>@enderror
 
-            <flux:input type="number" min="1" wire:model="servings" label="Porcie na jedlo" description="Návrh: 1 osoba = 1 porcia." class="sm:max-w-xs" />
+            <flux:input type="number" min="1" wire:model="servings" :label="__('Porcie na jedlo')" :description="__('Návrh: 1 osoba = 1 porcia.')" class="sm:max-w-xs" />
 
             <flux:card size="sm" class="!py-1">
                 <flux:accordion transition>
-                    <flux:accordion.item heading="Voliteľné filtre">
+                    <flux:accordion.item :heading="__('Voliteľné filtre')">
                         <div class="space-y-4 pt-2">
-                            <flux:input type="number" min="1" wire:model.live="maxMinutes" label="Najviac minút (celkový čas)" placeholder="napr. 30" />
+                            <flux:input type="number" min="1" wire:model.live="maxMinutes" :label="__('Najviac minút (celkový čas)')" :placeholder="__('napr. 30')" />
                             @if ($maxMinutes)
-                                <flux:checkbox wire:model="includeUnknownTime" label="Zahrnúť aj jedlá s neznámym časom" />
+                                <flux:checkbox wire:model="includeUnknownTime" :label="__('Zahrnúť aj jedlá s neznámym časom')" />
                             @endif
-                            <flux:checkbox wire:model="onlyFavoritesOfAll" label="Iba obľúbené všetkých" />
-                            <flux:checkbox wire:model="allowDisliked" label="Pripustiť aj menej obľúbené (Nemá rád dostane nízku váhu)" />
-                            <flux:checkbox wire:model="includeUntyped" label="Zahrnúť recepty bez typu jedla" />
-                            <flux:input type="number" min="1" wire:model="noRepeatDays" label="Neopakovať posledných X dní (prísny filter)" placeholder="napr. 14" />
+                            <flux:checkbox wire:model="onlyFavoritesOfAll" :label="__('Iba obľúbené všetkých')" />
+                            <flux:checkbox wire:model="allowDisliked" :label="__('Pripustiť aj menej obľúbené (Nemá rád dostane nízku váhu)')" />
+                            <flux:checkbox wire:model="includeUntyped" :label="__('Zahrnúť recepty bez typu jedla')" />
+                            <flux:input type="number" min="1" wire:model="noRepeatDays" :label="__('Neopakovať posledných X dní (prísny filter)')" :placeholder="__('napr. 14')" />
                         </div>
                     </flux:accordion.item>
                 </flux:accordion>
@@ -346,20 +346,20 @@ new #[Title('Návrh týždenného jedálnička')] class extends Component {
                 <flux:callout icon="exclamation-circle" variant="danger">{{ $error }}</flux:callout>
             @endif
 
-            <flux:button type="submit" variant="primary" icon="sparkles" class="w-full py-4 text-base" data-test="propose-week">{{ $proposal === [] ? 'Navrhnúť týždeň' : 'Navrhnúť celý týždeň znova' }}</flux:button>
+            <flux:button type="submit" variant="primary" icon="sparkles" class="w-full py-4 text-base" data-test="propose-week">{{ $proposal === [] ? __('Navrhnúť týždeň') : __('Navrhnúť celý týždeň znova') }}</flux:button>
         </form>
 
         @if ($proposal !== [])
             <section class="space-y-3" data-test="menu-proposal">
-                <flux:heading size="lg" class="font-display">Návrh</flux:heading>
-                <flux:text class="text-sm">Nič sa ešte neuložilo. Vymeň, čo sa nehodí, a potom potvrď. Každý recept je v týždni najviac raz; už naplánované jedlá zostávajú.</flux:text>
+                <flux:heading size="lg" class="font-display">{{ __('Návrh') }}</flux:heading>
+                <flux:text class="text-sm">{{ __('Nič sa ešte neuložilo. Vymeň, čo sa nehodí, a potom potvrď. Každý recept je v týždni najviac raz; už naplánované jedlá zostávajú.') }}</flux:text>
 
                 @foreach ($proposal as $index => $slot)
                     @php($recipe = $slot['recipe_id'] ? $this->recipes->get($slot['recipe_id']) : null)
                     <flux:card size="sm" class="flex items-center gap-3 !p-2.5 {{ $slot['occupied'] ? 'opacity-70' : '' }}" wire:key="slot-{{ $index }}" data-test="slot-{{ $index }}">
                         <div class="w-20 shrink-0 text-xs font-semibold leading-tight">
                             <div class="capitalize">{{ CarbonImmutable::parse($slot['date'])->translatedFormat('D j. n.') }}</div>
-                            <div class="font-normal text-zinc-500">{{ $slot['meal_type'] === 'any' ? 'Jedlo' : MealType::from($slot['meal_type'])->label() }}</div>
+                            <div class="font-normal text-zinc-500">{{ $slot['meal_type'] === 'any' ? __('Jedlo') : MealType::from($slot['meal_type'])->label() }}</div>
                         </div>
                         @if ($recipe)
                             <x-recipe-cover :recipe="$recipe" conversion="thumb" class="size-14 shrink-0 rounded-lg" />
@@ -373,27 +373,27 @@ new #[Title('Návrh týždenného jedálnička')] class extends Component {
                                 @endif
                                 <div class="truncate text-xs text-zinc-500">
                                     @if ($slot['occupied'])
-                                        Už naplánované – zostáva
+                                        {{ __('Už naplánované – zostáva') }}
                                     @else
                                         {{ implode(' · ', $slot['reasons']) }}
                                     @endif
                                 </div>
                             @else
-                                <div class="text-sm text-zinc-500">{{ $slot['note'] ?? 'Bez návrhu' }}</div>
+                                <div class="text-sm text-zinc-500">{{ $slot['note'] ?? __('Bez návrhu') }}</div>
                             @endif
                         </div>
                         @unless ($slot['occupied'])
-                            <flux:button size="sm" variant="ghost" icon="arrow-path" wire:click="reroll({{ $index }})" aria-label="Vymeniť" data-test="reroll-{{ $index }}" />
+                            <flux:button size="sm" variant="ghost" icon="arrow-path" wire:click="reroll({{ $index }})" :aria-label="__('Vymeniť')" data-test="reroll-{{ $index }}" />
                             @if ($slot['recipe_id'])
-                                <flux:button size="sm" variant="ghost" icon="x-mark" wire:click="clearSlot({{ $index }})" aria-label="Vynechať" />
+                                <flux:button size="sm" variant="ghost" icon="x-mark" wire:click="clearSlot({{ $index }})" :aria-label="__('Vynechať')" />
                             @endif
                         @endunless
                     </flux:card>
                 @endforeach
 
                 <div class="flex flex-col gap-2 sm:flex-row">
-                    <flux:button variant="primary" icon="check" wire:click="confirm" class="w-full" data-test="confirm-week">Uložiť do plánu</flux:button>
-                    <flux:button :href="route('plan.index', ['week' => $week])" wire:navigate variant="ghost" class="w-full">Zahodiť</flux:button>
+                    <flux:button variant="primary" icon="check" wire:click="confirm" class="w-full" data-test="confirm-week">{{ __('Uložiť do plánu') }}</flux:button>
+                    <flux:button :href="route('plan.index', ['week' => $week])" wire:navigate variant="ghost" class="w-full">{{ __('Zahodiť') }}</flux:button>
                 </div>
             </section>
         @endif

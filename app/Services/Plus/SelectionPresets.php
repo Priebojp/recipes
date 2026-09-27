@@ -32,7 +32,7 @@ class SelectionPresets
     {
         $name = trim(preg_replace('/\s+/u', ' ', $name) ?? '');
         if ($name === '' || mb_strlen($name) > 60) {
-            throw new InvalidArgumentException('Zadaj názov šablóny (najviac 60 znakov).');
+            throw new InvalidArgumentException(__('Zadaj názov šablóny (najviac 60 znakov).'));
         }
 
         $personIds = array_values(array_map('intval', Person::query()
@@ -41,7 +41,7 @@ class SelectionPresets
             ->pluck('id')
             ->all()));
         if ($personIds === []) {
-            throw new InvalidArgumentException('Šablóna potrebuje aspoň jedného stravníka.');
+            throw new InvalidArgumentException(__('Šablóna potrebuje aspoň jedného stravníka.'));
         }
 
         $mealType = isset($inputs['meal_type']) && $inputs['meal_type'] !== '' && $inputs['meal_type'] !== 'any'
@@ -50,7 +50,7 @@ class SelectionPresets
 
         $existing = SelectionPreset::query()->where('household_id', $household->id)->where('name', $name)->first();
         if ($existing === null && SelectionPreset::query()->where('household_id', $household->id)->count() >= self::LIMIT) {
-            throw new InvalidArgumentException('Domácnosť môže mať najviac '.self::LIMIT.' šablón. Odstráň niektorú alebo ju prepíš rovnakým názvom.');
+            throw new InvalidArgumentException(__('Domácnosť môže mať najviac :limit šablón. Odstráň niektorú alebo ju prepíš rovnakým názvom.', ['limit' => self::LIMIT]));
         }
 
         $attributes = [

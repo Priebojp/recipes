@@ -54,7 +54,7 @@ new #[Title('Rodina')] class extends Component {
             'name' => ['required', 'string', 'max:100'],
             'kind' => ['in:member,guest'],
             'color' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
-        ], ['name.required' => 'Zadaj meno.']);
+        ], ['name.required' => __('Zadaj meno.')]);
 
         $data = ['name' => trim($this->name), 'kind' => PersonKind::from($this->kind), 'color' => $this->color ?: null];
 
@@ -102,37 +102,37 @@ new #[Title('Rodina')] class extends Component {
         $this->authorize('edit', $this->household);
         $ids = Person::query()->where('household_id', $this->household->id)->active()->whereIn('id', $this->defaultPersonIds)->pluck('id')->map(fn ($i) => (int) $i)->all();
         $this->household->update(['default_person_ids' => $ids]);
-        \Flux\Flux::toast(variant: 'success', text: 'Predvolená skupina uložená.');
+        \Flux\Flux::toast(variant: 'success', text: __('Predvolená skupina uložená.'));
     }
 
     public function setActive(int $personId): void
     {
         $person = Person::query()->where('household_id', $this->household->id)->active()->findOrFail($personId);
         app(CurrentHousehold::class)->setActivePerson($person);
-        \Flux\Flux::toast(text: 'Upravuješ chute: '.$person->name);
+        \Flux\Flux::toast(text: __('Upravuješ chute: :name', ['name' => $person->name]));
     }
 }; ?>
 
 <div class="space-y-6">
-    <x-page-header title="Rodina a hostia" subtitle="Stravníci nepotrebujú vlastný účet. Dvaja ľudia môžu mať rovnaké meno.">
-        <flux:button :href="route('household.edit')" wire:navigate variant="ghost" icon="cog-6-tooth" size="sm">Domácnosť</flux:button>
+    <x-page-header :title="__('Rodina a hostia')" :subtitle="__('Stravníci nepotrebujú vlastný účet. Dvaja ľudia môžu mať rovnaké meno.')">
+        <flux:button :href="route('household.edit')" wire:navigate variant="ghost" icon="cog-6-tooth" size="sm">{{ __('Domácnosť') }}</flux:button>
     </x-page-header>
 
     @if ($this->canEdit)
         <flux:card class="space-y-3">
             <form wire:submit="save" class="space-y-3">
-                <flux:heading size="lg" class="font-display">{{ $editingId ? 'Upraviť stravníka' : 'Nový stravník' }}</flux:heading>
+                <flux:heading size="lg" class="font-display">{{ $editingId ? __('Upraviť stravníka') : __('Nový stravník') }}</flux:heading>
                 <div class="grid gap-3 sm:grid-cols-3">
-                    <flux:input wire:model="name" label="Meno" placeholder="napr. Eva" data-test="person-name" />
-                    <flux:select wire:model="kind" label="Typ">
-                        <flux:select.option value="member">Člen</flux:select.option>
-                        <flux:select.option value="guest">Hosť</flux:select.option>
+                    <flux:input wire:model="name" :label="__('Meno')" :placeholder="__('napr. Eva')" data-test="person-name" />
+                    <flux:select wire:model="kind" :label="__('Typ')">
+                        <flux:select.option value="member">{{ __('Člen') }}</flux:select.option>
+                        <flux:select.option value="guest">{{ __('Hosť') }}</flux:select.option>
                     </flux:select>
-                    <flux:input type="color" wire:model="color" label="Farba (voliteľné)" />
+                    <flux:input type="color" wire:model="color" :label="__('Farba (voliteľné)')" />
                 </div>
                 <div class="flex gap-2">
-                    <flux:button type="submit" variant="primary" data-test="person-save">{{ $editingId ? 'Uložiť' : 'Pridať' }}</flux:button>
-                    @if ($editingId)<flux:button wire:click="cancelEdit" variant="ghost">Zrušiť</flux:button>@endif
+                    <flux:button type="submit" variant="primary" data-test="person-save">{{ $editingId ? __('Uložiť') : __('Pridať') }}</flux:button>
+                    @if ($editingId)<flux:button wire:click="cancelEdit" variant="ghost">{{ __('Zrušiť') }}</flux:button>@endif
                 </div>
             </form>
         </flux:card>
@@ -140,8 +140,8 @@ new #[Title('Rodina')] class extends Component {
 
     <section class="space-y-2">
         <div class="flex items-center justify-between">
-            <flux:heading size="lg" class="font-display">Stravníci</flux:heading>
-            <flux:checkbox wire:model.live="showArchived" label="Aj archivovaní" />
+            <flux:heading size="lg" class="font-display">{{ __('Stravníci') }}</flux:heading>
+            <flux:checkbox wire:model.live="showArchived" :label="__('Aj archivovaní')" />
         </div>
         @foreach ($this->people as $person)
             <flux:card size="sm" class="flex items-center gap-3 !p-2.5 {{ $person->archived_at ? 'opacity-60' : '' }}" wire:key="person-{{ $person->id }}">
@@ -149,21 +149,21 @@ new #[Title('Rodina')] class extends Component {
                 <div class="min-w-0 flex-1">
                     <div class="truncate font-medium">{{ $person->name }}</div>
                     <div class="text-xs text-zinc-500">
-                        {{ $person->isGuest() ? 'Hosť' : 'Člen' }}
-                        @if ($person->user_id) · prepojený účet @endif
-                        @if ($person->archived_at) · archivovaný @endif
+                        {{ $person->isGuest() ? __('Hosť') : __('Člen') }}
+                        @if ($person->user_id) · {{ __('prepojený účet') }} @endif
+                        @if ($person->archived_at) · {{ __('archivovaný') }} @endif
                     </div>
                 </div>
                 @if ($this->canEdit)
                     <flux:dropdown align="end">
-                        <flux:button variant="ghost" size="sm" icon="ellipsis-horizontal" aria-label="Akcie" />
+                        <flux:button variant="ghost" size="sm" icon="ellipsis-horizontal" :aria-label="__('Akcie')" />
                         <flux:menu>
-                            <flux:menu.item wire:click="setActive({{ $person->id }})" icon="heart">Upravovať chute tohto človeka</flux:menu.item>
+                            <flux:menu.item wire:click="setActive({{ $person->id }})" icon="heart">{{ __('Upravovať chute tohto človeka') }}</flux:menu.item>
                             @if ($person->archived_at)
-                                <flux:menu.item wire:click="restore({{ $person->id }})" icon="arrow-uturn-left">Obnoviť</flux:menu.item>
+                                <flux:menu.item wire:click="restore({{ $person->id }})" icon="arrow-uturn-left">{{ __('Obnoviť') }}</flux:menu.item>
                             @else
-                                <flux:menu.item wire:click="edit({{ $person->id }})" icon="pencil">Upraviť</flux:menu.item>
-                                <flux:menu.item wire:click="archive({{ $person->id }})" icon="archive-box">Archivovať</flux:menu.item>
+                                <flux:menu.item wire:click="edit({{ $person->id }})" icon="pencil">{{ __('Upraviť') }}</flux:menu.item>
+                                <flux:menu.item wire:click="archive({{ $person->id }})" icon="archive-box">{{ __('Archivovať') }}</flux:menu.item>
                             @endif
                         </flux:menu>
                     </flux:dropdown>
@@ -174,8 +174,8 @@ new #[Title('Rodina')] class extends Component {
 
     @if ($this->canEdit)
         <flux:card class="space-y-3">
-            <flux:heading size="lg" class="font-display">Predvolená skupina stravníkov</flux:heading>
-            <flux:text class="text-sm">Použije sa pri ďalšom otvorení generátora a plánovania.</flux:text>
+            <flux:heading size="lg" class="font-display">{{ __('Predvolená skupina stravníkov') }}</flux:heading>
+            <flux:text class="text-sm">{{ __('Použije sa pri ďalšom otvorení generátora a plánovania.') }}</flux:text>
             <div class="flex flex-wrap gap-2">
                 @foreach ($this->people->whereNull('archived_at') as $person)
                     <label class="flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition {{ in_array($person->id, $defaultPersonIds) ? 'border-accent bg-accent/10 font-medium text-accent-content' : 'border-zinc-300 hover:border-zinc-400 dark:border-zinc-600' }}">
@@ -184,7 +184,7 @@ new #[Title('Rodina')] class extends Component {
                     </label>
                 @endforeach
             </div>
-            <flux:button wire:click="saveDefaults" size="sm" variant="primary">Uložiť skupinu</flux:button>
+            <flux:button wire:click="saveDefaults" size="sm" variant="primary">{{ __('Uložiť skupinu') }}</flux:button>
         </flux:card>
 
         <livewire:household-invitations />

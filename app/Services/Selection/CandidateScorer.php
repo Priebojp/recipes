@@ -39,12 +39,12 @@ class CandidateScorer
 
         $n = count($in->personIds);
         if ($favorites > 0) {
-            $reasons[] = $n === 1 ? 'Obľúbené' : "Obľúbené pre {$favorites} z {$n}";
+            $reasons[] = $n === 1 ? __('Obľúbené') : __('Obľúbené pre :favorites z :total', ['favorites' => $favorites, 'total' => $n]);
         }
         if ($unrated !== [] && $n > 0) {
             $reasons[] = count($unrated) === 1
-                ? 'U '.$unrated[0].' zatiaľ nepoznáme hodnotenie'
-                : 'U '.count($unrated).' ľudí zatiaľ nepoznáme hodnotenie';
+                ? __('U :name zatiaľ nepoznáme hodnotenie', ['name' => $unrated[0]])
+                : __('U :count ľudí zatiaľ nepoznáme hodnotenie', ['count' => count($unrated)]);
         }
 
         // H – real cooking history
@@ -68,17 +68,17 @@ class CandidateScorer
         $h = $r * $f * $hOther;
 
         if ($days === null) {
-            $reasons[] = $other === [] ? 'Ešte sa nevarilo' : 'Pre týchto ľudí sa ešte nevarilo';
+            $reasons[] = $other === [] ? __('Ešte sa nevarilo') : __('Pre týchto ľudí sa ešte nevarilo');
         } elseif ($days === 0) {
             $reasons[] = 'Varilo sa dnes';
         } else {
-            $reasons[] = $days === 1 ? '1 deň sa nevarilo' : "{$days} dní sa nevarilo";
+            $reasons[] = $days === 1 ? __('1 deň sa nevarilo') : __(':days dní sa nevarilo', ['days' => $days]);
         }
 
         // P – already planned nearby
         $p = $this->plannedFactor($c, $in) ? $this->config->plannedFactor : 1.0;
         if ($p < 1.0) {
-            $reasons[] = 'Už je v pláne na blízke dni';
+            $reasons[] = __('Už je v pláne na blízke dni');
         }
 
         $w = max($this->config->minWeight, $g * $h * $p);

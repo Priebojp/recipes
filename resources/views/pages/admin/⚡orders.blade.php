@@ -74,27 +74,27 @@ new #[Layout('layouts::admin')] #[Title('Objednávky')] class extends Component 
 }; ?>
 
 <div class="space-y-6">
-    <x-page-header title="Balíky a objednávky" subtitle="Obsah nákupu, úhrada a refundácie. Ceny sú snímka katalógu z času nákupu; neskoršia zmena cenníka ich nemení." />
+    <x-page-header :title="__('Balíky a objednávky')" :subtitle="__('Obsah nákupu, úhrada a refundácie. Ceny sú snímka katalógu z času nákupu; neskoršia zmena cenníka ich nemení.')" />
 
     <div class="flex flex-wrap items-end gap-3">
-        <flux:input wire:model.live.debounce.400ms="search" icon="magnifying-glass" placeholder="ID objednávky / domácnosti, e-mail, Stripe ID" clearable class="max-w-md" />
+        <flux:input wire:model.live.debounce.400ms="search" icon="magnifying-glass" :placeholder="__('ID objednávky / domácnosti, e-mail, Stripe ID')" clearable class="max-w-md" />
         <flux:select wire:model.live="status" class="w-56">
-            <flux:select.option value="">všetky stavy</flux:select.option>
+            <flux:select.option value="">{{ __('všetky stavy') }}</flux:select.option>
             @foreach (OrderStatus::cases() as $case)
                 <flux:select.option :value="$case->value">{{ $case->label() }} ({{ $this->counts[$case->value] ?? 0 }})</flux:select.option>
             @endforeach
         </flux:select>
         <flux:select wire:model.live="kind" class="w-40">
-            <flux:select.option value="">predplatné aj balíky</flux:select.option>
-            <flux:select.option value="subscription">predplatné</flux:select.option>
-            <flux:select.option value="addon">balíky</flux:select.option>
+            <flux:select.option value="">{{ __('predplatné aj balíky') }}</flux:select.option>
+            <flux:select.option value="subscription">{{ __('predplatné') }}</flux:select.option>
+            <flux:select.option value="addon">{{ __('balíky') }}</flux:select.option>
         </flux:select>
     </div>
 
     <flux:card class="space-y-3 overflow-x-auto">
         <table class="w-full text-sm">
             <thead class="text-left text-xs uppercase text-zinc-500">
-                <tr><th class="py-1 pe-2">#</th><th class="py-1 pe-2">Vytvorená</th><th class="py-1 pe-2">Domácnosť</th><th class="py-1 pe-2">Produkt</th><th class="py-1 pe-2 text-right">Suma</th><th class="py-1 pe-2 text-right">Refundované</th><th class="py-1 pe-2">Stav</th><th class="py-1">Zaplatená</th></tr>
+                <tr><th class="py-1 pe-2">#</th><th class="py-1 pe-2">{{ __('Vytvorená') }}</th><th class="py-1 pe-2">{{ __('Domácnosť') }}</th><th class="py-1 pe-2">{{ __('Produkt') }}</th><th class="py-1 pe-2 text-right">{{ __('Suma') }}</th><th class="py-1 pe-2 text-right">{{ __('Refundované') }}</th><th class="py-1 pe-2">{{ __('Stav') }}</th><th class="py-1">{{ __('Zaplatená') }}</th></tr>
             </thead>
             <tbody class="divide-y divide-zinc-200/70 dark:divide-zinc-800">
                 @forelse ($this->orders as $order)
@@ -109,7 +109,7 @@ new #[Layout('layouts::admin')] #[Title('Objednávky')] class extends Component 
                         <td class="py-1.5 whitespace-nowrap">{{ $order->paid_at?->setTimezone(config('recipes.default_timezone'))->format('d.m.Y H:i') ?? '–' }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="8" class="py-3 text-zinc-500">Žiadne objednávky.</td></tr>
+                    <tr><td colspan="8" class="py-3 text-zinc-500">{{ __('Žiadne objednávky.') }}</td></tr>
                 @endforelse
             </tbody>
         </table>

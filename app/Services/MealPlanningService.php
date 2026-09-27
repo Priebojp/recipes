@@ -25,7 +25,7 @@ class MealPlanningService
     public function create(Household $household, Recipe $recipe, array $data, ?User $by): MealPlan
     {
         if ($recipe->household_id !== $household->id) {
-            throw new InvalidArgumentException('Recept nepatrí do tejto domácnosti.');
+            throw new InvalidArgumentException(__('Recept nepatrí do tejto domácnosti.'));
         }
 
         $term = $this->normaliseTerm($household, $data);
@@ -82,7 +82,7 @@ class MealPlanningService
     public function cancel(MealPlan $plan): MealPlan
     {
         if ($plan->status === PlanStatus::Cooked) {
-            throw new InvalidArgumentException('Uvarený plán sa nedá zrušiť; najprv odvolaj potvrdenie uvarenia.');
+            throw new InvalidArgumentException(__('Uvarený plán sa nedá zrušiť; najprv odvolaj potvrdenie uvarenia.'));
         }
         $plan->update(['status' => PlanStatus::Cancelled]);
 
@@ -187,7 +187,7 @@ class MealPlanningService
             PlanMode::Date => (function () use ($data, $calendar) {
                 $date = $data['scheduled_date'] ?? null;
                 if (! $date) {
-                    throw new InvalidArgumentException('Pre plán na konkrétny deň treba zadať dátum.');
+                    throw new InvalidArgumentException(__('Pre plán na konkrétny deň treba zadať dátum.'));
                 }
 
                 return ['mode' => PlanMode::Date, 'scheduled_date' => $calendar->date($date)->toDateString(), 'week_start_date' => null];
@@ -195,7 +195,7 @@ class MealPlanningService
             PlanMode::Week => (function () use ($data, $calendar) {
                 $week = $data['week_start_date'] ?? null;
                 if (! $week) {
-                    throw new InvalidArgumentException('Pre týždenný plán treba zadať týždeň.');
+                    throw new InvalidArgumentException(__('Pre týždenný plán treba zadať týždeň.'));
                 }
 
                 return ['mode' => PlanMode::Week, 'scheduled_date' => null, 'week_start_date' => $calendar->weekStartOf($calendar->date($week))->toDateString()];

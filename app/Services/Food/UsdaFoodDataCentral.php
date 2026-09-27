@@ -225,12 +225,12 @@ class UsdaFoodDataCentral implements FoodDataSource
     private function request(): PendingRequest
     {
         if (! $this->isConfigured()) {
-            throw new FoodSourceUnavailableException('USDA FoodData Central nie je nakonfigurované – chýba USDA_FDC_API_KEY. Uložené záznamy fungujú, vyhľadávanie nových potravín je vypnuté.');
+            throw new FoodSourceUnavailableException(__('USDA FoodData Central nie je nakonfigurované – chýba USDA_FDC_API_KEY. Uložené záznamy fungujú, vyhľadávanie nových potravín je vypnuté.'));
         }
 
         $limit = max(1, (int) config('recipes.food.rate_limit_per_hour', 900));
         if (RateLimiter::tooManyAttempts(self::RATE_LIMIT_KEY, $limit)) {
-            throw new FoodSourceUnavailableException('Hodinový limit požiadaviek na USDA je vyčerpaný; skús to neskôr.');
+            throw new FoodSourceUnavailableException(__('Hodinový limit požiadaviek na USDA je vyčerpaný; skús to neskôr.'));
         }
         RateLimiter::hit(self::RATE_LIMIT_KEY, 3600);
 
@@ -262,9 +262,9 @@ class UsdaFoodDataCentral implements FoodDataSource
         } catch (FoodSourceUnavailableException $e) {
             throw $e;
         } catch (RequestException $e) {
-            throw new FoodSourceUnavailableException('USDA API odpovedalo chybou '.$e->response->status().'.', previous: $e);
+            throw new FoodSourceUnavailableException(__('USDA API odpovedalo chybou :status.', ['status' => $e->response->status()]), previous: $e);
         } catch (ConnectionException $e) {
-            throw new FoodSourceUnavailableException('USDA API nie je dostupné (spojenie alebo časový limit).', previous: $e);
+            throw new FoodSourceUnavailableException(__('USDA API nie je dostupné (spojenie alebo časový limit).'), previous: $e);
         }
     }
 }

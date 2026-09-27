@@ -145,7 +145,7 @@ new class extends Component {
         $this->authorize('update', $this->recipe);
         $recipes->publish($this->recipe);
         unset($this->recipe);
-        \Flux\Flux::toast(variant: 'success', text: 'Recept je verejný. Zobrazí sa na hlavnej stránke.');
+        \Flux\Flux::toast(variant: 'success', text: __('Recept je verejný. Zobrazí sa na hlavnej stránke.'));
     }
 
     public function unpublish(RecipeService $recipes): void
@@ -153,7 +153,7 @@ new class extends Component {
         $this->authorize('update', $this->recipe);
         $recipes->unpublish($this->recipe);
         unset($this->recipe);
-        \Flux\Flux::toast(text: 'Recept už nie je verejný.');
+        \Flux\Flux::toast(text: __('Recept už nie je verejný.'));
     }
 }; ?>
 
@@ -164,36 +164,36 @@ new class extends Component {
 
     <x-page-header :title="$recipe->title" :back="$sessionId ? route('cook.session', $sessionId) : route('recipes.index')">
         @if ($this->activePerson && ! $recipe->isArchived())
-            <flux:button wire:click="toggleFavorite" variant="ghost" icon="heart" :icon:variant="$liked ? 'solid' : 'outline'" :class="$liked ? '!text-red-500' : ''" aria-label="Obľúbené" data-test="heart" />
+            <flux:button wire:click="toggleFavorite" variant="ghost" icon="heart" :icon:variant="$liked ? 'solid' : 'outline'" :class="$liked ? '!text-red-500' : ''" aria-label="{{ __('Obľúbené') }}" data-test="heart" />
         @endif
         <flux:dropdown align="end">
-            <flux:button variant="ghost" icon="ellipsis-horizontal" aria-label="Viac" />
+            <flux:button variant="ghost" icon="ellipsis-horizontal" aria-label="{{ __('Viac') }}" />
             <flux:menu>
-                <flux:menu.item :href="route('recipes.edit', $recipe)" wire:navigate icon="pencil">Upraviť</flux:menu.item>
-                <flux:menu.item :href="route('plan.history', ['recipe' => $recipe->id])" wire:navigate icon="clock">História varenia</flux:menu.item>
+                <flux:menu.item :href="route('recipes.edit', $recipe)" wire:navigate icon="pencil">{{ __('Upraviť') }}</flux:menu.item>
+                <flux:menu.item :href="route('plan.history', ['recipe' => $recipe->id])" wire:navigate icon="clock">{{ __('História varenia') }}</flux:menu.item>
                 @if ($canEdit)
                     <flux:menu.separator />
                     @if ($recipe->isPublic())
-                        <flux:menu.item :href="route('public.recipe', $recipe)" target="_blank" icon="arrow-top-right-on-square">Otvoriť verejnú stránku</flux:menu.item>
-                        <flux:menu.item wire:click="unpublish" icon="eye-slash" data-test="unpublish">Zrušiť zverejnenie</flux:menu.item>
+                        <flux:menu.item :href="route('public.recipe', $recipe)" target="_blank" icon="arrow-top-right-on-square">{{ __('Otvoriť verejnú stránku') }}</flux:menu.item>
+                        <flux:menu.item wire:click="unpublish" icon="eye-slash" data-test="unpublish">{{ __('Zrušiť zverejnenie') }}</flux:menu.item>
                     @elseif (! $recipe->isArchived())
-                        <flux:menu.item wire:click="publish" icon="globe-alt" data-test="publish">Zverejniť na hlavnej stránke</flux:menu.item>
+                        <flux:menu.item wire:click="publish" icon="globe-alt" data-test="publish">{{ __('Zverejniť na hlavnej stránke') }}</flux:menu.item>
                     @endif
                     <flux:menu.separator />
                     @if ($recipe->isArchived())
-                        <flux:menu.item wire:click="restore" icon="arrow-uturn-left">Obnoviť z archívu</flux:menu.item>
+                        <flux:menu.item wire:click="restore" icon="arrow-uturn-left">{{ __('Obnoviť z archívu') }}</flux:menu.item>
                     @else
-                        <flux:menu.item x-on:click="$flux.modal('archive-recipe').show()" icon="archive-box" data-test="archive">Archivovať</flux:menu.item>
+                        <flux:menu.item x-on:click="$flux.modal('archive-recipe').show()" icon="archive-box" data-test="archive">{{ __('Archivovať') }}</flux:menu.item>
                     @endif
                 @endif
             </flux:menu>
         </flux:dropdown>
     </x-page-header>
 
-    <x-confirm-modal name="archive-recipe" title="Archivovať recept?" text="Zostane v histórii aj v pláne, iba sa už nebude navrhovať." confirm="Archivovať" action="archive" variant="primary" icon="archive-box" />
+    <x-confirm-modal name="archive-recipe" :title="__('Archivovať recept?')" :text="__('Zostane v histórii aj v pláne, iba sa už nebude navrhovať.')" :confirm="__('Archivovať')" action="archive" variant="primary" icon="archive-box" />
 
     @if ($recipe->isArchived())
-        <flux:callout icon="archive-box" variant="warning">Recept je archivovaný – nenavrhuje sa, história a plány zostávajú.</flux:callout>
+        <flux:callout icon="archive-box" variant="warning">{{ __('Recept je archivovaný – nenavrhuje sa, história a plány zostávajú.') }}</flux:callout>
     @endif
 
     <x-recipe-cover :recipe="$recipe" class="aspect-[4/3] w-full rounded-3xl shadow-sm" />
@@ -207,17 +207,17 @@ new class extends Component {
                 <flux:badge size="sm" color="orange" variant="pill">{{ $type->label() }}</flux:badge>
             @endforeach
             @if ($recipe->isPublic())
-                <flux:badge size="sm" color="green" variant="pill" icon="globe-alt">Verejný</flux:badge>
+                <flux:badge size="sm" color="green" variant="pill" icon="globe-alt">{{ __('Verejný') }}</flux:badge>
             @endif
-            @if ($recipe->prep_minutes)<span class="inline-flex items-center gap-1"><flux:icon name="scissors" class="size-4" /> {{ $recipe->prep_minutes }} min</span>@endif
-            @if ($recipe->cook_minutes)<span class="inline-flex items-center gap-1"><flux:icon name="fire" class="size-4" /> {{ $recipe->cook_minutes }} min</span>@endif
-            @if ($recipe->totalMinutes())<span class="inline-flex items-center gap-1 font-medium"><flux:icon name="clock" class="size-4" /> spolu {{ $recipe->totalMinutes() }} min</span>@endif
+            @if ($recipe->prep_minutes)<span class="inline-flex items-center gap-1"><flux:icon name="scissors" class="size-4" /> {{ __(':minutes min', ['minutes' => $recipe->prep_minutes]) }}</span>@endif
+            @if ($recipe->cook_minutes)<span class="inline-flex items-center gap-1"><flux:icon name="fire" class="size-4" /> {{ __(':minutes min', ['minutes' => $recipe->cook_minutes]) }}</span>@endif
+            @if ($recipe->totalMinutes())<span class="inline-flex items-center gap-1 font-medium"><flux:icon name="clock" class="size-4" /> {{ __('spolu :minutes min', ['minutes' => $recipe->totalMinutes()]) }}</span>@endif
             @if ($recipe->side_requirement->value !== 'unknown')<span>· {{ $recipe->side_requirement->label() }}@if($recipe->included_side): {{ $recipe->included_side }}@endif</span>@endif
         </div>
         @php($likedBy = $recipe->preferences->filter(fn ($p) => $p->preference === Preference::Favorite)->map->person->filter())
         @if ($likedBy->isNotEmpty())
             <div class="flex items-center gap-1.5 text-sm text-zinc-500">
-                <flux:icon name="heart" variant="solid" class="size-4 text-red-500" /> Majú radi:
+                <flux:icon name="heart" variant="solid" class="size-4 text-red-500" /> {{ __('Majú radi:') }}
                 @foreach ($likedBy as $person)<x-person-avatar :person="$person" size="size-5" />@endforeach
             </div>
         @endif
@@ -225,25 +225,25 @@ new class extends Component {
 
     @unless ($recipe->isArchived())
         <div class="grid grid-cols-2 gap-3">
-            <flux:button wire:click="wantToCook" variant="primary" icon="calendar-days" class="py-3" data-test="want-to-cook">Chcem variť</flux:button>
-            <flux:button wire:click="cooked" icon="check" class="py-3" data-test="cooked">Uvaril som</flux:button>
+            <flux:button wire:click="wantToCook" variant="primary" icon="calendar-days" class="py-3" data-test="want-to-cook">{{ __('Chcem variť') }}</flux:button>
+            <flux:button wire:click="cooked" icon="check" class="py-3" data-test="cooked">{{ __('Uvaril som') }}</flux:button>
         </div>
     @endunless
 
     @if ($recipe->ingredients->isNotEmpty())
         <flux:card class="space-y-3">
             <div class="flex flex-wrap items-center justify-between gap-2">
-                <flux:heading size="lg" class="font-display">Suroviny <span class="text-sm font-normal text-zinc-500">({{ $recipe->ingredients->count() }})</span></flux:heading>
+                <flux:heading size="lg" class="font-display">{{ __('Suroviny') }} <span class="text-sm font-normal text-zinc-500">({{ $recipe->ingredients->count() }})</span></flux:heading>
                 @if ((new ServingScaler)->canScale($recipe->base_servings))
                     <div class="flex items-center gap-2 text-sm">
-                        <span>Porcie:</span>
-                        <flux:button size="xs" icon="minus" wire:click="$set('targetServings', {{ max(1, ($targetServings ?? 1) - 1) }})" aria-label="Menej porcií" />
+                        <span>{{ __('Porcie:') }}</span>
+                        <flux:button size="xs" icon="minus" wire:click="$set('targetServings', {{ max(1, ($targetServings ?? 1) - 1) }})" aria-label="{{ __('Menej porcií') }}" />
                         <span class="w-6 text-center font-semibold" data-test="target-servings">{{ $targetServings }}</span>
-                        <flux:button size="xs" icon="plus" wire:click="$set('targetServings', {{ ($targetServings ?? 1) + 1 }})" aria-label="Viac porcií" />
-                        <span class="text-zinc-500">(recept na {{ $recipe->base_servings }})</span>
+                        <flux:button size="xs" icon="plus" wire:click="$set('targetServings', {{ ($targetServings ?? 1) + 1 }})" aria-label="{{ __('Viac porcií') }}" />
+                        <span class="text-zinc-500">{{ __('(recept na :servings)', ['servings' => $recipe->base_servings]) }}</span>
                     </div>
                 @elseif ($recipe->base_servings === null)
-                    <span class="text-xs text-zinc-500">Bez základných porcií sa prepočet neponúka.</span>
+                    <span class="text-xs text-zinc-500">{{ __('Bez základných porcií sa prepočet neponúka.') }}</span>
                 @endif
             </div>
             <ul class="divide-y divide-zinc-100 dark:divide-zinc-700">
@@ -255,14 +255,14 @@ new class extends Component {
                 @endforeach
             </ul>
             @if ($targetServings !== $recipe->base_servings && (new ServingScaler)->canScale($recipe->base_servings))
-                <flux:text class="text-xs text-zinc-500">Prepočítané číselné množstvá; textové („podľa chuti“) zostávajú. Originál receptu sa nemení.</flux:text>
+                <flux:text class="text-xs text-zinc-500">{{ __('Prepočítané číselné množstvá; textové („podľa chuti“) zostávajú. Originál receptu sa nemení.') }}</flux:text>
             @endif
         </flux:card>
     @endif
 
     @if ($recipe->steps->isNotEmpty())
         <section class="space-y-4">
-            <flux:heading size="lg" class="font-display">Postup</flux:heading>
+            <flux:heading size="lg" class="font-display">{{ __('Postup') }}</flux:heading>
             <ol class="space-y-5">
                 @foreach ($recipe->steps as $step)
                     <li class="flex gap-4">
@@ -273,7 +273,7 @@ new class extends Component {
                             @if ($images->isNotEmpty())
                                 <div class="flex flex-wrap gap-2">
                                     @foreach ($images as $image)
-                                        <a href="{{ route('media.show', [$image, 'card']) }}" target="_blank"><img src="{{ route('media.show', [$image, 'thumb']) }}" class="h-24 rounded-lg object-cover" alt="Krok {{ $loop->parent->iteration }}" loading="lazy" /></a>
+                                        <a href="{{ route('media.show', [$image, 'card']) }}" target="_blank"><img src="{{ route('media.show', [$image, 'thumb']) }}" class="h-24 rounded-lg object-cover" alt="{{ __('Krok :step', ['step' => $loop->parent->iteration]) }}" loading="lazy" /></a>
                                     @endforeach
                                 </div>
                             @endif
@@ -286,20 +286,20 @@ new class extends Component {
 
     @if ($recipe->source || $recipe->notes)
         <div class="text-sm text-zinc-500">
-            @if ($recipe->source)<div>Zdroj: {{ $recipe->source }}</div>@endif
+            @if ($recipe->source)<div>{{ __('Zdroj: :source', ['source' => $recipe->source]) }}</div>@endif
             @if ($recipe->notes)<div class="whitespace-pre-line">{{ $recipe->notes }}</div>@endif
         </div>
     @endif
 
     <flux:accordion transition>
         @if ($recipe->raw_text)
-            <flux:accordion.item heading="Pôvodný zápis receptu">
+            <flux:accordion.item :heading="__('Pôvodný zápis receptu')">
                 <p class="whitespace-pre-line text-sm">{{ $recipe->raw_text }}</p>
             </flux:accordion.item>
         @endif
-        <flux:accordion.item heading="Chute stravníkov">
+        <flux:accordion.item :heading="__('Chute stravníkov')">
             <div class="space-y-3">
-                <flux:text class="text-xs text-zinc-500">Nehodnotené neznamená „nemá rád“. „Neponúkať“ je pevná výluka, ktorú generátor nikdy neobíde.</flux:text>
+                <flux:text class="text-xs text-zinc-500">{{ __('Nehodnotené neznamená „nemá rád“. „Neponúkať“ je pevná výluka, ktorú generátor nikdy neobíde.') }}</flux:text>
                 <livewire:preference-editor :recipe-id="$recipe->id" :key="'prefs-'.$recipe->id" />
             </div>
         </flux:accordion.item>
@@ -307,8 +307,8 @@ new class extends Component {
 
     <section class="space-y-2">
         <div class="flex items-center justify-between">
-            <flux:heading size="lg" class="font-display">Naposledy varené</flux:heading>
-            <flux:link :href="route('plan.history', ['recipe' => $recipe->id])" wire:navigate class="text-sm">Celá história</flux:link>
+            <flux:heading size="lg" class="font-display">{{ __('Naposledy varené') }}</flux:heading>
+            <flux:link :href="route('plan.history', ['recipe' => $recipe->id])" wire:navigate class="text-sm">{{ __('Celá história') }}</flux:link>
         </div>
         @forelse ($this->history as $event)
             <div class="flex items-center gap-2 text-sm">
@@ -317,7 +317,7 @@ new class extends Component {
                 @if ($event->note)<span class="truncate text-zinc-500">{{ $event->note }}</span>@endif
             </div>
         @empty
-            <flux:text class="text-sm">Ešte sa nevarilo.</flux:text>
+            <flux:text class="text-sm">{{ __('Ešte sa nevarilo.') }}</flux:text>
         @endforelse
     </section>
 

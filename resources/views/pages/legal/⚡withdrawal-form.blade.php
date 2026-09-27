@@ -54,7 +54,7 @@ new #[Layout('layouts::public')] #[Title('Odstúpenie od zmluvy – formulár')]
             'order_reference' => ['nullable', 'string', 'max:100'],
             'message' => ['nullable', 'string', 'max:2000'],
             'confirm' => ['accepted'],
-        ], ['confirm.accepted' => 'Potvrď, že chceš odstúpiť od zmluvy.']);
+        ], ['confirm.accepted' => __('Potvrď, že chceš odstúpiť od zmluvy.')]);
 
         $request = $withdrawals->submit($this->email, $this->order_reference ?: null, $this->message ?: null, auth()->user());
         $this->submittedReference = $request->reference;
@@ -63,36 +63,36 @@ new #[Layout('layouts::public')] #[Title('Odstúpenie od zmluvy – formulár')]
 }; ?>
 
 <div class="mx-auto max-w-2xl space-y-6">
-    <flux:heading size="xl" level="1" class="font-display">Odstúpenie od zmluvy</flux:heading>
-    <flux:text>Týmto formulárom odstúpiš od zmluvy o platenom programe alebo balíku. Je to iná vec než <strong>zrušenie obnovovania</strong> predplatného, ktoré urobíš v Nastavenia → Predplatné bez odstúpenia. Formulár funguje aj bez prihlásenia – stačí e-mail, ktorým si platil(a), a číslo objednávky.</flux:text>
+    <flux:heading size="xl" level="1" class="font-display">{{ __('Odstúpenie od zmluvy') }}</flux:heading>
+    <flux:text>{{ __('Týmto formulárom odstúpiš od zmluvy o platenom programe alebo balíku.') }} {!! __('Je to iná vec než :emphasis predplatného, ktoré urobíš v Nastavenia → Predplatné bez odstúpenia.', ['emphasis' => '<strong>'.__('zrušenie obnovovania').'</strong>']) !!} {{ __('Formulár funguje aj bez prihlásenia – stačí e-mail, ktorým si platil(a), a číslo objednávky.') }}</flux:text>
 
     @if ($submittedReference)
         <flux:callout icon="check-circle" variant="success" data-test="withdrawal-received">
-            <flux:callout.heading>Odstúpenie prijaté pod číslom {{ $submittedReference }}</flux:callout.heading>
-            <flux:callout.text>Potvrdenie prijatia sme odoslali na {{ $email }}. O výsledku a refundácii ťa budeme informovať e-mailom.</flux:callout.text>
+            <flux:callout.heading>{{ __('Odstúpenie prijaté pod číslom :reference', ['reference' => $submittedReference]) }}</flux:callout.heading>
+            <flux:callout.text>{{ __('Potvrdenie prijatia sme odoslali na :email.', ['email' => $email]) }} {{ __('O výsledku a refundácii ťa budeme informovať e-mailom.') }}</flux:callout.text>
         </flux:callout>
     @else
         <flux:card>
             <form wire:submit="submit" class="space-y-4">
-                <flux:input wire:model="email" type="email" label="E-mail použitý pri nákupe" required data-test="withdrawal-email" />
+                <flux:input wire:model="email" type="email" :label="__('E-mail použitý pri nákupe')" required data-test="withdrawal-email" />
 
                 @if ($this->orders->isNotEmpty())
-                    <flux:radio.group wire:model="order_reference" label="Objednávka" data-test="withdrawal-orders">
+                    <flux:radio.group wire:model="order_reference" :label="__('Objednávka')" data-test="withdrawal-orders">
                         @foreach ($this->orders as $order)
                             <flux:radio :value="(string) $order->id" :label="'#'.$order->id.' · '.$order->productName().' · '.App\Services\Billing\Catalog::formatCents($order->amount_cents, $order->currency).' · '.$order->created_at->format('j. n. Y')" />
                         @endforeach
                     </flux:radio.group>
                 @else
-                    <flux:input wire:model="order_reference" label="Číslo objednávky" description="Z potvrdzovacieho e-mailu alebo z Nastavenia → Predplatné (napr. #12). Ak ho nemáš, opíš nákup v správe." data-test="withdrawal-order" />
+                    <flux:input wire:model="order_reference" :label="__('Číslo objednávky')" :description="__('Z potvrdzovacieho e-mailu alebo z Nastavenia → Predplatné (napr. #12). Ak ho nemáš, opíš nákup v správe.')" data-test="withdrawal-order" />
                 @endif
 
-                <flux:textarea wire:model="message" label="Správa (nepovinné)" rows="3" />
+                <flux:textarea wire:model="message" :label="__('Správa (nepovinné)')" rows="3" />
 
-                <flux:checkbox wire:model="confirm" label="Potvrdzujem, že odstupujem od zmluvy uzavretej so službou {{ config('app.name') }}." data-test="withdrawal-confirm" />
+                <flux:checkbox wire:model="confirm" :label="__('Potvrdzujem, že odstupujem od zmluvy uzavretej so službou :app.', ['app' => config('app.name')])" data-test="withdrawal-confirm" />
 
-                <flux:button type="submit" variant="primary" data-test="withdrawal-submit">Odoslať odstúpenie</flux:button>
+                <flux:button type="submit" variant="primary" data-test="withdrawal-submit">{{ __('Odoslať odstúpenie') }}</flux:button>
             </form>
         </flux:card>
-        <flux:text class="text-xs">Po odoslaní dostaneš ihneď potvrdenie prijatia na trvalom médiu (e-mail). Refundácia prebieha rovnakým spôsobom, akým si platil(a), spravidla do 14 dní. Podrobnosti: <a href="{{ route('legal.show', ['slug' => 'odstupenie-od-zmluvy']) }}" wire:navigate class="underline">Odstúpenie od zmluvy a reklamácie</a>.</flux:text>
+        <flux:text class="text-xs">{{ __('Po odoslaní dostaneš ihneď potvrdenie prijatia na trvalom médiu (e-mail). Refundácia prebieha rovnakým spôsobom, akým si platil(a), spravidla do 14 dní.') }} {!! __('Podrobnosti: :link.', ['link' => '<a href="'.route('legal.show', ['slug' => 'odstupenie-od-zmluvy']).'" wire:navigate class="underline">'.__('Odstúpenie od zmluvy a reklamácie').'</a>']) !!}</flux:text>
     @endif
 </div>

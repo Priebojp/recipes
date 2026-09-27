@@ -22,10 +22,10 @@ enum FoodMappingStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::Suggested => 'návrh',
-            self::Confirmed => 'potvrdené',
-            self::Rejected => 'odmietnuté',
-            self::Unresolved => 'nepriradené',
+            self::Suggested => __('návrh'),
+            self::Confirmed => __('potvrdené'),
+            self::Rejected => __('odmietnuté'),
+            self::Unresolved => __('nepriradené'),
         };
     }
 }

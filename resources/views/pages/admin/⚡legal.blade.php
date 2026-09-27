@@ -76,7 +76,7 @@ new #[Layout('layouts::admin')] #[Title('Právne dokumenty')] class extends Comp
         $this->operator = $identity->all();
         $this->reset('operator_reason');
         unset($this->blockers);
-        Flux::toast(variant: 'success', text: 'Údaje prevádzkovateľa uložené.');
+        Flux::toast(variant: 'success', text: __('Údaje prevádzkovateľa uložené.'));
     }
 
     public function newDraft(string $type, LegalDocuments $documents): void
@@ -106,49 +106,49 @@ new #[Layout('layouts::admin')] #[Title('Právne dokumenty')] class extends Comp
         }
         $this->reset('reason');
         unset($this->documents, $this->blockers);
-        Flux::toast(variant: 'success', text: 'Verzia archivovaná; stránka teraz hlási, že sa dokument pripravuje.');
+        Flux::toast(variant: 'success', text: __('Verzia archivovaná; stránka teraz hlási, že sa dokument pripravuje.'));
     }
 }; ?>
 
 <div class="space-y-6">
-    <x-page-header title="Právne dokumenty" subtitle="Verzie, publikácia so schválením, história akceptácií a identita prevádzkovateľa. Publikovaná verzia je nemenná; zmena je nová verzia." />
+    <x-page-header :title="__('Právne dokumenty')" :subtitle="__('Verzie, publikácia so schválením, história akceptácií a identita prevádzkovateľa. Publikovaná verzia je nemenná; zmena je nová verzia.')" />
 
     @if ($this->blockers !== [])
         <flux:callout icon="exclamation-triangle" variant="warning" data-test="legal-blockers">
-            <flux:callout.heading>Platený checkout je zablokovaný</flux:callout.heading>
+            <flux:callout.heading>{{ __('Platený checkout je zablokovaný') }}</flux:callout.heading>
             <flux:callout.text>
                 <ul class="list-inside list-disc">
                     @foreach ($this->blockers as $blocker) <li>{{ $blocker }}</li> @endforeach
                 </ul>
-                Bezplatné funkcie a recepty to neobmedzuje.
+                {{ __('Bezplatné funkcie a recepty to neobmedzuje.') }}
             </flux:callout.text>
         </flux:callout>
     @else
-        <flux:callout icon="check-circle" variant="success" data-test="legal-ready">Identita prevádzkovateľa a povinné dokumenty sú publikované; checkout môže bežať (Stripe price ID musí mať katalóg).</flux:callout>
+        <flux:callout icon="check-circle" variant="success" data-test="legal-ready">{{ __('Identita prevádzkovateľa a povinné dokumenty sú publikované; checkout môže bežať (Stripe price ID musí mať katalóg).') }}</flux:callout>
     @endif
 
     <flux:card class="space-y-3" data-test="legal-documents">
-        <flux:heading size="lg" class="font-display">Dokumenty</flux:heading>
+        <flux:heading size="lg" class="font-display">{{ __('Dokumenty') }}</flux:heading>
         <table class="w-full text-sm">
-            <thead class="text-left text-xs uppercase text-zinc-500"><tr><th class="py-1 pe-2">Dokument</th><th class="py-1 pe-2">Publikovaná</th><th class="py-1 pe-2">Akceptácie</th><th class="py-1 pe-2">Návrh</th><th class="py-1">Akcie</th></tr></thead>
+            <thead class="text-left text-xs uppercase text-zinc-500"><tr><th class="py-1 pe-2">{{ __('Dokument') }}</th><th class="py-1 pe-2">{{ __('Publikovaná') }}</th><th class="py-1 pe-2">{{ __('Akceptácie') }}</th><th class="py-1 pe-2">{{ __('Návrh') }}</th><th class="py-1">{{ __('Akcie') }}</th></tr></thead>
             <tbody class="divide-y divide-zinc-200/70 dark:divide-zinc-800">
                 @foreach ($this->documents as $row)
                     <tr wire:key="doc-{{ $row['type']->value }}" class="align-top">
                         <td class="py-2 pe-2 font-medium">{{ $row['type']->label() }}<div class="text-xs font-normal text-zinc-500">/{{ $row['type']->slug() }}</div></td>
                         <td class="py-2 pe-2">
                             @if ($row['current'])
-                                v{{ $row['current']->version }} · účinná {{ $row['current']->effective_at?->format('j. n. Y') }}<br>
-                                <span class="text-xs text-zinc-500">schválil {{ $row['current']->approver?->email }} {{ $row['current']->approved_at?->format('j. n. Y') }}</span>
-                                <a href="{{ route('admin.legal.document', ['version' => $row['current']->id]) }}" wire:navigate class="ms-1 text-xs underline">zobraziť</a>
+                                {{ __('v:version · účinná :date', ['version' => $row['current']->version, 'date' => $row['current']->effective_at?->format('j. n. Y')]) }}<br>
+                                <span class="text-xs text-zinc-500">{{ __('schválil :email :date', ['email' => $row['current']->approver?->email, 'date' => $row['current']->approved_at?->format('j. n. Y')]) }}</span>
+                                <a href="{{ route('admin.legal.document', ['version' => $row['current']->id]) }}" wire:navigate class="ms-1 text-xs underline">{{ __('zobraziť') }}</a>
                             @else
-                                <flux:badge size="sm" color="amber">žiadna</flux:badge>
+                                <flux:badge size="sm" color="amber">{{ __('žiadna') }}</flux:badge>
                             @endif
                         </td>
                         <td class="py-2 pe-2 tabular-nums">{{ $row['acceptances'] }}</td>
                         <td class="py-2 pe-2">
                             @if ($row['draft'])
                                 <a href="{{ route('admin.legal.document', ['version' => $row['draft']->id]) }}" wire:navigate class="underline">v{{ $row['draft']->version }}</a>
-                                @if ($row['draft']->hasPlaceholders()) <flux:badge size="sm" color="amber">{{ count($row['draft']->placeholders()) }} nevyplnených</flux:badge> @else <flux:badge size="sm" color="green">bez placeholderov</flux:badge> @endif
+                                @if ($row['draft']->hasPlaceholders()) <flux:badge size="sm" color="amber">{{ __(':count nevyplnených', ['count' => count($row['draft']->placeholders())]) }}</flux:badge> @else <flux:badge size="sm" color="green">{{ __('bez placeholderov') }}</flux:badge> @endif
                             @else
                                 –
                             @endif
@@ -156,10 +156,10 @@ new #[Layout('layouts::admin')] #[Title('Právne dokumenty')] class extends Comp
                         <td class="py-2">
                             <div class="flex flex-wrap gap-1">
                                 @unless ($row['draft'])
-                                    <flux:button size="xs" wire:click="newDraft('{{ $row['type']->value }}')" data-test="new-draft-{{ $row['type']->value }}">Nová verzia</flux:button>
+                                    <flux:button size="xs" wire:click="newDraft('{{ $row['type']->value }}')" data-test="new-draft-{{ $row['type']->value }}">{{ __('Nová verzia') }}</flux:button>
                                 @endunless
                                 @if ($row['current'])
-                                    <flux:button size="xs" variant="ghost" :href="route('legal.show', ['slug' => $row['type']->slug()])" target="_blank">Stránka</flux:button>
+                                    <flux:button size="xs" variant="ghost" :href="route('legal.show', ['slug' => $row['type']->slug()])" target="_blank">{{ __('Stránka') }}</flux:button>
                                 @endif
                             </div>
                         </td>
@@ -168,12 +168,12 @@ new #[Layout('layouts::admin')] #[Title('Právne dokumenty')] class extends Comp
             </tbody>
         </table>
         <details class="text-sm">
-            <summary class="cursor-pointer text-zinc-600 dark:text-zinc-400">Archivovať publikovanú verziu (stránka bude hlásiť „pripravuje sa“)</summary>
+            <summary class="cursor-pointer text-zinc-600 dark:text-zinc-400">{{ __('Archivovať publikovanú verziu (stránka bude hlásiť „pripravuje sa“)') }}</summary>
             <div class="mt-2 flex flex-wrap items-end gap-2">
-                <flux:input wire:model="reason" label="Dôvod" class="w-72" />
+                <flux:input wire:model="reason" :label="__('Dôvod')" class="w-72" />
                 @foreach ($this->documents as $row)
                     @if ($row['current'])
-                        <flux:button size="sm" variant="danger" wire:click="archive({{ $row['current']->id }})" wire:confirm="Archivovať {{ $row['type']->shortLabel() }} v{{ $row['current']->version }}?">{{ $row['type']->shortLabel() }} v{{ $row['current']->version }}</flux:button>
+                        <flux:button size="sm" variant="danger" wire:click="archive({{ $row['current']->id }})" wire:confirm="{{ __('Archivovať :label v:version?', ['label' => $row['type']->shortLabel(), 'version' => $row['current']->version]) }}">{{ $row['type']->shortLabel() }} v{{ $row['current']->version }}</flux:button>
                     @endif
                 @endforeach
             </div>
@@ -181,21 +181,21 @@ new #[Layout('layouts::admin')] #[Title('Právne dokumenty')] class extends Comp
     </flux:card>
 
     <flux:card class="space-y-3" data-test="operator-form">
-        <flux:heading size="lg" class="font-display">Prevádzkovateľ</flux:heading>
-        <flux:text class="text-sm">Povinné vstupy od prevádzkovateľa (zadanie kap. 9). Nič sa nevymýšľa; placeholdery v dokumentoch sa dopĺňajú z týchto polí.</flux:text>
+        <flux:heading size="lg" class="font-display">{{ __('Prevádzkovateľ') }}</flux:heading>
+        <flux:text class="text-sm">{{ __('Povinné vstupy od prevádzkovateľa (zadanie kap. 9). Nič sa nevymýšľa; placeholdery v dokumentoch sa dopĺňajú z týchto polí.') }}</flux:text>
         <form wire:submit="saveOperator" class="grid gap-3 sm:grid-cols-2">
             @foreach (App\Services\Legal\OperatorIdentity::FIELDS as $field => $meta)
-                <flux:input wire:model="operator.{{ $field }}" :label="$meta['label'].($meta['required'] ? ' *' : '')" :description="$meta['hint'] ?? null" data-test="operator-{{ $field }}" />
+                <flux:input wire:model="operator.{{ $field }}" :label="__($meta['label']).($meta['required'] ? ' *' : '')" :description="isset($meta['hint']) ? __($meta['hint']) : null" data-test="operator-{{ $field }}" />
             @endforeach
-            <flux:input wire:model="operator_reason" label="Dôvod zmeny *" class="sm:col-span-2" />
-            <div class="sm:col-span-2"><flux:button type="submit" variant="primary" data-test="operator-save">Uložiť</flux:button></div>
+            <flux:input wire:model="operator_reason" :label="__('Dôvod zmeny *')" class="sm:col-span-2" />
+            <div class="sm:col-span-2"><flux:button type="submit" variant="primary" data-test="operator-save">{{ __('Uložiť') }}</flux:button></div>
         </form>
     </flux:card>
 
     <flux:card class="space-y-2">
-        <flux:heading size="lg" class="font-display">Posledné akceptácie</flux:heading>
+        <flux:heading size="lg" class="font-display">{{ __('Posledné akceptácie') }}</flux:heading>
         <table class="w-full text-sm">
-            <thead class="text-left text-xs uppercase text-zinc-500"><tr><th class="py-1 pe-2">Kedy</th><th class="py-1 pe-2">Dokument</th><th class="py-1 pe-2">Akt</th><th class="py-1 pe-2">Kto</th><th class="py-1">Objednávka / poznámky</th></tr></thead>
+            <thead class="text-left text-xs uppercase text-zinc-500"><tr><th class="py-1 pe-2">{{ __('Kedy') }}</th><th class="py-1 pe-2">{{ __('Dokument') }}</th><th class="py-1 pe-2">{{ __('Akt') }}</th><th class="py-1 pe-2">{{ __('Kto') }}</th><th class="py-1">{{ __('Objednávka / poznámky') }}</th></tr></thead>
             <tbody class="divide-y divide-zinc-200/70 dark:divide-zinc-800">
                 @forelse ($this->acceptances as $acceptance)
                     <tr wire:key="acc-{{ $acceptance->id }}">
@@ -206,7 +206,7 @@ new #[Layout('layouts::admin')] #[Title('Právne dokumenty')] class extends Comp
                         <td class="py-1.5 text-xs">@if ($acceptance->order_id)<a href="{{ route('admin.orders.show', $acceptance->order_id) }}" class="underline" wire:navigate>#{{ $acceptance->order_id }}</a>@endif @if ($acceptance->acknowledgements) {{ json_encode($acceptance->acknowledgements) }} @endif</td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="py-3 text-zinc-500">Žiadne akceptácie.</td></tr>
+                    <tr><td colspan="5" class="py-3 text-zinc-500">{{ __('Žiadne akceptácie.') }}</td></tr>
                 @endforelse
             </tbody>
         </table>

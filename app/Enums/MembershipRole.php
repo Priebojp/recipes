@@ -11,9 +11,9 @@ enum MembershipRole: string
     public function label(): string
     {
         return match ($this) {
-            self::Owner => 'Vlastník',
-            self::Editor => 'Editor',
-            self::Member => 'Člen',
+            self::Owner => __('Vlastník'),
+            self::Editor => __('Editor'),
+            self::Member => __('Člen'),
         };
     }
 

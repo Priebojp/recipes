@@ -109,9 +109,9 @@ enum ImageProfile: string
     public function description(): string
     {
         return match ($this) {
-            self::EconomyV1 => 'low · 1024 × 1024 · kandidát pre bežné receptové karty',
-            self::StandardV1 => 'medium · 1024 × 1024 · pôvodný návrh v2, spotrebúva nárok Standard',
-            self::HighV1 => 'high · 1024 × 1024 · len budúce rozšírenie, nevystavuje sa',
+            self::EconomyV1 => __('low · 1024 × 1024 · kandidát pre bežné receptové karty'),
+            self::StandardV1 => __('medium · 1024 × 1024 · pôvodný návrh v2, spotrebúva nárok Standard'),
+            self::HighV1 => __('high · 1024 × 1024 · len budúce rozšírenie, nevystavuje sa'),
         };
     }
 

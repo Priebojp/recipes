@@ -16,7 +16,7 @@ class CheckoutReadiness
     /** @return list<string> human-readable blockers; empty when checkout may go live */
     public function blockers(): array
     {
-        $blockers = $this->switchedOn() ? [] : ['Platby nie sú zapnuté nasadením (RECIPES_CHECKOUT_ENABLED).'];
+        $blockers = $this->switchedOn() ? [] : [__('Platby nie sú zapnuté nasadením (RECIPES_CHECKOUT_ENABLED).')];
 
         return [...$blockers, ...$this->legalBlockers()];
     }
@@ -28,7 +28,7 @@ class CheckoutReadiness
 
         $missing = $this->operator->missing();
         if ($missing !== []) {
-            $blockers[] = 'Chýba identita prevádzkovateľa: '.implode(', ', $missing).'.';
+            $blockers[] = __('Chýba identita prevádzkovateľa: :fields.', ['fields' => implode(', ', $missing)]);
         }
 
         foreach (LegalDocumentType::cases() as $type) {
@@ -37,9 +37,9 @@ class CheckoutReadiness
             }
             $current = $this->documents->current($type);
             if ($current === null) {
-                $blockers[] = $type->shortLabel().': nie je publikovaná žiadna verzia.';
+                $blockers[] = __(':document: nie je publikovaná žiadna verzia.', ['document' => $type->shortLabel()]);
             } elseif ($current->hasPlaceholders()) {
-                $blockers[] = $type->shortLabel().' v'.$current->version.' obsahuje nevyplnené údaje.';
+                $blockers[] = __(':document v:version obsahuje nevyplnené údaje.', ['document' => $type->shortLabel(), 'version' => $current->version]);
             }
         }
 

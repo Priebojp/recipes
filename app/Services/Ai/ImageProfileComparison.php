@@ -234,7 +234,7 @@ class ImageProfileComparison
     {
         $record = $this->record($run);
         if ($record === null || ! in_array($jobId, $record['job_ids'] ?? [], true)) {
-            throw new InvalidArgumentException('Úloha nepatrí do tohto porovnania.');
+            throw new InvalidArgumentException(__('Úloha nepatrí do tohto porovnania.'));
         }
 
         $evaluations = $record['evaluations'] ?? [];
@@ -254,11 +254,11 @@ class ImageProfileComparison
     public function decide(string $run, ImageProfile $profile, string $note, User $by): void
     {
         if (! in_array($profile, self::PROFILES, true)) {
-            throw new InvalidArgumentException('Rozhodnúť možno len medzi porovnávanými profilmi.');
+            throw new InvalidArgumentException(__('Rozhodnúť možno len medzi porovnávanými profilmi.'));
         }
         $record = $this->record($run);
         if ($record === null) {
-            throw new InvalidArgumentException('Neznámy beh porovnania.');
+            throw new InvalidArgumentException(__('Neznámy beh porovnania.'));
         }
 
         $summary = $this->summarize($run);

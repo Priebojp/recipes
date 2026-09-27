@@ -153,20 +153,20 @@ new #[Title('Návrh jedla')] class extends Component {
         if (dx < -80) $wire.skip(); else if (dx > 80) $wire.wantToCook();
     }
 }">
-    <x-page-header title="Návrh" :back="route('cook.select')">
-        <flux:text class="text-sm">{{ app(App\Services\RecipeSelectionService::class)->remainingCount($this->session) }} ďalších</flux:text>
+    <x-page-header :title="__('Návrh')" :back="route('cook.select')">
+        <flux:text class="text-sm">{{ __(':count ďalších', ['count' => app(App\Services\RecipeSelectionService::class)->remainingCount($this->session)]) }}</flux:text>
     </x-page-header>
 
     <div class="flex flex-wrap items-center gap-1 text-sm text-zinc-500">
-        <span>Pre:</span>
+        <span>{{ __('Pre:') }}</span>
         @foreach ($this->people as $person)
             <x-person-avatar :person="$person" size="size-5" />
         @endforeach
         @php($mt = $this->session->inputs['meal_type'] ?? null)
-        <span>· {{ $mt ? MealType::from($mt)->label() : 'Čokoľvek' }}</span>
+        <span>· {{ $mt ? MealType::from($mt)->label() : __('Čokoľvek') }}</span>
         @php($term = $this->session->inputs['term'])
         @if (($term['mode'] ?? 'someday') !== 'someday')
-            <span>· {{ $term['mode'] === 'date' ? \Carbon\CarbonImmutable::parse($term['scheduled_date'])->translatedFormat('D j. n.') : 'týždeň od '.\Carbon\CarbonImmutable::parse($term['week_start_date'])->format('j. n.') }}</span>
+            <span>· {{ $term['mode'] === 'date' ? \Carbon\CarbonImmutable::parse($term['scheduled_date'])->translatedFormat('D j. n.') : __('týždeň od :date', ['date' => \Carbon\CarbonImmutable::parse($term['week_start_date'])->format('j. n.')]) }}</span>
         @endif
     </div>
 
@@ -186,10 +186,10 @@ new #[Title('Návrh jedla')] class extends Component {
 
                 <div class="flex flex-wrap items-center gap-2 text-sm text-zinc-500">
                     @if ($this->recipe->totalMinutes())
-                        <span class="inline-flex items-center gap-1"><flux:icon name="clock" class="size-4" /> {{ $this->recipe->totalMinutes() }} min</span>
+                        <span class="inline-flex items-center gap-1"><flux:icon name="clock" class="size-4" /> {{ __(':minutes min', ['minutes' => $this->recipe->totalMinutes()]) }}</span>
                     @endif
                     @if ($this->recipe->mealTypes->isEmpty())
-                        <flux:badge size="sm" color="zinc">Typ jedla nevyplnený</flux:badge>
+                        <flux:badge size="sm" color="zinc">{{ __('Typ jedla nevyplnený') }}</flux:badge>
                     @endif
                     @if ($this->likedBy->isNotEmpty())
                         <span class="inline-flex items-center gap-1">
@@ -200,62 +200,62 @@ new #[Title('Návrh jedla')] class extends Component {
                         </span>
                     @endif
                     @if ($this->lastCooked)
-                        <span>Naposledy {{ $this->lastCooked->cooked_on->translatedFormat('j. n. Y') }}</span>
+                        <span>{{ __('Naposledy :date', ['date' => $this->lastCooked->cooked_on->translatedFormat('j. n. Y')]) }}</span>
                     @endif
                 </div>
 
                 <flux:text class="text-sm">{{ implode(' • ', $candidate['reasons'] ?? []) }}</flux:text>
 
                 @if (count($this->session->state['available']) === 0 && count($this->session->state['skipped']) === 0)
-                    <flux:callout icon="information-circle" variant="secondary">Toto je jediný vhodný kandidát.</flux:callout>
+                    <flux:callout icon="information-circle" variant="secondary">{{ __('Toto je jediný vhodný kandidát.') }}</flux:callout>
                 @endif
             </div>
         </article>
 
         <div class="grid grid-cols-2 gap-2">
-            <flux:button wire:click="skip" icon="x-mark" class="py-4" data-test="skip">Teraz nie</flux:button>
-            <flux:button wire:click="wantToCook" variant="primary" icon="check" class="py-4" data-test="want-to-cook">Chcem variť</flux:button>
+            <flux:button wire:click="skip" icon="x-mark" class="py-4" data-test="skip">{{ __('Teraz nie') }}</flux:button>
+            <flux:button wire:click="wantToCook" variant="primary" icon="check" class="py-4" data-test="want-to-cook">{{ __('Chcem variť') }}</flux:button>
         </div>
         <div class="grid grid-cols-2 gap-2">
-            <flux:button :href="route('recipes.show', ['recipe' => $this->recipe, 'session' => $sessionId])" wire:navigate variant="ghost" icon="book-open">Pozrieť recept</flux:button>
-            <flux:button wire:click="undo" variant="ghost" icon="arrow-uturn-left" :disabled="count($this->session->state['skipped']) === 0" data-test="undo">Späť</flux:button>
+            <flux:button :href="route('recipes.show', ['recipe' => $this->recipe, 'session' => $sessionId])" wire:navigate variant="ghost" icon="book-open">{{ __('Pozrieť recept') }}</flux:button>
+            <flux:button wire:click="undo" variant="ghost" icon="arrow-uturn-left" :disabled="count($this->session->state['skipped']) === 0" data-test="undo">{{ __('Späť') }}</flux:button>
         </div>
-        <flux:text class="text-center text-xs text-zinc-500">Teraz nie iba preskočí kartu v tomto výbere, chute sa nemenia.</flux:text>
+        <flux:text class="text-center text-xs text-zinc-500">{{ __('Teraz nie iba preskočí kartu v tomto výbere, chute sa nemenia.') }}</flux:text>
     @else
         @php($softCounts = $this->session->candidates['soft_counts'] ?? [])
         @php($hasShown = count($this->session->state['skipped']) > 0)
         <flux:callout icon="face-frown" variant="secondary">
-            <flux:callout.heading>{{ $hasShown ? 'Všetko si preskočil' : 'Žiadna zhoda' }}</flux:callout.heading>
+            <flux:callout.heading>{{ $hasShown ? __('Všetko si preskočil') : __('Žiadna zhoda') }}</flux:callout.heading>
             <flux:callout.text>
                 @if ($hasShown)
-                    Môžeš výber zopakovať alebo upraviť filtre. Karty sa samy neopakujú.
+                    {{ __('Môžeš výber zopakovať alebo upraviť filtre. Karty sa samy neopakujú.') }}
                 @else
-                    Podľa aktuálnych filtrov sa nenašiel žiadny recept.
+                    {{ __('Podľa aktuálnych filtrov sa nenašiel žiadny recept.') }}
                 @endif
             </flux:callout.text>
         </flux:callout>
 
         @if ($softCounts !== [])
             <div class="space-y-2">
-                <flux:heading size="sm">Dôvody vylúčenia a čo môžeš zmierniť</flux:heading>
+                <flux:heading size="sm">{{ __('Dôvody vylúčenia a čo môžeš zmierniť') }}</flux:heading>
                 @foreach ($softCounts as $rule => $count)
                     @php($label = match ($rule) {
-                        'dislikes' => 'Nemá rád niekto zo stravníkov',
-                        'not_favorite' => 'Nie je obľúbené u všetkých',
-                        'untyped' => 'Typ jedla nevyplnený',
-                        'unknown_time' => 'Neznámy čas prípravy',
-                        'too_long' => 'Trvá dlhšie ako limit',
-                        'no_repeat' => 'Varilo sa nedávno',
-                        'meal_type' => 'Iný typ jedla',
+                        'dislikes' => __('Nemá rád niekto zo stravníkov'),
+                        'not_favorite' => __('Nie je obľúbené u všetkých'),
+                        'untyped' => __('Typ jedla nevyplnený'),
+                        'unknown_time' => __('Neznámy čas prípravy'),
+                        'too_long' => __('Trvá dlhšie ako limit'),
+                        'no_repeat' => __('Varilo sa nedávno'),
+                        'meal_type' => __('Iný typ jedla'),
                         default => $rule,
                     })
                     @php($action = match ($rule) {
-                        'dislikes' => 'Pripustiť aj menej obľúbené',
-                        'not_favorite' => 'Nevyžadovať obľúbené u všetkých',
-                        'untyped' => 'Zahrnúť nezaradené',
-                        'unknown_time' => 'Zahrnúť neznámy čas',
-                        'too_long' => 'Zrušiť časový limit',
-                        'no_repeat' => 'Zrušiť neopakovanie',
+                        'dislikes' => __('Pripustiť aj menej obľúbené'),
+                        'not_favorite' => __('Nevyžadovať obľúbené u všetkých'),
+                        'untyped' => __('Zahrnúť nezaradené'),
+                        'unknown_time' => __('Zahrnúť neznámy čas'),
+                        'too_long' => __('Zrušiť časový limit'),
+                        'no_repeat' => __('Zrušiť neopakovanie'),
                         default => null,
                     })
                     <div class="flex items-center justify-between gap-2 rounded-lg border border-zinc-200 p-3 text-sm dark:border-zinc-700">
@@ -270,15 +270,15 @@ new #[Title('Návrh jedla')] class extends Component {
 
         @php($hard = collect($this->session->candidates['excluded'] ?? [])->where('hard', true))
         @if ($hard->isNotEmpty())
-            <flux:text class="text-sm text-zinc-500">{{ $hard->count() }} receptov je vylúčených pevnou výlukou „Neponúkať“. Tá sa zmierňovaním nezruší.</flux:text>
+            <flux:text class="text-sm text-zinc-500">{{ __(':count receptov je vylúčených pevnou výlukou „Neponúkať“. Tá sa zmierňovaním nezruší.', ['count' => $hard->count()]) }}</flux:text>
         @endif
 
         <div class="flex flex-col gap-2 sm:flex-row">
             @if ($hasShown)
-                <flux:button wire:click="restart" variant="primary" icon="arrow-path" data-test="restart">Zopakovať výber</flux:button>
-                <flux:button wire:click="undo" variant="ghost" icon="arrow-uturn-left">Späť na poslednú kartu</flux:button>
+                <flux:button wire:click="restart" variant="primary" icon="arrow-path" data-test="restart">{{ __('Zopakovať výber') }}</flux:button>
+                <flux:button wire:click="undo" variant="ghost" icon="arrow-uturn-left">{{ __('Späť na poslednú kartu') }}</flux:button>
             @endif
-            <flux:button :href="route('cook.select')" wire:navigate variant="ghost">Upraviť výber</flux:button>
+            <flux:button :href="route('cook.select')" wire:navigate variant="ghost">{{ __('Upraviť výber') }}</flux:button>
         </div>
     @endif
 

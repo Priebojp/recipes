@@ -11,9 +11,9 @@ enum WithdrawalStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::Received => 'prijaté',
-            self::Refunded => 'refundované',
-            self::Rejected => 'zamietnuté',
+            self::Received => __('prijaté'),
+            self::Refunded => __('refundované'),
+            self::Rejected => __('zamietnuté'),
         };
     }
 

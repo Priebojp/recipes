@@ -78,6 +78,6 @@ class CheckoutController extends Controller
         $order->household_id === $current->id() || abort(404);
         $checkout->cancel($order);
 
-        return redirect()->route('subscription.edit')->with('status', 'Platba nebola dokončená. Nič sa neúčtovalo.');
+        return redirect()->route('subscription.edit')->with('status', __('Platba nebola dokončená. Nič sa neúčtovalo.'));
     }
 }

@@ -30,7 +30,7 @@ new #[Layout('layouts::public')] class extends Component {
 <div class="mx-auto max-w-6xl space-y-8">
     @php($recipe = $this->recipe)
 
-    <flux:button :href="route('home')" wire:navigate variant="ghost" icon="chevron-left" size="sm">Všetky verejné recepty</flux:button>
+    <flux:button :href="route('home')" wire:navigate variant="ghost" icon="chevron-left" size="sm">{{ __('Všetky verejné recepty') }}</flux:button>
 
     <div class="grid gap-8 md:grid-cols-5">
         <x-recipe-cover :recipe="$recipe" class="aspect-[4/3] w-full rounded-3xl shadow-sm md:col-span-3" />
@@ -46,16 +46,16 @@ new #[Layout('layouts::public')] class extends Component {
             @endif
             <dl class="grid grid-cols-2 gap-3 text-sm">
                 @if ($recipe->prep_minutes)
-                    <div class="rounded-xl bg-white p-3 dark:bg-zinc-800"><dt class="text-zinc-500">Príprava</dt><dd class="font-semibold">{{ $recipe->prep_minutes }} min</dd></div>
+                    <div class="rounded-xl bg-white p-3 dark:bg-zinc-800"><dt class="text-zinc-500">{{ __('Príprava') }}</dt><dd class="font-semibold">{{ __(':minutes min', ['minutes' => $recipe->prep_minutes]) }}</dd></div>
                 @endif
                 @if ($recipe->cook_minutes)
-                    <div class="rounded-xl bg-white p-3 dark:bg-zinc-800"><dt class="text-zinc-500">Varenie</dt><dd class="font-semibold">{{ $recipe->cook_minutes }} min</dd></div>
+                    <div class="rounded-xl bg-white p-3 dark:bg-zinc-800"><dt class="text-zinc-500">{{ __('Varenie') }}</dt><dd class="font-semibold">{{ __(':minutes min', ['minutes' => $recipe->cook_minutes]) }}</dd></div>
                 @endif
                 @if ($recipe->base_servings)
-                    <div class="rounded-xl bg-white p-3 dark:bg-zinc-800"><dt class="text-zinc-500">Porcie</dt><dd class="font-semibold">{{ $recipe->base_servings }}</dd></div>
+                    <div class="rounded-xl bg-white p-3 dark:bg-zinc-800"><dt class="text-zinc-500">{{ __('Porcie') }}</dt><dd class="font-semibold">{{ $recipe->base_servings }}</dd></div>
                 @endif
                 @if ($recipe->side_requirement->value !== 'unknown')
-                    <div class="rounded-xl bg-white p-3 dark:bg-zinc-800"><dt class="text-zinc-500">Príloha</dt><dd class="font-semibold">{{ $recipe->included_side ?: $recipe->side_requirement->label() }}</dd></div>
+                    <div class="rounded-xl bg-white p-3 dark:bg-zinc-800"><dt class="text-zinc-500">{{ __('Príloha') }}</dt><dd class="font-semibold">{{ $recipe->included_side ?: $recipe->side_requirement->label() }}</dd></div>
                 @endif
             </dl>
         </div>
@@ -64,7 +64,7 @@ new #[Layout('layouts::public')] class extends Component {
     <div class="grid gap-8 md:grid-cols-5">
         @if ($recipe->ingredients->isNotEmpty())
             <flux:card class="h-fit space-y-3 md:col-span-2">
-                <flux:heading size="lg" class="font-display">Suroviny</flux:heading>
+                <flux:heading size="lg" class="font-display">{{ __('Suroviny') }}</flux:heading>
                 <ul class="divide-y divide-zinc-100 dark:divide-zinc-700">
                     @foreach ($recipe->ingredients as $line)
                         <li class="flex gap-3 py-2 text-sm">
@@ -78,7 +78,7 @@ new #[Layout('layouts::public')] class extends Component {
 
         @if ($recipe->steps->isNotEmpty())
             <section class="space-y-4 md:col-span-3">
-                <flux:heading size="lg" class="font-display">Postup</flux:heading>
+                <flux:heading size="lg" class="font-display">{{ __('Postup') }}</flux:heading>
                 <ol class="space-y-5">
                     @foreach ($recipe->steps as $step)
                         <li class="flex gap-4">
@@ -89,7 +89,7 @@ new #[Layout('layouts::public')] class extends Component {
                                 @if ($images->isNotEmpty())
                                     <div class="flex flex-wrap gap-2">
                                         @foreach ($images as $image)
-                                            <a href="{{ route('media.show', [$image, 'card']) }}" target="_blank"><img src="{{ route('media.show', [$image, 'thumb']) }}" class="h-24 rounded-lg object-cover" alt="Krok {{ $loop->parent->iteration }}" loading="lazy" /></a>
+                                            <a href="{{ route('media.show', [$image, 'card']) }}" target="_blank"><img src="{{ route('media.show', [$image, 'thumb']) }}" class="h-24 rounded-lg object-cover" alt="{{ __('Krok :number', ['number' => $loop->parent->iteration]) }}" loading="lazy" /></a>
                                         @endforeach
                                     </div>
                                 @endif
@@ -103,12 +103,12 @@ new #[Layout('layouts::public')] class extends Component {
 
     @if ($recipe->ingredients->isEmpty() && $recipe->steps->isEmpty() && $recipe->raw_text)
         <flux:card>
-            <flux:heading size="lg" class="font-display">Recept</flux:heading>
+            <flux:heading size="lg" class="font-display">{{ __('Recept') }}</flux:heading>
             <p class="mt-2 whitespace-pre-line text-sm leading-relaxed">{{ $recipe->raw_text }}</p>
         </flux:card>
     @endif
 
     @if ($recipe->source)
-        <flux:text class="text-sm">Zdroj: {{ $recipe->source }}</flux:text>
+        <flux:text class="text-sm">{{ __('Zdroj: :source', ['source' => $recipe->source]) }}</flux:text>
     @endif
 </div>

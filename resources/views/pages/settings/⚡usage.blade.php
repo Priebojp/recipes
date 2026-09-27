@@ -64,29 +64,29 @@ new #[Title('AI použitia')] class extends Component {
 }; ?>
 
 <section class="w-full">
-    <x-pages::settings.layout heading="AI použitia" subheading="Koľko AI operácií má tvoja domácnosť k dispozícii a odkiaľ pochádzajú.">
+    <x-pages::settings.layout :heading="__('AI použitia')" :subheading="__('Koľko AI operácií má tvoja domácnosť k dispozícii a odkiaľ pochádzajú.')">
         <div class="my-6 space-y-6">
             @if (! $this->enforced)
-                <flux:callout icon="information-circle" variant="secondary">AI použitia sa v tejto inštalácii zatiaľ neúčtujú; platia len denné limity.</flux:callout>
+                <flux:callout icon="information-circle" variant="secondary">{{ __('AI použitia sa v tejto inštalácii zatiaľ neúčtujú; platia len denné limity.') }}</flux:callout>
             @else
                 @foreach ($this->balances as $balance)
                     <flux:card class="space-y-2" data-test="usage-{{ $balance->kind->value }}">
                         <flux:heading size="lg" class="font-display">{{ ucfirst($balance->kind->label()) }}</flux:heading>
                         <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-                            <dt class="text-zinc-500">{{ $balance->includedSourceLabel ? ucfirst($balance->includedSourceLabel) : 'Zahrnuté' }}</dt>
+                            <dt class="text-zinc-500">{{ $balance->includedSourceLabel ? ucfirst($balance->includedSourceLabel) : __('Zahrnuté') }}</dt>
                             <dd>
                                 @if ($balance->includedTotal > 0)
                                     {{ $balance->includedAvailable }}/{{ $balance->includedTotal }}
                                     @if ($balance->includedExpiresAt)
-                                        <span class="text-zinc-500">· platí do {{ $balance->includedExpiresAt->timezone($this->household->timezone)->translatedFormat('j. n. Y') }}</span>
+                                        <span class="text-zinc-500">· {{ __('platí do :date', ['date' => $balance->includedExpiresAt->timezone($this->household->timezone)->translatedFormat('j. n. Y')]) }}</span>
                                     @endif
                                 @else
-                                    <span class="text-zinc-500">žiadne</span>
+                                    <span class="text-zinc-500">{{ __('žiadne') }}</span>
                                 @endif
                             </dd>
-                            <dt class="text-zinc-500">Dokúpené</dt>
+                            <dt class="text-zinc-500">{{ __('Dokúpené') }}</dt>
                             <dd>{{ $balance->purchasedAvailable }}</dd>
-                            <dt class="font-medium">Spolu k dispozícii</dt>
+                            <dt class="font-medium">{{ __('Spolu k dispozícii') }}</dt>
                             <dd class="font-medium">{{ $balance->available() }}</dd>
                         </dl>
                     </flux:card>
@@ -94,7 +94,7 @@ new #[Title('AI použitia')] class extends Component {
 
                 @if ($this->purchased->isNotEmpty())
                     <flux:card class="space-y-2">
-                        <flux:heading size="lg" class="font-display">Dokúpené balíky a kompenzácie</flux:heading>
+                        <flux:heading size="lg" class="font-display">{{ __('Dokúpené balíky a kompenzácie') }}</flux:heading>
                         <ul class="space-y-1 text-sm">
                             @foreach ($this->purchased as $grant)
                                 <li wire:key="grant-{{ $grant->id }}" class="flex justify-between gap-4">
@@ -107,8 +107,8 @@ new #[Title('AI použitia')] class extends Component {
                 @endif
 
                 <flux:text class="text-sm">
-                    Jedno použitie = jeden úspešne doručený návrh textu alebo jeden obrázok Standard. Technická chyba použitie vráti; neprijatie doručeného výsledku nie.
-                    Najskôr sa čerpajú použitia s najbližšou expiráciou (skúšobné, mesačné), potom najstaršie dokúpené. Po vyčerpaní sa nič neúčtuje automaticky.
+                    {{ __('Jedno použitie = jeden úspešne doručený návrh textu alebo jeden obrázok Standard. Technická chyba použitie vráti; neprijatie doručeného výsledku nie.') }}
+                    {{ __('Najskôr sa čerpajú použitia s najbližšou expiráciou (skúšobné, mesačné), potom najstaršie dokúpené. Po vyčerpaní sa nič neúčtuje automaticky.') }}
                 </flux:text>
             @endif
         </div>

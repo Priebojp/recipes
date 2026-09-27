@@ -11,9 +11,9 @@ enum LegalDocumentState: string
     public function label(): string
     {
         return match ($this) {
-            self::Draft => 'návrh',
-            self::Published => 'publikovaná',
-            self::Archived => 'archivovaná',
+            self::Draft => __('návrh'),
+            self::Published => __('publikovaná'),
+            self::Archived => __('archivovaná'),
         };
     }
 

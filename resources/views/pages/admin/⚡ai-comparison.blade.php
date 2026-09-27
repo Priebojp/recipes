@@ -86,29 +86,29 @@ new #[Layout('layouts::admin')] #[Title('Porovnanie profilov obrázkov')] class 
 
         $this->decision_note = '';
         unset($this->summary);
-        Flux::toast(variant: 'success', text: 'Rozhodnutie zapísané ako launch potvrdenie „Porovnanie obrázkov low/medium“ (audit). Ponuka sa mení až v etape 13.');
+        Flux::toast(variant: 'success', text: __('Rozhodnutie zapísané ako launch potvrdenie „Porovnanie obrázkov low/medium“ (audit). Ponuka sa mení až v etape 13.'));
     }
 }; ?>
 
 <div class="space-y-6">
     @php($s = $this->summary)
     @php($tz = config('recipes.default_timezone'))
-    <x-page-header title="Porovnanie profilov obrázkov" subtitle="Beh {{ $run }} · {{ \Carbon\CarbonImmutable::parse($s['record']['at'])->timezone($tz)->format('j. n. Y H:i') }} · domácnosť #{{ $s['record']['household_id'] }} · model {{ $s['record']['model'] ?? 'predvolený' }} · spolu {{ Money::microUsd((int) $s['total_cost_micro']) }}. Hodnotí administrátor: správnosť jedla a prílohy, prirodzenosť, artefakty, použiteľnosť na karte. Malá vzorka rozhoduje, nedokazuje presnosť." :back="route('admin.ai')" />
+    <x-page-header :title="__('Porovnanie profilov obrázkov')" :subtitle="__('Beh :run', ['run' => $run]).' · '.\Carbon\CarbonImmutable::parse($s['record']['at'])->timezone($tz)->format('j. n. Y H:i').' · '.__('domácnosť #:id', ['id' => $s['record']['household_id']]).' · '.__('model :model', ['model' => $s['record']['model'] ?? __('predvolený')]).' · '.__('spolu :cost', ['cost' => Money::microUsd((int) $s['total_cost_micro'])]).'. '.__('Hodnotí administrátor: správnosť jedla a prílohy, prirodzenosť, artefakty, použiteľnosť na karte.').' '.__('Malá vzorka rozhoduje, nedokazuje presnosť.')" :back="route('admin.ai')" />
 
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" data-test="comparison-summary">
         @foreach (ImageProfileComparison::PROFILES as $profile)
             @php($p = $s['profiles'][$profile->value])
             <flux:card class="space-y-1">
                 <flux:text class="text-xs uppercase tracking-wide">{{ $profile->label() }} · {{ $profile->quality() }} · {{ $profile->pixelSize() }}</flux:text>
-                <flux:heading size="xl" class="font-display">{{ $p['acceptable'] }} / {{ $p['evaluated'] }} <span class="text-base font-normal text-zinc-500">prijateľných / hodnotených</span></flux:heading>
-                <flux:text class="text-xs">{{ $p['succeeded'] }}/{{ $p['jobs'] }} doručených @if ($p['failed']) · <span class="text-red-600">{{ $p['failed'] }} chýb</span> @endif · {{ Money::microUsd($p['cost_micro']) }} spolu · Ø {{ Money::microUsd($p['avg_cost_micro']) }}</flux:text>
+                <flux:heading size="xl" class="font-display">{{ $p['acceptable'] }} / {{ $p['evaluated'] }} <span class="text-base font-normal text-zinc-500">{{ __('prijateľných / hodnotených') }}</span></flux:heading>
+                <flux:text class="text-xs">{{ __(':succeeded/:jobs doručených', ['succeeded' => $p['succeeded'], 'jobs' => $p['jobs']]) }} @if ($p['failed']) · <span class="text-red-600">{{ __(':count chýb', ['count' => $p['failed']]) }}</span> @endif · {{ __(':cost spolu', ['cost' => Money::microUsd($p['cost_micro'])]) }} · Ø {{ Money::microUsd($p['avg_cost_micro']) }}</flux:text>
             </flux:card>
         @endforeach
         <flux:card class="space-y-1">
-            <flux:text class="text-xs uppercase tracking-wide">Kritérium ≥ {{ ImageProfileComparison::ECONOMY_ACCEPTABLE_MINIMUM }} / {{ ImageProfileComparison::imagesPerProfile() }} Economy</flux:text>
+            <flux:text class="text-xs uppercase tracking-wide">{{ __('Kritérium ≥ :minimum / :total Economy', ['minimum' => ImageProfileComparison::ECONOMY_ACCEPTABLE_MINIMUM, 'total' => ImageProfileComparison::imagesPerProfile()]) }}</flux:text>
             @php($c = $s['criterion_met'])
-            <flux:heading size="xl" class="font-display {{ $c === true ? 'text-green-700 dark:text-green-400' : ($c === false ? 'text-red-600' : '') }}">{{ $c === true ? 'splnené' : ($c === false ? 'nesplnené' : 'ohodnoť všetky Economy') }}</flux:heading>
-            <flux:text class="text-xs">Plus podmienka: žiadna systematická zámena jedla alebo prílohy – posúď v poznámkach.</flux:text>
+            <flux:heading size="xl" class="font-display {{ $c === true ? 'text-green-700 dark:text-green-400' : ($c === false ? 'text-red-600' : '') }}">{{ $c === true ? __('splnené') : ($c === false ? __('nesplnené') : __('ohodnoť všetky Economy')) }}</flux:heading>
+            <flux:text class="text-xs">{{ __('Plus podmienka: žiadna systematická zámena jedla alebo prílohy – posúď v poznámkach.') }}</flux:text>
         </flux:card>
     </div>
 
@@ -129,11 +129,11 @@ new #[Layout('layouts::admin')] #[Title('Porovnanie profilov obrázkov')] class 
                                 <div class="flex aspect-square items-center justify-center rounded bg-zinc-100 p-3 text-center text-xs text-red-600 dark:bg-zinc-800">{{ $job->status->value }}{{ $job->error ? ': '.\Illuminate\Support\Str::limit($job->error, 120) : '' }}</div>
                             @endif
                             <flux:select wire:model="verdicts.{{ $job->id }}" wire:change="rate({{ $job->id }})" size="sm" data-test="verdict-{{ $job->id }}">
-                                <flux:select.option value="">– nehodnotené –</flux:select.option>
-                                <flux:select.option value="yes">prijateľný: áno</flux:select.option>
-                                <flux:select.option value="no">prijateľný: nie</flux:select.option>
+                                <flux:select.option value="">{{ __('– nehodnotené –') }}</flux:select.option>
+                                <flux:select.option value="yes">{{ __('prijateľný: áno') }}</flux:select.option>
+                                <flux:select.option value="no">{{ __('prijateľný: nie') }}</flux:select.option>
                             </flux:select>
-                            <flux:input wire:model="notes.{{ $job->id }}" wire:change="rate({{ $job->id }})" size="sm" placeholder="poznámka (jedlo/príloha, prirodzenosť, artefakty)" />
+                            <flux:input wire:model="notes.{{ $job->id }}" wire:change="rate({{ $job->id }})" size="sm" :placeholder="__('poznámka (jedlo/príloha, prirodzenosť, artefakty)')" />
                             @error('verdicts.'.$job->id) <flux:text class="text-xs text-red-600">{{ $message }}</flux:text> @enderror
                         </div>
                     @endforeach
@@ -143,22 +143,22 @@ new #[Layout('layouts::admin')] #[Title('Porovnanie profilov obrázkov')] class 
     @endforeach
 
     <flux:card class="space-y-3" data-test="decision">
-        <flux:heading size="lg" class="font-display">Rozhodnutie</flux:heading>
+        <flux:heading size="lg" class="font-display">{{ __('Rozhodnutie') }}</flux:heading>
         @if ($s['record']['decision'] ?? null)
             <flux:callout icon="check-circle" variant="success">
-                <flux:callout.text>Zapísané {{ \Carbon\CarbonImmutable::parse($s['record']['decision']['at'])->timezone($tz)->format('j. n. Y H:i') }}: profil {{ ImageProfile::tryFrom($s['record']['decision']['profile'])?->label() ?? $s['record']['decision']['profile'] }}{{ $s['record']['decision']['note'] !== '' ? ' · '.$s['record']['decision']['note'] : '' }}. Nová verzia ponuky sa zakladá až v etape 13 (/admin/catalog); zaplatené Standard balíky sa nikdy nemenia na Economy.</flux:callout.text>
+                <flux:callout.text>{{ __('Zapísané :date: profil :profile:note.', ['date' => \Carbon\CarbonImmutable::parse($s['record']['decision']['at'])->timezone($tz)->format('j. n. Y H:i'), 'profile' => ImageProfile::tryFrom($s['record']['decision']['profile'])?->label() ?? $s['record']['decision']['profile'], 'note' => $s['record']['decision']['note'] !== '' ? ' · '.$s['record']['decision']['note'] : '']) }} {{ __('Nová verzia ponuky sa zakladá až v etape 13 (/admin/catalog); zaplatené Standard balíky sa nikdy nemenia na Economy.') }}</flux:callout.text>
             </flux:callout>
         @endif
         <form wire:submit="decide" class="grid gap-3 sm:grid-cols-[auto_1fr_auto] sm:items-end">
-            <flux:select wire:model="decision" label="Profil pre novú ponuku">
-                <flux:select.option value="">– vyber –</flux:select.option>
+            <flux:select wire:model="decision" :label="__('Profil pre novú ponuku')">
+                <flux:select.option value="">{{ __('– vyber –') }}</flux:select.option>
                 @foreach (ImageProfileComparison::PROFILES as $profile)
                     <flux:select.option :value="$profile->value">{{ $profile->label() }} ({{ $profile->value }})</flux:select.option>
                 @endforeach
             </flux:select>
-            <flux:input wire:model="decision_note" label="Poznámka (systematické zámeny, výhrady)" />
-            <flux:button type="submit" variant="primary">Zapísať rozhodnutie</flux:button>
+            <flux:input wire:model="decision_note" :label="__('Poznámka (systematické zámeny, výhrady)')" />
+            <flux:button type="submit" variant="primary">{{ __('Zapísať rozhodnutie') }}</flux:button>
         </form>
-        <flux:text class="text-xs">Rozhodnutie sa uloží ako launch potvrdenie <code>image_profile</code> (kto, kedy, výsledok) a do auditu. Nemení ceny, limity ani existujúce nároky.</flux:text>
+        <flux:text class="text-xs">{!! __('Rozhodnutie sa uloží ako launch potvrdenie :key (kto, kedy, výsledok) a do auditu.', ['key' => '<code>image_profile</code>']) !!} {{ __('Nemení ceny, limity ani existujúce nároky.') }}</flux:text>
     </flux:card>
 </div>

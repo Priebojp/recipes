@@ -45,9 +45,9 @@ class FoodUnitConversion extends Model
     public function sourceLabel(): string
     {
         return match ($this->source) {
-            self::SOURCE_USDA_PORTION => 'porcia USDA',
-            self::SOURCE_LABEL => 'etiketa',
-            default => 'ručne',
+            self::SOURCE_USDA_PORTION => __('porcia USDA'),
+            self::SOURCE_LABEL => __('etiketa'),
+            default => __('ručne'),
         };
     }
 }

@@ -53,20 +53,20 @@ new #[Title('História varenia')] class extends Component {
 }; ?>
 
 <div class="space-y-6">
-    <x-page-header title="História varenia" :back="route('plan.index')" subtitle="Iba potvrdené varenia. Ovplyvňujú, čo generátor navrhne nabudúce." />
+    <x-page-header :title="__('História varenia')" :back="route('plan.index')" :subtitle="__('Iba potvrdené varenia. Ovplyvňujú, čo generátor navrhne nabudúce.')" />
 
     @if ($this->filterRecipe)
         <div class="flex items-center gap-2 text-sm">
-            <flux:badge color="orange" variant="pill">Iba: {{ $this->filterRecipe->title }}</flux:badge>
-            <flux:button size="xs" variant="ghost" wire:click="$set('recipe', null)">Zrušiť filter</flux:button>
+            <flux:badge color="orange" variant="pill">{{ __('Iba: :title', ['title' => $this->filterRecipe->title]) }}</flux:badge>
+            <flux:button size="xs" variant="ghost" wire:click="$set('recipe', null)">{{ __('Zrušiť filter') }}</flux:button>
         </div>
     @endif
 
-    <x-confirm-modal name="void-event" title="Zneplatniť tento záznam?" text="Prepojený plán sa vráti medzi naplánované." confirm="Opraviť omyl" action="void" variant="primary" icon="arrow-uturn-left" />
+    <x-confirm-modal name="void-event" :title="__('Zneplatniť tento záznam?')" :text="__('Prepojený plán sa vráti medzi naplánované.')" :confirm="__('Opraviť omyl')" action="void" variant="primary" icon="arrow-uturn-left" />
 
     @if ($this->events->isEmpty())
         <flux:card variant="soft" class="text-center">
-            <flux:text>Zatiaľ žiadne potvrdené varenie.</flux:text>
+            <flux:text>{{ __('Zatiaľ žiadne potvrdené varenie.') }}</flux:text>
         </flux:card>
     @else
         <flux:timeline>
@@ -87,17 +87,17 @@ new #[Title('História varenia')] class extends Component {
                                     @if ($event->recipe)
                                         <a href="{{ route('recipes.show', $event->recipe) }}" wire:navigate>{{ $event->recipe->title }}</a>
                                     @else
-                                        {{ $event->recipe_title_snapshot }} <span class="text-xs font-normal text-zinc-500">(recept vymazaný)</span>
+                                        {{ $event->recipe_title_snapshot }} <span class="text-xs font-normal text-zinc-500">{{ __('(recept vymazaný)') }}</span>
                                     @endif
                                 </div>
                                 <div class="flex flex-wrap items-center gap-1.5 text-xs text-zinc-500">
                                     <span>{{ $event->cooked_on->translatedFormat('D j. n. Y') }}</span>
-                                    @if ($event->servings)<span>· {{ $event->servings }} porc.</span>@endif
+                                    @if ($event->servings)<span>· {{ __(':count porc.', ['count' => $event->servings]) }}</span>@endif
                                     <span class="flex -space-x-1">@foreach ($event->people as $person)<x-person-avatar :person="$person" size="size-4" />@endforeach</span>
                                     @if ($event->note)<span class="truncate">· {{ $event->note }}</span>@endif
                                 </div>
                             </div>
-                            <flux:button size="xs" variant="ghost" icon="arrow-uturn-left" wire:click="askVoid({{ $event->id }})" data-test="void-{{ $event->id }}">Opraviť omyl</flux:button>
+                            <flux:button size="xs" variant="ghost" icon="arrow-uturn-left" wire:click="askVoid({{ $event->id }})" data-test="void-{{ $event->id }}">{{ __('Opraviť omyl') }}</flux:button>
                         </flux:card>
                     </flux:timeline.content>
                 </flux:timeline.item>

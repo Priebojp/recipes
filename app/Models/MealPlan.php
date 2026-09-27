@@ -90,8 +90,8 @@ class MealPlan extends Model
     {
         return match ($this->mode) {
             PlanMode::Date => $this->scheduled_date?->translatedFormat('D j. n.') ?? '',
-            PlanMode::Week => 'Týždeň od '.$this->week_start_date?->format('j. n.'),
-            PlanMode::Someday => 'Niekedy',
+            PlanMode::Week => __('Týždeň od :date', ['date' => $this->week_start_date?->format('j. n.')]),
+            PlanMode::Someday => __('Niekedy'),
         };
     }
 }

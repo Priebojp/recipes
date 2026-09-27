@@ -1,5 +1,5 @@
 {{-- Confirmation dialog replacing browser confirm(). Open it with $flux.modal('<name>').show() or <flux:modal.trigger name="…">. --}}
-@props(['name', 'title', 'text' => null, 'confirm' => 'Potvrdiť', 'action', 'variant' => 'danger', 'icon' => 'exclamation-triangle'])
+@props(['name', 'title', 'text' => null, 'confirm' => __('Potvrdiť'), 'action', 'variant' => 'danger', 'icon' => 'exclamation-triangle'])
 
 <flux:modal :name="$name" class="min-w-[22rem] max-w-md">
     <div class="space-y-5">
@@ -16,7 +16,7 @@
         </div>
         <div class="flex justify-end gap-2">
             <flux:modal.close>
-                <flux:button variant="ghost">Zrušiť</flux:button>
+                <flux:button variant="ghost">{{ __('Zrušiť') }}</flux:button>
             </flux:modal.close>
             <flux:button :variant="$variant" wire:click="{{ $action }}" x-on:click="$flux.modal('{{ $name }}').close()" data-test="confirm-{{ $name }}">{{ $confirm }}</flux:button>
         </div>

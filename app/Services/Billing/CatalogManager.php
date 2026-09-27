@@ -73,7 +73,7 @@ class CatalogManager
     public function activate(PlanVersion|AddonVersion $version, string $reason, ?User $by = null): void
     {
         if ($version->state !== CatalogState::Draft) {
-            throw new InvalidArgumentException('Aktivovať možno iba návrh.');
+            throw new InvalidArgumentException(__('Aktivovať možno iba návrh.'));
         }
 
         DB::transaction(function () use ($version, $reason, $by) {

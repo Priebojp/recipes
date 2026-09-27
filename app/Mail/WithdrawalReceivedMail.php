@@ -20,7 +20,7 @@ class WithdrawalReceivedMail extends Mailable implements ShouldQueue
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Potvrdenie prijatia odstúpenia od zmluvy '.$this->request->reference);
+        return new Envelope(subject: __('Potvrdenie prijatia odstúpenia od zmluvy :reference', ['reference' => $this->request->reference]));
     }
 
     public function content(): Content

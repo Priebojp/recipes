@@ -165,7 +165,7 @@ class ShoppingListBuilder
     {
         $name = trim($name);
         if ($name === '') {
-            throw new InvalidArgumentException('Zadaj názov položky.');
+            throw new InvalidArgumentException(__('Zadaj názov položky.'));
         }
         $unit = $unit !== null && trim($unit) !== '' ? trim($unit) : null;
         $parsed = $this->parser->parse($amount);
@@ -208,7 +208,7 @@ class ShoppingListBuilder
     public function remove(ShoppingListItem $item): void
     {
         if (! $item->manual) {
-            throw new InvalidArgumentException('Položku z receptu odstrániš odškrtnutím alebo zmenou plánu.');
+            throw new InvalidArgumentException(__('Položku z receptu odstrániš odškrtnutím alebo zmenou plánu.'));
         }
         $item->delete();
     }

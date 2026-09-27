@@ -39,11 +39,11 @@ class CheckoutService
         $this->assertReady();
         $plan = $this->catalog->plan($planCode);
         if ($plan === null || ! $plan->stripe_price_id) {
-            throw new CheckoutException('Táto ponuka momentálne nie je dostupná.');
+            throw new CheckoutException(__('Táto ponuka momentálne nie je dostupná.'));
         }
 
         if ($this->plans->hasSubscription($household)) {
-            throw new CheckoutException('Domácnosť už má predplatné Plus. Zmenu obdobia urobíš v správe platby.');
+            throw new CheckoutException(__('Domácnosť už má predplatné Plus. Zmenu obdobia urobíš v správe platby.'));
         }
 
         $account = $this->accounts->forHousehold($household, $by);
@@ -87,7 +87,7 @@ class CheckoutService
         $this->assertReady();
         $addon = $this->catalog->addon($addonCode);
         if ($addon === null || ! $addon->stripe_price_id) {
-            throw new CheckoutException('Tento balík momentálne nie je dostupný.');
+            throw new CheckoutException(__('Tento balík momentálne nie je dostupný.'));
         }
 
         $account = $this->accounts->forHousehold($household, $by);
@@ -138,7 +138,7 @@ class CheckoutService
     private function assertReady(): void
     {
         if (! $this->readiness->isReady()) {
-            throw new CheckoutException('Platby ešte nie sú zapnuté: chýba zapnutie platieb nasadením, identifikácia prevádzkovateľa alebo publikované obchodné podmienky. Bezplatné funkcie fungujú ďalej.');
+            throw new CheckoutException(__('Platby ešte nie sú zapnuté: chýba zapnutie platieb nasadením, identifikácia prevádzkovateľa alebo publikované obchodné podmienky. Bezplatné funkcie fungujú ďalej.'));
         }
     }
 
@@ -161,7 +161,7 @@ class CheckoutService
     private function assertNotBlocked(Household $household): void
     {
         if ($household->isBlocked()) {
-            throw new CheckoutException('Nákupy sú pre túto domácnosť pozastavené. Kontaktuj podporu.');
+            throw new CheckoutException(__('Nákupy sú pre túto domácnosť pozastavené. Kontaktuj podporu.'));
         }
     }
 

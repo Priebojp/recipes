@@ -84,7 +84,7 @@ class FoodCatalog
 
         $reference = trim($reference);
         if ($reference === '') {
-            throw new InvalidArgumentException('Chýba odkaz na potravinu.');
+            throw new InvalidArgumentException(__('Chýba odkaz na potravinu.'));
         }
 
         $existing = FoodSourceRecord::query()->where('provider', $this->provider())->where('external_id', $reference)->first();

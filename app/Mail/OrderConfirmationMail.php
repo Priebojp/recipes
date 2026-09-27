@@ -25,7 +25,7 @@ class OrderConfirmationMail extends Mailable implements ShouldQueue
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Potvrdenie objednávky #'.$this->order->id.' – '.config('app.name'));
+        return new Envelope(subject: __('Potvrdenie objednávky #:id – :app', ['id' => $this->order->id, 'app' => config('app.name')]));
     }
 
     public function content(): Content

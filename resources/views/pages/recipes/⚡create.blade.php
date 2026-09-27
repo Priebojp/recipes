@@ -29,7 +29,7 @@ new #[Title('Nový recept')] class extends Component {
             'description' => ['nullable', 'string', 'max:2000'],
             'mealTypes' => ['array'],
             'mealTypes.*' => ['in:breakfast,lunch,dinner'],
-        ], ['title.required' => 'Zadaj názov jedla.', 'title.max' => 'Názov môže mať najviac 200 znakov.']);
+        ], ['title.required' => __('Zadaj názov jedla.'), 'title.max' => __('Názov môže mať najviac 200 znakov.')]);
 
         $recipe = $recipes->quickCreate(app(CurrentHousehold::class)->get(), auth()->user(), [
             'title' => $this->title,
@@ -37,33 +37,33 @@ new #[Title('Nový recept')] class extends Component {
             'meal_types' => $this->mealTypes,
         ]);
 
-        \Flux\Flux::toast(variant: 'success', text: 'Recept je uložený. Dá sa hneď vyhľadať aj použiť v generátore.');
+        \Flux\Flux::toast(variant: 'success', text: __('Recept je uložený. Dá sa hneď vyhľadať aj použiť v generátore.'));
 
         $this->redirectRoute($thenEdit ? 'recipes.edit' : 'recipes.show', $recipe, navigate: true);
     }
 }; ?>
 
 <div class="mx-auto max-w-xl space-y-6">
-    <x-page-header title="Nový recept" :back="route('recipes.index')" />
+    <x-page-header :title="__('Nový recept')" :back="route('recipes.index')" />
 
     <form wire:submit="save" class="space-y-5">
-        <flux:input wire:model.live.debounce.500ms="title" label="Názov" placeholder="napr. Praženica" required autofocus maxlength="200" description="Jediná povinná položka." data-test="recipe-title" />
+        <flux:input wire:model.live.debounce.500ms="title" :label="__('Názov')" :placeholder="__('napr. Praženica')" required autofocus maxlength="200" :description="__('Jediná povinná položka.')" data-test="recipe-title" />
 
         @if ($this->duplicate)
-            <flux:callout icon="information-circle" variant="secondary">Recept s rovnakým názvom už existuje. Uložiť sa dá aj tak, ale zváž krátky opis na rozlíšenie.</flux:callout>
+            <flux:callout icon="information-circle" variant="secondary">{{ __('Recept s rovnakým názvom už existuje. Uložiť sa dá aj tak, ale zváž krátky opis na rozlíšenie.') }}</flux:callout>
         @endif
 
-        <flux:textarea wire:model="description" label="Krátky opis" rows="2" placeholder="napr. Kuracie kúsky na paprike so smotanovou omáčkou" description="Odporúčané pri nejednoznačnom názve, nie povinné." />
+        <flux:textarea wire:model="description" :label="__('Krátky opis')" rows="2" :placeholder="__('napr. Kuracie kúsky na paprike so smotanovou omáčkou')" :description="__('Odporúčané pri nejednoznačnom názve, nie povinné.')" />
 
-        <flux:checkbox.group wire:model="mealTypes" label="Typ jedla" description="Prázdne = nezaradené; také recepty sa v generátore predvolene ponúkajú tiež.">
+        <flux:checkbox.group wire:model="mealTypes" :label="__('Typ jedla')" :description="__('Prázdne = nezaradené; také recepty sa v generátore predvolene ponúkajú tiež.')">
             @foreach (MealType::cases() as $type)
                 <flux:checkbox :value="$type->value" :label="$type->label()" />
             @endforeach
         </flux:checkbox.group>
 
         <div class="flex flex-col gap-2 sm:flex-row">
-            <flux:button type="submit" variant="primary" class="w-full" data-test="recipe-save">Uložiť</flux:button>
-            <flux:button wire:click="save(true)" class="w-full">Uložiť a doplniť podrobnosti</flux:button>
+            <flux:button type="submit" variant="primary" class="w-full" data-test="recipe-save">{{ __('Uložiť') }}</flux:button>
+            <flux:button wire:click="save(true)" class="w-full">{{ __('Uložiť a doplniť podrobnosti') }}</flux:button>
         </div>
     </form>
 </div>

@@ -11,9 +11,9 @@ enum SideRequirement: string
     public function label(): string
     {
         return match ($this) {
-            self::Unknown => 'Neznáme',
-            self::Complete => 'Kompletné jedlo',
-            self::NeedsSide => 'Vyžaduje samostatnú prílohu',
+            self::Unknown => __('Neznáme'),
+            self::Complete => __('Kompletné jedlo'),
+            self::NeedsSide => __('Vyžaduje samostatnú prílohu'),
         };
     }
 }

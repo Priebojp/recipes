@@ -35,7 +35,7 @@ class CreateNewUser implements CreatesNewUsers
             'password' => $this->passwordRules(),
             'terms' => $terms !== null ? ['accepted'] : ['nullable'],
         ], [
-            'terms.accepted' => 'Pre vytvorenie účtu je potrebné prijať obchodné podmienky.',
+            'terms.accepted' => __('Pre vytvorenie účtu je potrebné prijať obchodné podmienky.'),
         ])->validate();
 
         return DB::transaction(function () use ($input, $terms) {

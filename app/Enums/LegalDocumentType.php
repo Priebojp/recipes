@@ -25,20 +25,20 @@ enum LegalDocumentType: string
     public function label(): string
     {
         return match ($this) {
-            self::Terms => 'Všeobecné obchodné podmienky',
-            self::Privacy => 'Informácie o spracúvaní osobných údajov',
-            self::Cookies => 'Cookies a voliteľné služby',
-            self::Withdrawal => 'Odstúpenie od zmluvy a reklamácie',
+            self::Terms => __('Všeobecné obchodné podmienky'),
+            self::Privacy => __('Informácie o spracúvaní osobných údajov'),
+            self::Cookies => __('Cookies a voliteľné služby'),
+            self::Withdrawal => __('Odstúpenie od zmluvy a reklamácie'),
         };
     }
 
     public function shortLabel(): string
     {
         return match ($this) {
-            self::Terms => 'VOP',
-            self::Privacy => 'Ochrana osobných údajov',
-            self::Cookies => 'Cookies',
-            self::Withdrawal => 'Odstúpenie od zmluvy',
+            self::Terms => __('VOP'),
+            self::Privacy => __('Ochrana osobných údajov'),
+            self::Cookies => __('Cookies'),
+            self::Withdrawal => __('Odstúpenie od zmluvy'),
         };
     }
 

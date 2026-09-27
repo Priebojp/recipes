@@ -22,6 +22,9 @@ pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->in('Feature');
 
+// Selection unit tests do not need a database, but the reasons they assert go through the translator.
+pest()->extend(TestCase::class)->in('Unit/Selection');
+
 /*
 |--------------------------------------------------------------------------
 | Expectations

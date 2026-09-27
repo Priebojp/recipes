@@ -80,28 +80,28 @@ new #[Layout('layouts::public')] class extends Component {
         <flux:heading size="xl" level="1" class="font-display">{{ $document?->title ?? $type->label() }}</flux:heading>
         @if ($document)
             <flux:text class="text-sm">
-                Verzia {{ $document->version }}
-                @if ($document->effective_at) · účinná od {{ $document->effective_at->timezone(config('recipes.default_timezone'))->format('j. n. Y') }} @endif
-                @if ($document->published_at) · publikovaná {{ $document->published_at->timezone(config('recipes.default_timezone'))->format('j. n. Y') }} @endif
-                @if ($document->archived_at) · <span class="text-amber-700 dark:text-amber-400">archivovaná verzia, neplatí</span> @endif
-                · <a href="{{ route('legal.archive', ['slug' => $type->slug()]) }}" wire:navigate class="underline">archív verzií</a>
+                {{ __('Verzia :version', ['version' => $document->version]) }}
+                @if ($document->effective_at) · {{ __('účinná od :date', ['date' => $document->effective_at->timezone(config('recipes.default_timezone'))->format('j. n. Y')]) }} @endif
+                @if ($document->published_at) · {{ __('publikovaná :date', ['date' => $document->published_at->timezone(config('recipes.default_timezone'))->format('j. n. Y')]) }} @endif
+                @if ($document->archived_at) · <span class="text-amber-700 dark:text-amber-400">{{ __('archivovaná verzia, neplatí') }}</span> @endif
+                · <a href="{{ route('legal.archive', ['slug' => $type->slug()]) }}" wire:navigate class="underline">{{ __('archív verzií') }}</a>
             </flux:text>
         @endif
     </header>
 
     @if ($document === null)
         <flux:callout icon="clock" variant="secondary" data-test="legal-preparing">
-            <flux:callout.heading>Dokument sa pripravuje</flux:callout.heading>
-            <flux:callout.text>Táto stránka zatiaľ nemá publikovanú verziu. Bezplatné funkcie aplikácie to neobmedzuje; platené predplatné sa spustí až s publikovanými podmienkami. Otázky: <a href="{{ route('legal.contact') }}" wire:navigate class="underline">kontakt</a>.</flux:callout.text>
+            <flux:callout.heading>{{ __('Dokument sa pripravuje') }}</flux:callout.heading>
+            <flux:callout.text>{{ __('Táto stránka zatiaľ nemá publikovanú verziu. Bezplatné funkcie aplikácie to neobmedzuje; platené predplatné sa spustí až s publikovanými podmienkami.') }} {!! __('Otázky: :link.', ['link' => '<a href="'.route('legal.contact').'" wire:navigate class="underline">'.__('kontakt').'</a>']) !!}</flux:callout.text>
         </flux:callout>
     @else
         @if ($preview)
             <flux:callout icon="exclamation-triangle" variant="warning" data-test="legal-draft-banner">
-                <flux:callout.heading>Pracovný návrh – nie je právne schválený ani publikovaný</flux:callout.heading>
+                <flux:callout.heading>{{ __('Pracovný návrh – nie je právne schválený ani publikovaný') }}</flux:callout.heading>
                 <flux:callout.text>
-                    Vidíš ho, lebo si administrátor. Údaje v hranatých zátvorkách sú nevyplnené.
+                    {{ __('Vidíš ho, lebo si administrátor. Údaje v hranatých zátvorkách sú nevyplnené.') }}
                     @if ($document->hasPlaceholders())
-                        Chýba: {{ implode(', ', $document->placeholders()) }}.
+                        {{ __('Chýba: :placeholders.', ['placeholders' => implode(', ', $document->placeholders())]) }}
                     @endif
                 </flux:callout.text>
             </flux:callout>
@@ -114,8 +114,8 @@ new #[Layout('layouts::public')] class extends Component {
 
     @if ($type === LegalDocumentType::Cookies)
         <section class="space-y-4" data-test="cookies-inventory">
-            <flux:heading size="lg" class="font-display">Používané technológie a služby</flux:heading>
-            <flux:text class="text-sm">Zoznam sa generuje z registra služieb, ktorý prevádzkovateľ spravuje – uvádza iba skutočne nasadené technológie.</flux:text>
+            <flux:heading size="lg" class="font-display">{{ __('Používané technológie a služby') }}</flux:heading>
+            <flux:text class="text-sm">{{ __('Zoznam sa generuje z registra služieb, ktorý prevádzkovateľ spravuje – uvádza iba skutočne nasadené technológie.') }}</flux:text>
 
             @foreach (ConsentCategory::cases() as $category)
                 @php($rows = $this->services->get($category->value, collect()))
@@ -127,7 +127,7 @@ new #[Layout('layouts::public')] class extends Component {
                     <flux:text class="text-sm">{{ $category->description() }}</flux:text>
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
-                            <thead class="text-left text-xs uppercase text-zinc-500"><tr><th class="py-1 pe-3">Služba</th><th class="py-1 pe-3">Poskytovateľ</th><th class="py-1 pe-3">Účel</th><th class="py-1 pe-3">Cookies / úložisko</th><th class="py-1">Uchovanie a miesto</th></tr></thead>
+                            <thead class="text-left text-xs uppercase text-zinc-500"><tr><th class="py-1 pe-3">{{ __('Služba') }}</th><th class="py-1 pe-3">{{ __('Poskytovateľ') }}</th><th class="py-1 pe-3">{{ __('Účel') }}</th><th class="py-1 pe-3">{{ __('Cookies / úložisko') }}</th><th class="py-1">{{ __('Uchovanie a miesto') }}</th></tr></thead>
                             <tbody class="divide-y divide-zinc-200/70 dark:divide-zinc-800">
                                 @foreach ($rows as $service)
                                     <tr class="align-top">
@@ -138,7 +138,7 @@ new #[Layout('layouts::public')] class extends Component {
                                             @forelse ($service->storage ?? [] as $entry)
                                                 <div><code class="text-xs">{{ $entry['name'] ?? '' }}</code> <span class="text-xs text-zinc-500">({{ $entry['kind'] ?? 'cookie' }}, {{ $entry['domain'] ?? '' }}, {{ $entry['duration'] ?? '' }}) – {{ $entry['purpose'] ?? '' }}</span></div>
                                             @empty
-                                                <span class="text-xs text-zinc-500">bez cookies na našich stránkach</span>
+                                                <span class="text-xs text-zinc-500">{{ __('bez cookies na našich stránkach') }}</span>
                                             @endforelse
                                         </td>
                                         <td class="py-2 text-xs text-zinc-600 dark:text-zinc-400">{{ $service->retention }}@if ($service->location) · {{ $service->location }}@endif</td>
@@ -151,20 +151,20 @@ new #[Layout('layouts::public')] class extends Component {
             @endforeach
 
             <flux:card class="space-y-2">
-                <flux:heading class="font-display">Vaša voľba</flux:heading>
+                <flux:heading class="font-display">{{ __('Vaša voľba') }}</flux:heading>
                 @if (! $this->hasOptional)
-                    <flux:text class="text-sm">Momentálne nepoužívame žiadne voliteľné služby, preto nežiadame o súhlas. Ak nejakú pridáme, spýtame sa vopred.</flux:text>
+                    <flux:text class="text-sm">{{ __('Momentálne nepoužívame žiadne voliteľné služby, preto nežiadame o súhlas. Ak nejakú pridáme, spýtame sa vopred.') }}</flux:text>
                 @elseif ($this->decision)
                     <flux:text class="text-sm" data-test="consent-current">
-                        Uložená {{ \Carbon\CarbonImmutable::parse($this->decision['at'])->timezone(config('recipes.default_timezone'))->format('j. n. Y H:i') }}:
+                        {{ __('Uložená :date:', ['date' => \Carbon\CarbonImmutable::parse($this->decision['at'])->timezone(config('recipes.default_timezone'))->format('j. n. Y H:i')]) }}
                         @foreach ($this->decision['categories'] as $key => $on)
-                            {{ ConsentCategory::from($key)->label() }} {{ $on ? 'zapnuté' : 'vypnuté' }}{{ $loop->last ? '' : ', ' }}
+                            {{ ConsentCategory::from($key)->label() }} {{ $on ? __('zapnuté') : __('vypnuté') }}{{ $loop->last ? '' : ', ' }}
                         @endforeach
                     </flux:text>
-                    <flux:button size="sm" data-consent-open>Zmeniť alebo odvolať</flux:button>
+                    <flux:button size="sm" data-consent-open>{{ __('Zmeniť alebo odvolať') }}</flux:button>
                 @else
-                    <flux:text class="text-sm">Zatiaľ ste nerozhodli; voliteľné služby sú vypnuté.</flux:text>
-                    <flux:button size="sm" data-consent-open>Nastavenia cookies</flux:button>
+                    <flux:text class="text-sm">{{ __('Zatiaľ ste nerozhodli; voliteľné služby sú vypnuté.') }}</flux:text>
+                    <flux:button size="sm" data-consent-open>{{ __('Nastavenia cookies') }}</flux:button>
                 @endif
             </flux:card>
         </section>
@@ -172,13 +172,13 @@ new #[Layout('layouts::public')] class extends Component {
 
     @if ($type === LegalDocumentType::Withdrawal)
         <flux:card class="space-y-2" data-test="withdrawal-cta">
-            <flux:heading class="font-display">Odstúpiť online</flux:heading>
-            <flux:text class="text-sm">Formulár funguje aj bez prihlásenia. Prijatie potvrdíme ihneď e-mailom; refundácia nasleduje po posúdení. Nie je potrebné telefonovať.</flux:text>
-            <flux:button :href="route('legal.withdrawal.form')" wire:navigate variant="primary" size="sm">Formulár odstúpenia od zmluvy</flux:button>
+            <flux:heading class="font-display">{{ __('Odstúpiť online') }}</flux:heading>
+            <flux:text class="text-sm">{{ __('Formulár funguje aj bez prihlásenia. Prijatie potvrdíme ihneď e-mailom; refundácia nasleduje po posúdení. Nie je potrebné telefonovať.') }}</flux:text>
+            <flux:button :href="route('legal.withdrawal.form')" wire:navigate variant="primary" size="sm">{{ __('Formulár odstúpenia od zmluvy') }}</flux:button>
         </flux:card>
     @endif
 
     @if ($this->operator->get('business_name') !== '' && $type !== LegalDocumentType::Cookies)
-        <flux:text class="text-xs">{{ $this->operator->identityLine() }}. Kontakt: {{ $this->operator->get('support_email') }}.</flux:text>
+        <flux:text class="text-xs">{{ __(':operator. Kontakt: :email.', ['operator' => $this->operator->identityLine(), 'email' => $this->operator->get('support_email')]) }}</flux:text>
     @endif
 </article>

@@ -39,37 +39,37 @@ new #[Title('Domácnosť')] class extends Component {
         ]);
 
         $this->household->update(['name' => $this->name, 'timezone' => $this->timezone]);
-        \Flux\Flux::toast(variant: 'success', text: 'Uložené.');
+        \Flux\Flux::toast(variant: 'success', text: __('Uložené.'));
     }
 }; ?>
 
 <div class="mx-auto max-w-xl space-y-6">
-    <x-page-header title="Nastavenia domácnosti" :back="route('family.index')" />
+    <x-page-header :title="__('Nastavenia domácnosti')" :back="route('family.index')" />
 
     <flux:card class="space-y-4">
         <form wire:submit="save" class="space-y-4">
-            <flux:input wire:model="name" label="Názov domácnosti" />
-            <flux:select wire:model="timezone" label="Časová zóna" description="Určuje „dnes“, „zajtra“ aj hranice týždňa.">
+            <flux:input wire:model="name" :label="__('Názov domácnosti')" />
+            <flux:select wire:model="timezone" :label="__('Časová zóna')" :description="__('Určuje „dnes“, „zajtra“ aj hranice týždňa.')">
                 @foreach ($this->timezones as $tz)
                     <flux:select.option :value="$tz">{{ $tz }}</flux:select.option>
                 @endforeach
             </flux:select>
-            <flux:button type="submit" variant="primary" :disabled="! auth()->user()->can('manage', $this->household)">Uložiť</flux:button>
+            <flux:button type="submit" variant="primary" :disabled="! auth()->user()->can('manage', $this->household)">{{ __('Uložiť') }}</flux:button>
         </form>
     </flux:card>
 
     <flux:card class="space-y-2">
-        <flux:heading size="lg" class="font-display">Export údajov</flux:heading>
-        <flux:text class="text-sm">ZIP s JSON (recepty, pôvodné texty, chute, plány, história) a všetkými obrázkami.</flux:text>
-        <flux:button :href="route('export')" icon="arrow-down-tray" size="sm">Stiahnuť export</flux:button>
+        <flux:heading size="lg" class="font-display">{{ __('Export údajov') }}</flux:heading>
+        <flux:text class="text-sm">{{ __('ZIP s JSON (recepty, pôvodné texty, chute, plány, história) a všetkými obrázkami.') }}</flux:text>
+        <flux:button :href="route('export')" icon="arrow-down-tray" size="sm">{{ __('Stiahnuť export') }}</flux:button>
     </flux:card>
 
     <flux:card class="space-y-2">
         <flux:heading size="lg" class="font-display">AI</flux:heading>
         @php($ai = app(App\Services\Ai\AiAvailability::class))
         <flux:text class="text-sm">
-            Text: {{ $ai->textConfigured() ? 'nakonfigurované ('.$ai->textProvider().')' : 'nenakonfigurované – chýba API kľúč' }}<br>
-            Obrázky: {{ $ai->imageConfigured() ? 'nakonfigurované ('.$ai->imageProvider().')' : 'nenakonfigurované – chýba API kľúč' }}
+            {{ $ai->textConfigured() ? __('Text: nakonfigurované (:provider)', ['provider' => $ai->textProvider()]) : __('Text: nenakonfigurované – chýba API kľúč') }}<br>
+            {{ $ai->imageConfigured() ? __('Obrázky: nakonfigurované (:provider)', ['provider' => $ai->imageProvider()]) : __('Obrázky: nenakonfigurované – chýba API kľúč') }}
         </flux:text>
     </flux:card>
 </div>

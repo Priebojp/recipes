@@ -26,11 +26,11 @@ enum AiJobStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::Queued => 'vo fronte',
-            self::Running => 'beží',
-            self::Succeeded => 'doručené',
-            self::Failed => 'chyba',
-            self::Reconciling => 'overuje sa',
+            self::Queued => __('vo fronte'),
+            self::Running => __('beží'),
+            self::Succeeded => __('doručené'),
+            self::Failed => __('chyba'),
+            self::Reconciling => __('overuje sa'),
         };
     }
 }

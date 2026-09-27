@@ -20,7 +20,7 @@ class InvitationController extends Controller
         $invitation = HouseholdInvitation::query()->where('token', $token)->with('household')->firstOrFail();
 
         if (! $invitation->isUsable()) {
-            return redirect()->route('cook.index')->with('status', 'Pozvánka už nie je platná.');
+            return redirect()->route('cook.index')->with('status', __('Pozvánka už nie je platná.'));
         }
 
         return view('invitations.show', ['invitation' => $invitation]);
@@ -51,6 +51,6 @@ class InvitationController extends Controller
 
         session(['current_household_id' => $invitation->household_id]);
 
-        return redirect()->route('cook.index')->with('status', 'Vitaj v domácnosti '.$invitation->household->name.'.');
+        return redirect()->route('cook.index')->with('status', __('Vitaj v domácnosti :household.', ['household' => $invitation->household->name]));
     }
 }

@@ -24,6 +24,6 @@ class PlusAccess
     /** Abort the request with 403 when the feature is not available to the household. */
     public function assert(Household $household, PlusFeature $feature): void
     {
-        abort_unless($this->allows($household, $feature), 403, $feature->label().' je súčasťou programu Plus.');
+        abort_unless($this->allows($household, $feature), 403, __(':feature je súčasťou programu Plus.', ['feature' => $feature->label()]));
     }
 }

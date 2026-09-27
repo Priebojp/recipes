@@ -50,7 +50,7 @@ class RecipeService
             $recipe = Recipe::query()->lockForUpdate()->findOrFail($recipe->id);
 
             if ($expectedVersion !== null && $recipe->version !== $expectedVersion) {
-                throw new StaleRecipeException('Recept bol medzitým upravený niekým iným.');
+                throw new StaleRecipeException(__('Recept bol medzitým upravený niekým iným.'));
             }
 
             $recipe->fill([

@@ -88,28 +88,28 @@ new #[Title('Recepty')] class extends Component {
 }; ?>
 
 <div class="space-y-4">
-    <x-page-header title="Recepty">
-        <flux:button :href="route('recipes.create')" wire:navigate variant="primary" icon="plus" data-test="new-recipe">Pridať</flux:button>
+    <x-page-header :title="__('Recepty')">
+        <flux:button :href="route('recipes.create')" wire:navigate variant="primary" icon="plus" data-test="new-recipe">{{ __('Pridať') }}</flux:button>
     </x-page-header>
 
     <div class="flex flex-col gap-2 sm:flex-row">
-        <flux:input wire:model.live.debounce.300ms="q" icon="magnifying-glass" placeholder="Hľadať recept…" clearable class="flex-1" />
+        <flux:input wire:model.live.debounce.300ms="q" icon="magnifying-glass" :placeholder="__('Hľadať recept…')" clearable class="flex-1" />
         <flux:select wire:model.live="filter" class="sm:w-64">
-            <flux:select.option value="all">Všetky aktívne</flux:select.option>
+            <flux:select.option value="all">{{ __('Všetky aktívne') }}</flux:select.option>
             @if ($this->activePerson)
-                <flux:select.option value="favorites:{{ $this->activePerson->id }}">Moje obľúbené ({{ $this->activePerson->name }})</flux:select.option>
+                <flux:select.option value="favorites:{{ $this->activePerson->id }}">{{ __('Moje obľúbené (:name)', ['name' => $this->activePerson->name]) }}</flux:select.option>
             @endif
             @foreach ($this->people as $person)
                 @continue($this->activePerson && $person->id === $this->activePerson->id)
-                <flux:select.option value="favorites:{{ $person->id }}">Obľúbené: {{ $person->name }}</flux:select.option>
+                <flux:select.option value="favorites:{{ $person->id }}">{{ __('Obľúbené: :name', ['name' => $person->name]) }}</flux:select.option>
             @endforeach
-            <flux:select.option value="archived">Archivované</flux:select.option>
+            <flux:select.option value="archived">{{ __('Archivované') }}</flux:select.option>
         </flux:select>
     </div>
 
     @if ($this->activePerson && $this->people->count() > 1)
         <div class="flex flex-wrap items-center gap-2 text-sm text-zinc-500">
-            <span>Upravuješ chute:</span>
+            <span>{{ __('Upravuješ chute:') }}</span>
             <flux:dropdown>
                 <flux:button size="xs" icon-trailing="chevron-down"><x-person-avatar :person="$this->activePerson" size="size-4" class="mr-1" /> {{ $this->activePerson->name }}</flux:button>
                 <flux:menu>
@@ -123,10 +123,10 @@ new #[Title('Recepty')] class extends Component {
 
     @if ($this->recipes->isEmpty())
         <flux:callout icon="book-open">
-            <flux:callout.heading>{{ trim($q) !== '' || $filter !== 'all' ? 'Nič sa nenašlo' : 'Pridaj prvé jedlo, stačí názov' }}</flux:callout.heading>
+            <flux:callout.heading>{{ trim($q) !== '' || $filter !== 'all' ? __('Nič sa nenašlo') : __('Pridaj prvé jedlo, stačí názov') }}</flux:callout.heading>
             @if (trim($q) === '' && $filter === 'all')
                 <x-slot name="actions">
-                    <flux:button :href="route('recipes.create')" wire:navigate variant="primary" icon="plus">Pridať recept</flux:button>
+                    <flux:button :href="route('recipes.create')" wire:navigate variant="primary" icon="plus">{{ __('Pridať recept') }}</flux:button>
                 </x-slot>
             @endif
         </flux:callout>
@@ -136,7 +136,7 @@ new #[Title('Recepty')] class extends Component {
                 <x-recipe-card :recipe="$recipe" :href="route('recipes.show', $recipe)" wire:key="recipe-{{ $recipe->id }}">
                     <x-slot:meta>
                         @if ($recipe->isPublic())
-                            <flux:icon name="globe-alt" class="size-3.5 text-zinc-400" title="Verejný recept" />
+                            <flux:icon name="globe-alt" class="size-3.5 text-zinc-400" :title="__('Verejný recept')" />
                         @endif
                         <span class="ml-auto flex -space-x-1">
                             @foreach ($recipe->preferences->take(4) as $pref)
@@ -146,7 +146,7 @@ new #[Title('Recepty')] class extends Component {
                     </x-slot:meta>
                     @if ($this->activePerson && ! $recipe->isArchived())
                         @php($liked = $recipe->preferences->contains(fn ($p) => $p->person_id === $this->activePerson->id))
-                        <button type="button" wire:click="toggleFavorite({{ $recipe->id }})" class="absolute right-2 top-2 rounded-full bg-white/90 p-1.5 shadow transition hover:scale-110 dark:bg-zinc-900/90" aria-label="{{ $liked ? 'Zrušiť obľúbené' : 'Označiť ako obľúbené' }}" data-test="heart-{{ $recipe->id }}">
+                        <button type="button" wire:click="toggleFavorite({{ $recipe->id }})" class="absolute right-2 top-2 rounded-full bg-white/90 p-1.5 shadow transition hover:scale-110 dark:bg-zinc-900/90" aria-label="{{ $liked ? __('Zrušiť obľúbené') : __('Označiť ako obľúbené') }}" data-test="heart-{{ $recipe->id }}">
                             <flux:icon name="heart" :variant="$liked ? 'solid' : 'outline'" class="size-5 {{ $liked ? 'text-red-500' : 'text-zinc-500' }}" />
                         </button>
                     @endif

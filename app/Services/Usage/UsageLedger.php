@@ -56,7 +56,7 @@ class UsageLedger
         array $links = [],
     ): UsageGrant {
         if ($quantity < 1) {
-            throw new InvalidArgumentException('Grant musí mať aspoň jedno použitie.');
+            throw new InvalidArgumentException(__('Grant musí mať aspoň jedno použitie.'));
         }
 
         return DB::transaction(function () use ($household, $kind, $source, $quantity, $sourceKey, $validFrom, $expiresAt, $actor, $note, $meta, $links) {
@@ -104,7 +104,7 @@ class UsageLedger
     public function reserve(AiJob $job, UsageKind $kind, int $quantity = 1): UsageReservation
     {
         if ($quantity < 1) {
-            throw new InvalidArgumentException('Rezervácia musí mať aspoň jedno použitie.');
+            throw new InvalidArgumentException(__('Rezervácia musí mať aspoň jedno použitie.'));
         }
         if (! DB::transactionLevel()) {
             throw new LogicException('Rezerváciu treba vytvoriť v transakcii spolu s úlohou.');
@@ -176,7 +176,7 @@ class UsageLedger
     public function revoke(UsageGrant $grant, int $quantity, string $sourceKey, ?User $actor = null, ?string $note = null): UsageGrant
     {
         if ($quantity < 1) {
-            throw new InvalidArgumentException('Odobrať treba aspoň jedno použitie.');
+            throw new InvalidArgumentException(__('Odobrať treba aspoň jedno použitie.'));
         }
 
         return DB::transaction(function () use ($grant, $quantity, $sourceKey, $actor, $note) {
@@ -186,7 +186,7 @@ class UsageLedger
 
             $locked = UsageGrant::query()->whereKey($grant->id)->lockForUpdate()->firstOrFail();
             if ($quantity > $locked->available()) {
-                throw new InvalidArgumentException("Grant má iba {$locked->available()} nevyužitých použití; spotrebované ani rezervované sa odobrať nedajú.");
+                throw new InvalidArgumentException(__('Grant má iba :available nevyužitých použití; spotrebované ani rezervované sa odobrať nedajú.', ['available' => $locked->available()]));
             }
 
             $locked->revoked_quantity += $quantity;
@@ -274,7 +274,7 @@ class UsageLedger
 
     public function exhaustedMessage(UsageKind $kind): string
     {
-        return "Nemáš už žiadne voľné AI použitia ({$kind->label()}). Ďalšie získaš s predplatným Plus alebo dokúpením balíka v Nastavenia → Predplatné – nič sa neúčtuje automaticky. Recept môžeš ďalej upravovať ručne.";
+        return __('Nemáš už žiadne voľné AI použitia (:kind). Ďalšie získaš s predplatným Plus alebo dokúpením balíka v Nastavenia → Predplatné – nič sa neúčtuje automaticky. Recept môžeš ďalej upravovať ručne.', ['kind' => $kind->label()]);
     }
 
     private function settle(AiJob $job, UsageReservationState $target): ?UsageReservation

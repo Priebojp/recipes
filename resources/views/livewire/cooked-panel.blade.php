@@ -3,18 +3,18 @@
     @if ($this->recipe)
         <div class="space-y-5">
             <div>
-                <flux:heading size="lg" class="font-display">{{ $saved ? 'Uvarené' : 'Uvaril som' }}</flux:heading>
+                <flux:heading size="lg" class="font-display">{{ $saved ? __('Uvarené') : __('Uvaril som') }}</flux:heading>
                 <flux:text class="mt-1">{{ $this->recipe->title }}</flux:text>
             </div>
 
             @if ($saved)
                 <flux:callout icon="check-circle" variant="success">
-                    Zapísané do histórie varenia. Omyl opravíš v histórii tlačidlom „Opraviť omyl“.
+                    {{ __('Zapísané do histórie varenia. Omyl opravíš v histórii tlačidlom „Opraviť omyl“.') }}
                 </flux:callout>
 
                 <div>
-                    <flux:heading size="sm">Chutilo?</flux:heading>
-                    <flux:text class="mb-2 text-sm">Voliteľné – rýchlo uprav chute jednotlivých stravníkov.</flux:text>
+                    <flux:heading size="sm">{{ __('Chutilo?') }}</flux:heading>
+                    <flux:text class="mb-2 text-sm">{{ __('Voliteľné – rýchlo uprav chute jednotlivých stravníkov.') }}</flux:text>
                     <div class="space-y-2">
                         @foreach ($this->people->whereIn('id', $personIds) as $person)
                             <div class="flex flex-wrap items-center gap-2">
@@ -29,13 +29,13 @@
                     </div>
                 </div>
 
-                <flux:button variant="primary" wire:click="close" class="w-full" data-test="cooked-done">Hotovo</flux:button>
+                <flux:button variant="primary" wire:click="close" class="w-full" data-test="cooked-done">{{ __('Hotovo') }}</flux:button>
             @else
                 <form wire:submit="save" class="space-y-4">
-                    <flux:date-picker wire:model="cookedOn" label="Skutočný dátum" with-today />
+                    <flux:date-picker wire:model="cookedOn" :label="__('Skutočný dátum')" with-today />
 
                     <flux:fieldset>
-                        <flux:legend>Pre koho sa varilo</flux:legend>
+                        <flux:legend>{{ __('Pre koho sa varilo') }}</flux:legend>
                         <div class="flex flex-wrap gap-2">
                             @foreach ($this->people as $person)
                                 <label class="flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition {{ in_array($person->id, $personIds) ? 'border-accent bg-accent/10 font-medium text-accent-content' : 'border-zinc-300 hover:border-zinc-400 dark:border-zinc-600' }}">
@@ -47,16 +47,16 @@
                         </div>
                     </flux:fieldset>
 
-                    <flux:input type="number" min="1" wire:model="servings" label="Porcie" />
-                    <flux:textarea wire:model="note" label="Poznámka" rows="2" placeholder="napr. menej soli nabudúce" />
+                    <flux:input type="number" min="1" wire:model="servings" :label="__('Porcie')" />
+                    <flux:textarea wire:model="note" :label="__('Poznámka')" rows="2" :placeholder="__('napr. menej soli nabudúce')" />
 
                     @if ($error)
                         <flux:callout icon="exclamation-circle" variant="danger">{{ $error }}</flux:callout>
                     @endif
 
                     <div class="flex gap-2">
-                        <flux:button type="submit" variant="primary" class="w-full" wire:loading.attr="disabled" data-test="cooked-save">Potvrdiť uvarenie</flux:button>
-                        <flux:button wire:click="close" variant="ghost">Zavrieť</flux:button>
+                        <flux:button type="submit" variant="primary" class="w-full" wire:loading.attr="disabled" data-test="cooked-save">{{ __('Potvrdiť uvarenie') }}</flux:button>
+                        <flux:button wire:click="close" variant="ghost">{{ __('Zavrieť') }}</flux:button>
                     </div>
                 </form>
             @endif

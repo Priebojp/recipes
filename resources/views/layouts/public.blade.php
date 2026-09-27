@@ -12,11 +12,11 @@
 
                 <nav class="flex items-center gap-2">
                     @auth
-                        <flux:button :href="route('cook.index')" wire:navigate variant="primary" icon="sparkles" size="sm">Otvoriť aplikáciu</flux:button>
+                        <flux:button :href="route('cook.index')" wire:navigate variant="primary" icon="sparkles" size="sm">{{ __('Otvoriť aplikáciu') }}</flux:button>
                     @else
-                        <flux:button :href="route('login')" wire:navigate variant="ghost" size="sm">Prihlás sa</flux:button>
+                        <flux:button :href="route('login')" wire:navigate variant="ghost" size="sm">{{ __('Prihlás sa') }}</flux:button>
                         @if (Route::has('register'))
-                            <flux:button :href="route('register')" wire:navigate variant="primary" size="sm">Založ si domácnosť</flux:button>
+                            <flux:button :href="route('register')" wire:navigate variant="primary" size="sm">{{ __('Založ si domácnosť') }}</flux:button>
                         @endif
                     @endauth
                 </nav>

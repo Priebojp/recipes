@@ -125,39 +125,39 @@ class LaunchReadiness
         $env = (string) app()->environment();
         $checks = [];
 
-        $checks[] = new LaunchCheck('env.production', $g, 'Produkčné prostredie',
+        $checks[] = new LaunchCheck('env.production', $g, __('Produkčné prostredie'),
             $this->isProduction() ? LaunchCheckStatus::Ok : LaunchCheckStatus::Warn,
-            'APP_ENV='.$env, $this->isProduction() ? null : 'Toto nie je produkcia; prísne kontroly sú tu iba upozornením.');
+            'APP_ENV='.$env, $this->isProduction() ? null : __('Toto nie je produkcia; prísne kontroly sú tu iba upozornením.'));
 
-        $checks[] = $this->productionOnly('env.debug', $g, 'Ladiaci režim vypnutý', ! config('app.debug'),
-            'APP_DEBUG='.(config('app.debug') ? 'true' : 'false'), 'V produkcii musí byť APP_DEBUG=false (inak unikajú detaily chýb).');
+        $checks[] = $this->productionOnly('env.debug', $g, __('Ladiaci režim vypnutý'), ! config('app.debug'),
+            'APP_DEBUG='.(config('app.debug') ? 'true' : 'false'), __('V produkcii musí byť APP_DEBUG=false (inak unikajú detaily chýb).'));
 
         $url = (string) config('app.url');
-        $checks[] = $this->productionOnly('env.url', $g, 'Verejná adresa cez HTTPS', str_starts_with($url, 'https://'),
-            'APP_URL='.$url, 'Webhook aj Checkout návratové URL sa odvádzajú z APP_URL; v produkcii https://moje-recepty.sk.');
+        $checks[] = $this->productionOnly('env.url', $g, __('Verejná adresa cez HTTPS'), str_starts_with($url, 'https://'),
+            'APP_URL='.$url, __('Webhook aj Checkout návratové URL sa odvádzajú z APP_URL; v produkcii https://moje-recepty.sk.'));
 
         $queue = (string) config('queue.default');
-        $checks[] = $this->productionOnly('env.queue', $g, 'Fronta beží mimo requestu', $queue !== 'sync',
-            'QUEUE_CONNECTION='.$queue, 'Stripe udalosti a e-maily sú fronta; spusti worker (php artisan queue:work) a monitoruj ho.');
+        $checks[] = $this->productionOnly('env.queue', $g, __('Fronta beží mimo requestu'), $queue !== 'sync',
+            'QUEUE_CONNECTION='.$queue, __('Stripe udalosti a e-maily sú fronta; spusti worker (php artisan queue:work) a monitoruj ho.'));
 
         $mailer = (string) config('mail.default');
-        $checks[] = $this->productionOnly('env.mail', $g, 'Odchádzajúca pošta nastavená', ! in_array($mailer, ['log', 'array', 'null'], true),
-            'MAIL_MAILER='.$mailer.' · odosielateľ '.((string) config('mail.from.address')),
-            'Potvrdenia objednávok, odstúpenia a exporty odchádzajú e-mailom; nastav produkčný SMTP a odosielateľa v doméne.');
+        $checks[] = $this->productionOnly('env.mail', $g, __('Odchádzajúca pošta nastavená'), ! in_array($mailer, ['log', 'array', 'null'], true),
+            __('MAIL_MAILER=:mailer · odosielateľ :from', ['mailer' => $mailer, 'from' => (string) config('mail.from.address')]),
+            __('Potvrdenia objednávok, odstúpenia a exporty odchádzajú e-mailom; nastav produkčný SMTP a odosielateľa v doméne.'));
 
         $lastRun = $this->settings->get(self::RECONCILE_KEY);
         $lastRunAt = is_string($lastRun) ? CarbonImmutable::parse($lastRun) : null;
         $checks[] = match (true) {
-            $lastRunAt === null => new LaunchCheck('env.scheduler', $g, 'Scheduler (app:billing-reconcile)', LaunchCheckStatus::Warn,
-                'zatiaľ nebežal', 'Nastav cron `php artisan schedule:run` každú minútu; denná úloha otvára mesačné granty a opakuje zlyhané udalosti.'),
-            $lastRunAt->lt(CarbonImmutable::now()->subHours(36)) => $this->productionOnly('env.scheduler', $g, 'Scheduler (app:billing-reconcile)', false,
-                'posledný beh '.$lastRunAt->toDateTimeString().' UTC', 'Denná úloha nebežala viac než 36 h – skontroluj cron.'),
-            default => new LaunchCheck('env.scheduler', $g, 'Scheduler (app:billing-reconcile)', LaunchCheckStatus::Ok, 'posledný beh '.$lastRunAt->toDateTimeString().' UTC'),
+            $lastRunAt === null => new LaunchCheck('env.scheduler', $g, __('Scheduler (app:billing-reconcile)'), LaunchCheckStatus::Warn,
+                __('zatiaľ nebežal'), __('Nastav cron `php artisan schedule:run` každú minútu; denná úloha otvára mesačné granty a opakuje zlyhané udalosti.')),
+            $lastRunAt->lt(CarbonImmutable::now()->subHours(36)) => $this->productionOnly('env.scheduler', $g, __('Scheduler (app:billing-reconcile)'), false,
+                __('posledný beh :at UTC', ['at' => $lastRunAt->toDateTimeString()]), __('Denná úloha nebežala viac než 36 h – skontroluj cron.')),
+            default => new LaunchCheck('env.scheduler', $g, __('Scheduler (app:billing-reconcile)'), LaunchCheckStatus::Ok, __('posledný beh :at UTC', ['at' => $lastRunAt->toDateTimeString()])),
         };
 
         $failed = $this->safeCount(fn () => (int) DB::table('failed_jobs')->count());
-        $checks[] = new LaunchCheck('env.failed_jobs', $g, 'Zlyhané úlohy fronty', $failed === 0 ? LaunchCheckStatus::Ok : LaunchCheckStatus::Warn,
-            $failed.' v failed_jobs', $failed === 0 ? null : 'Pozri `php artisan queue:failed`; pred launchom vyčisti alebo zopakuj.');
+        $checks[] = new LaunchCheck('env.failed_jobs', $g, __('Zlyhané úlohy fronty'), $failed === 0 ? LaunchCheckStatus::Ok : LaunchCheckStatus::Warn,
+            __(':count v failed_jobs', ['count' => $failed]), $failed === 0 ? null : __('Pozri `php artisan queue:failed`; pred launchom vyčisti alebo zopakuj.'));
 
         return $checks;
     }
@@ -174,23 +174,23 @@ class LaunchReadiness
         $publicMode = $this->keyMode($public, 'pk_');
 
         if ($secret === '' || $public === '') {
-            $checks[] = new LaunchCheck('stripe.keys', $g, 'Stripe kľúče', LaunchCheckStatus::Fail, 'STRIPE_KEY / STRIPE_SECRET chýba', 'Doplň kľúče z Stripe dashboardu (Developers → API keys).');
+            $checks[] = new LaunchCheck('stripe.keys', $g, __('Stripe kľúče'), LaunchCheckStatus::Fail, __('STRIPE_KEY / STRIPE_SECRET chýba'), __('Doplň kľúče z Stripe dashboardu (Developers → API keys).'));
         } elseif ($secretMode === null || $publicMode === null || $secretMode !== $publicMode) {
-            $checks[] = new LaunchCheck('stripe.keys', $g, 'Stripe kľúče', LaunchCheckStatus::Fail, 'kľúče nie sú z rovnakého režimu (test/live)', 'STRIPE_KEY a STRIPE_SECRET musia byť oba test alebo oba live.');
+            $checks[] = new LaunchCheck('stripe.keys', $g, __('Stripe kľúče'), LaunchCheckStatus::Fail, __('kľúče nie sú z rovnakého režimu (test/live)'), __('STRIPE_KEY a STRIPE_SECRET musia byť oba test alebo oba live.'));
         } elseif ($secretMode === 'live' && ! $this->isProduction()) {
-            $checks[] = new LaunchCheck('stripe.keys', $g, 'Stripe kľúče', LaunchCheckStatus::Fail, 'živé kľúče mimo produkcie', 'Mimo produkcie používaj iba sandbox (sk_test_…); živý kľúč tu znamená skutočné platby.');
+            $checks[] = new LaunchCheck('stripe.keys', $g, __('Stripe kľúče'), LaunchCheckStatus::Fail, __('živé kľúče mimo produkcie'), __('Mimo produkcie používaj iba sandbox (sk_test_…); živý kľúč tu znamená skutočné platby.'));
         } else {
-            $checks[] = $this->productionOnly('stripe.keys', $g, 'Stripe kľúče', $secretMode === 'live', 'režim '.$secretMode,
-                'Produkcia potrebuje živé kľúče (sk_live_/pk_live_); testovací kľúč nepredá nič.');
+            $checks[] = $this->productionOnly('stripe.keys', $g, __('Stripe kľúče'), $secretMode === 'live', __('režim :mode', ['mode' => $secretMode]),
+                __('Produkcia potrebuje živé kľúče (sk_live_/pk_live_); testovací kľúč nepredá nič.'));
         }
 
         $webhookSecret = (string) config('cashier.webhook.secret');
-        $checks[] = new LaunchCheck('stripe.webhook_secret', $g, 'Webhook signing secret', $webhookSecret !== '' ? LaunchCheckStatus::Ok : LaunchCheckStatus::Fail,
-            $webhookSecret !== '' ? 'STRIPE_WEBHOOK_SECRET nastavený' : 'STRIPE_WEBHOOK_SECRET chýba',
-            $webhookSecret !== '' ? null : 'Bez podpisu sa každá udalosť odmietne (403) a žiadna platba neaktivuje Plus.');
+        $checks[] = new LaunchCheck('stripe.webhook_secret', $g, __('Webhook signing secret'), $webhookSecret !== '' ? LaunchCheckStatus::Ok : LaunchCheckStatus::Fail,
+            $webhookSecret !== '' ? __('STRIPE_WEBHOOK_SECRET nastavený') : __('STRIPE_WEBHOOK_SECRET chýba'),
+            $webhookSecret !== '' ? null : __('Bez podpisu sa každá udalosť odmietne (403) a žiadna platba neaktivuje Plus.'));
 
         if ($stripe === null) {
-            $checks[] = new LaunchCheck('stripe.webhook_endpoint', $g, 'Webhook endpoint v Stripe', LaunchCheckStatus::Skip, 'neoverené proti Stripe', 'Spusti `php artisan app:launch-check --stripe` alebo „Overiť v Stripe“.');
+            $checks[] = new LaunchCheck('stripe.webhook_endpoint', $g, __('Webhook endpoint v Stripe'), LaunchCheckStatus::Skip, __('neoverené proti Stripe'), __('Spusti `php artisan app:launch-check --stripe` alebo „Overiť v Stripe“.'));
         } else {
             $checks[] = $this->webhookEndpoint($stripe);
         }
@@ -206,18 +206,18 @@ class LaunchReadiness
         try {
             $endpoints = $stripe->webhookEndpoints();
         } catch (Throwable $e) {
-            return new LaunchCheck('stripe.webhook_endpoint', $g, 'Webhook endpoint v Stripe', LaunchCheckStatus::Fail, 'Stripe API: '.mb_substr($e->getMessage(), 0, 160), 'Skontroluj STRIPE_SECRET a sieťové spojenie.');
+            return new LaunchCheck('stripe.webhook_endpoint', $g, __('Webhook endpoint v Stripe'), LaunchCheckStatus::Fail, 'Stripe API: '.mb_substr($e->getMessage(), 0, 160), __('Skontroluj STRIPE_SECRET a sieťové spojenie.'));
         }
 
         $matching = array_values(array_filter($endpoints, fn (array $e) => rtrim($e['url'], '/') === rtrim($url, '/')));
         if ($matching === []) {
-            return new LaunchCheck('stripe.webhook_endpoint', $g, 'Webhook endpoint v Stripe', LaunchCheckStatus::Fail,
-                'žiadny endpoint pre '.$url.' ('.count($endpoints).' iných)', 'Vytvor ho: `php artisan cashier:webhook` (registruje presný zoznam udalostí) a ulož jeho secret do STRIPE_WEBHOOK_SECRET.');
+            return new LaunchCheck('stripe.webhook_endpoint', $g, __('Webhook endpoint v Stripe'), LaunchCheckStatus::Fail,
+                __('žiadny endpoint pre :url (:count iných)', ['url' => $url, 'count' => count($endpoints)]), __('Vytvor ho: `php artisan cashier:webhook` (registruje presný zoznam udalostí) a ulož jeho secret do STRIPE_WEBHOOK_SECRET.'));
         }
 
         $enabled = array_values(array_filter($matching, fn (array $e) => $e['status'] === 'enabled'));
         if ($enabled === []) {
-            return new LaunchCheck('stripe.webhook_endpoint', $g, 'Webhook endpoint v Stripe', LaunchCheckStatus::Fail, 'endpoint existuje, ale je vypnutý', 'Zapni ho v Stripe dashboarde (Developers → Webhooks).');
+            return new LaunchCheck('stripe.webhook_endpoint', $g, __('Webhook endpoint v Stripe'), LaunchCheckStatus::Fail, __('endpoint existuje, ale je vypnutý'), __('Zapni ho v Stripe dashboarde (Developers → Webhooks).'));
         }
 
         $missing = StripeWebhookEvents::required();
@@ -226,16 +226,16 @@ class LaunchReadiness
         }
 
         if ($missing !== []) {
-            return new LaunchCheck('stripe.webhook_endpoint', $g, 'Webhook endpoint v Stripe', LaunchCheckStatus::Fail,
-                'chýbajú udalosti: '.implode(', ', $missing), 'Doplň udalosti na endpointe alebo ho vytvor znova cez `php artisan cashier:webhook`.');
+            return new LaunchCheck('stripe.webhook_endpoint', $g, __('Webhook endpoint v Stripe'), LaunchCheckStatus::Fail,
+                __('chýbajú udalosti: :events', ['events' => implode(', ', $missing)]), __('Doplň udalosti na endpointe alebo ho vytvor znova cez `php artisan cashier:webhook`.'));
         }
 
         $live = (bool) $enabled[0]['livemode'];
         $modeMatches = $live === ($this->keyMode((string) config('cashier.secret'), 'sk_') === 'live');
 
-        return new LaunchCheck('stripe.webhook_endpoint', $g, 'Webhook endpoint v Stripe', $modeMatches ? LaunchCheckStatus::Ok : LaunchCheckStatus::Fail,
-            $enabled[0]['id'].' · '.($live ? 'live' : 'test').' · '.count($enabled[0]['enabled_events']).' udalostí',
-            $modeMatches ? null : 'Endpoint je v inom režime než kľúče.');
+        return new LaunchCheck('stripe.webhook_endpoint', $g, __('Webhook endpoint v Stripe'), $modeMatches ? LaunchCheckStatus::Ok : LaunchCheckStatus::Fail,
+            __(':id · :mode · :count udalostí', ['id' => $enabled[0]['id'], 'mode' => $live ? 'live' : 'test', 'count' => count($enabled[0]['enabled_events'])]),
+            $modeMatches ? null : __('Endpoint je v inom režime než kľúče.'));
     }
 
     /** @return list<LaunchCheck> */
@@ -247,12 +247,12 @@ class LaunchReadiness
         $addons = $this->catalog->addons();
 
         if ($plans->isEmpty()) {
-            $checks[] = new LaunchCheck('catalog.active', $g, 'Aktívny katalóg', LaunchCheckStatus::Fail, 'žiadny aktívny plán', 'Spusti `php artisan db:seed --class=CatalogSeeder` alebo aktivuj verziu v /admin/catalog.');
+            $checks[] = new LaunchCheck('catalog.active', $g, __('Aktívny katalóg'), LaunchCheckStatus::Fail, __('žiadny aktívny plán'), __('Spusti `php artisan db:seed --class=CatalogSeeder` alebo aktivuj verziu v /admin/catalog.'));
         } else {
             $unsellable = collect([...$plans->all(), ...$addons->all()])->filter(fn ($v) => ! $v->stripe_price_id)->map(fn ($v) => $v->code)->values()->all();
-            $checks[] = new LaunchCheck('catalog.active', $g, 'Aktívny katalóg', $unsellable === [] ? LaunchCheckStatus::Ok : LaunchCheckStatus::Fail,
-                $plans->count().' plány, '.$addons->count().' balíky'.($unsellable !== [] ? ' · bez Stripe price ID: '.implode(', ', $unsellable) : ''),
-                $unsellable === [] ? null : 'Ponuka bez Stripe price ID je nepredajná; doplň ID novou verziou katalógu alebo CatalogSeederom.');
+            $checks[] = new LaunchCheck('catalog.active', $g, __('Aktívny katalóg'), $unsellable === [] ? LaunchCheckStatus::Ok : LaunchCheckStatus::Fail,
+                $unsellable !== [] ? __(':plans plány, :addons balíky · bez Stripe price ID: :codes', ['plans' => $plans->count(), 'addons' => $addons->count(), 'codes' => implode(', ', $unsellable)]) : __(':plans plány, :addons balíky', ['plans' => $plans->count(), 'addons' => $addons->count()]),
+                $unsellable === [] ? null : __('Ponuka bez Stripe price ID je nepredajná; doplň ID novou verziou katalógu alebo CatalogSeederom.'));
         }
 
         $envPrices = (array) config('recipes.billing.stripe_prices', []);
@@ -268,10 +268,10 @@ class LaunchReadiness
             }
         }
         $checks[] = match (true) {
-            $mismatch !== [] => new LaunchCheck('catalog.env_match', $g, 'Katalóg ↔ STRIPE_PRICE_*', LaunchCheckStatus::Fail, 'iné ID než .env: '.implode(', ', $mismatch),
-                'Katalóg predáva ID uložené v DB. Po zmene .env vytvor novú verziu s novým ID (alebo seeder na prázdne ID); inak sa predáva staré ID.'),
-            $unsetEnv !== [] => new LaunchCheck('catalog.env_match', $g, 'Katalóg ↔ STRIPE_PRICE_*', LaunchCheckStatus::Warn, 'v .env chýba: '.implode(', ', $unsetEnv), 'Nie je chyba, ak sú ID iba v katalógu; udrž .env a katalóg v zhode pre ďalšie nasadenia.'),
-            default => new LaunchCheck('catalog.env_match', $g, 'Katalóg ↔ STRIPE_PRICE_*', LaunchCheckStatus::Ok, 'ID v katalógu a v .env sa zhodujú'),
+            $mismatch !== [] => new LaunchCheck('catalog.env_match', $g, __('Katalóg ↔ STRIPE_PRICE_*'), LaunchCheckStatus::Fail, __('iné ID než .env: :codes', ['codes' => implode(', ', $mismatch)]),
+                __('Katalóg predáva ID uložené v DB. Po zmene .env vytvor novú verziu s novým ID (alebo seeder na prázdne ID); inak sa predáva staré ID.')),
+            $unsetEnv !== [] => new LaunchCheck('catalog.env_match', $g, __('Katalóg ↔ STRIPE_PRICE_*'), LaunchCheckStatus::Warn, __('v .env chýba: :codes', ['codes' => implode(', ', $unsetEnv)]), __('Nie je chyba, ak sú ID iba v katalógu; udrž .env a katalóg v zhode pre ďalšie nasadenia.')),
+            default => new LaunchCheck('catalog.env_match', $g, __('Katalóg ↔ STRIPE_PRICE_*'), LaunchCheckStatus::Ok, __('ID v katalógu a v .env sa zhodujú')),
         };
 
         return [...$checks, ...$this->catalogPricesInStripe($plans, $addons, $stripe)];
@@ -291,13 +291,13 @@ class LaunchReadiness
         // Base collection: PlanVersion and AddonVersion ids collide, so merge() would drop rows.
         foreach (collect([...$plans->all(), ...$addons->all()]) as $version) {
             $key = 'catalog.stripe.'.$version->code;
-            $label = 'Stripe cena: '.$version->name;
+            $label = __('Stripe cena: :name', ['name' => $version->name]);
             $expected = Catalog::formatCents($version->final_price_cents, $version->currency);
             if (! $version->stripe_price_id) {
                 continue;
             }
             if ($stripe === null) {
-                $checks[] = new LaunchCheck($key, $g, $label, LaunchCheckStatus::Skip, $expected.' · '.$version->stripe_price_id, 'Overenie proti Stripe: `--stripe` / „Overiť v Stripe“.');
+                $checks[] = new LaunchCheck($key, $g, $label, LaunchCheckStatus::Skip, $expected.' · '.$version->stripe_price_id, __('Overenie proti Stripe: `--stripe` / „Overiť v Stripe“.'));
 
                 continue;
             }
@@ -313,28 +313,28 @@ class LaunchReadiness
             $expectedInterval = $version instanceof PlanVersion ? ($version->interval === PlanInterval::Year ? 'year' : 'month') : null;
             $problems = [];
             if ($price === null) {
-                $problems[] = 'cena '.$version->stripe_price_id.' v Stripe neexistuje (iný režim alebo účet?)';
+                $problems[] = __('cena :id v Stripe neexistuje (iný režim alebo účet?)', ['id' => $version->stripe_price_id]);
             } else {
                 if (! $price['active']) {
-                    $problems[] = 'cena je v Stripe neaktívna';
+                    $problems[] = __('cena je v Stripe neaktívna');
                 }
                 if ($price['unit_amount'] !== $version->final_price_cents) {
-                    $problems[] = 'Stripe účtuje '.($price['unit_amount'] !== null ? Catalog::formatCents($price['unit_amount'], $price['currency']) : '?').', katalóg '.$expected;
+                    $problems[] = __('Stripe účtuje :stripe, katalóg :catalog', ['stripe' => $price['unit_amount'] !== null ? Catalog::formatCents($price['unit_amount'], $price['currency']) : '?', 'catalog' => $expected]);
                 }
                 if (strtolower($price['currency']) !== strtolower($version->currency)) {
-                    $problems[] = 'mena '.$price['currency'].' ≠ '.$version->currency;
+                    $problems[] = __('mena :stripe ≠ :catalog', ['stripe' => $price['currency'], 'catalog' => $version->currency]);
                 }
                 if ($price['interval'] !== $expectedInterval) {
-                    $problems[] = 'interval '.($price['interval'] ?? 'jednorazovo').' ≠ '.($expectedInterval ?? 'jednorazovo');
+                    $problems[] = __('interval :stripe ≠ :catalog', ['stripe' => $price['interval'] ?? __('jednorazovo'), 'catalog' => $expectedInterval ?? __('jednorazovo')]);
                 }
                 if ($price['livemode'] !== $live) {
-                    $problems[] = 'cena je '.($price['livemode'] ? 'live' : 'test').', kľúče '.($live ? 'live' : 'test');
+                    $problems[] = __('cena je :price, kľúče :keys', ['price' => $price['livemode'] ? 'live' : 'test', 'keys' => $live ? 'live' : 'test']);
                 }
             }
 
             $checks[] = new LaunchCheck($key, $g, $label, $problems === [] ? LaunchCheckStatus::Ok : LaunchCheckStatus::Fail,
-                $problems === [] ? $expected.' · '.$version->stripe_price_id.' sedí' : implode('; ', $problems),
-                $problems === [] ? null : 'Cena v Stripe musí presne zodpovedať snapshotu katalógu; oprav v Stripe alebo vytvor novú verziu katalógu.');
+                $problems === [] ? __(':price · :id sedí', ['price' => $expected, 'id' => $version->stripe_price_id]) : implode('; ', $problems),
+                $problems === [] ? null : __('Cena v Stripe musí presne zodpovedať snapshotu katalógu; oprav v Stripe alebo vytvor novú verziu katalógu.'));
         }
 
         return $checks;
@@ -347,14 +347,14 @@ class LaunchReadiness
         $checks = [];
 
         $blockers = $this->checkout->legalBlockers();
-        $checks[] = new LaunchCheck('legal.checkout', $g, 'Prevádzkovateľ a publikované dokumenty', $blockers === [] ? LaunchCheckStatus::Ok : LaunchCheckStatus::Fail,
-            $blockers === [] ? 'identita vyplnená, VOP / súkromie / odstúpenie publikované' : implode(' ', $blockers),
-            $blockers === [] ? null : 'Dopĺňa sa v /admin/legal; bez toho je platený checkout zablokovaný (akceptačný test 20).');
+        $checks[] = new LaunchCheck('legal.checkout', $g, __('Prevádzkovateľ a publikované dokumenty'), $blockers === [] ? LaunchCheckStatus::Ok : LaunchCheckStatus::Fail,
+            $blockers === [] ? __('identita vyplnená, VOP / súkromie / odstúpenie publikované') : implode(' ', $blockers),
+            $blockers === [] ? null : __('Dopĺňa sa v /admin/legal; bez toho je platený checkout zablokovaný (akceptačný test 20).'));
 
         $cookies = $this->documents->current(LegalDocumentType::Cookies);
-        $checks[] = new LaunchCheck('legal.cookies', $g, 'Stránka o cookies', $cookies !== null && ! $cookies->hasPlaceholders() ? LaunchCheckStatus::Ok : LaunchCheckStatus::Warn,
-            $cookies === null ? 'nie je publikovaná' : ($cookies->hasPlaceholders() ? 'v'.$cookies->version.' obsahuje nevyplnené údaje' : 'v'.$cookies->version),
-            $cookies !== null && ! $cookies->hasPlaceholders() ? null : 'Lišta odkazuje na /cookies; publikuj verziu bez placeholderov.');
+        $checks[] = new LaunchCheck('legal.cookies', $g, __('Stránka o cookies'), $cookies !== null && ! $cookies->hasPlaceholders() ? LaunchCheckStatus::Ok : LaunchCheckStatus::Warn,
+            $cookies === null ? __('nie je publikovaná') : ($cookies->hasPlaceholders() ? __('v:version obsahuje nevyplnené údaje', ['version' => $cookies->version]) : 'v'.$cookies->version),
+            $cookies !== null && ! $cookies->hasPlaceholders() ? null : __('Lišta odkazuje na /cookies; publikuj verziu bez placeholderov.'));
 
         return $checks;
     }
@@ -368,17 +368,17 @@ class LaunchReadiness
         $admins = User::query()->where('is_platform_admin', true)->get(['id', 'two_factor_confirmed_at']);
         $withMfa = $admins->whereNotNull('two_factor_confirmed_at')->count();
         $checks[] = match (true) {
-            $admins->isEmpty() => new LaunchCheck('admin.account', $g, 'Administrátor platformy', LaunchCheckStatus::Fail, 'žiadny účet s rolou', 'php artisan app:grant-platform-admin <email>'),
-            $withMfa === 0 => new LaunchCheck('admin.account', $g, 'Administrátor platformy', LaunchCheckStatus::Fail, $admins->count().' bez potvrdeného 2FA', 'Administrátor si musí zapnúť dvojfaktorové overenie v Nastavenia → Zabezpečenie.'),
-            default => new LaunchCheck('admin.account', $g, 'Administrátor platformy', LaunchCheckStatus::Ok, $withMfa.' s 2FA z '.$admins->count()),
+            $admins->isEmpty() => new LaunchCheck('admin.account', $g, __('Administrátor platformy'), LaunchCheckStatus::Fail, __('žiadny účet s rolou'), 'php artisan app:grant-platform-admin <email>'),
+            $withMfa === 0 => new LaunchCheck('admin.account', $g, __('Administrátor platformy'), LaunchCheckStatus::Fail, __(':count bez potvrdeného 2FA', ['count' => $admins->count()]), __('Administrátor si musí zapnúť dvojfaktorové overenie v Nastavenia → Zabezpečenie.')),
+            default => new LaunchCheck('admin.account', $g, __('Administrátor platformy'), LaunchCheckStatus::Ok, __(':with s 2FA z :total', ['with' => $withMfa, 'total' => $admins->count()])),
         };
 
-        $checks[] = $this->productionOnly('admin.two_factor', $g, 'MFA pre /admin vyžadované', (bool) config('admin.require_two_factor'),
-            'ADMIN_REQUIRE_TWO_FACTOR='.(config('admin.require_two_factor') ? 'true' : 'false'), 'Zadanie vyžaduje MFA pre administráciu.');
+        $checks[] = $this->productionOnly('admin.two_factor', $g, __('MFA pre /admin vyžadované'), (bool) config('admin.require_two_factor'),
+            'ADMIN_REQUIRE_TWO_FACTOR='.(config('admin.require_two_factor') ? 'true' : 'false'), __('Zadanie vyžaduje MFA pre administráciu.'));
 
         $bootstrap = (string) config('admin.bootstrap_password');
-        $checks[] = new LaunchCheck('admin.bootstrap_password', $g, 'Počiatočné heslo administrátora', $bootstrap === '' ? LaunchCheckStatus::Ok : LaunchCheckStatus::Warn,
-            $bootstrap === '' ? 'ADMIN_INITIAL_PASSWORD nie je nastavené' : 'ADMIN_INITIAL_PASSWORD je v prostredí', $bootstrap === '' ? null : 'Po prvom prihlásení heslo zmeň a premennú odstráň.');
+        $checks[] = new LaunchCheck('admin.bootstrap_password', $g, __('Počiatočné heslo administrátora'), $bootstrap === '' ? LaunchCheckStatus::Ok : LaunchCheckStatus::Warn,
+            $bootstrap === '' ? __('ADMIN_INITIAL_PASSWORD nie je nastavené') : __('ADMIN_INITIAL_PASSWORD je v prostredí'), $bootstrap === '' ? null : __('Po prvom prihlásení heslo zmeň a premennú odstráň.'));
 
         return $checks;
     }
@@ -391,26 +391,26 @@ class LaunchReadiness
 
         $textOk = $this->ai->textConfigured();
         $imageOk = $this->ai->imageConfigured();
-        $checks[] = new LaunchCheck('ai.keys', $g, 'AI poskytovateľ nakonfigurovaný', $textOk && $imageOk ? LaunchCheckStatus::Ok : LaunchCheckStatus::Fail,
-            'text: '.$this->aiSettings->textProvider().($textOk ? ' ✓' : ' bez kľúča').' · obrázky: '.$this->aiSettings->imageProvider().($imageOk ? ' ✓' : ' bez kľúča'),
-            $textOk && $imageOk ? null : 'Plus sľubuje AI; bez kľúča (OPENAI_API_KEY) sa predplatné nesmie predávať.');
+        $checks[] = new LaunchCheck('ai.keys', $g, __('AI poskytovateľ nakonfigurovaný'), $textOk && $imageOk ? LaunchCheckStatus::Ok : LaunchCheckStatus::Fail,
+            __('text: :text · obrázky: :image', ['text' => $this->aiSettings->textProvider().($textOk ? ' ✓' : ' '.__('bez kľúča')), 'image' => $this->aiSettings->imageProvider().($imageOk ? ' ✓' : ' '.__('bez kľúča'))]),
+            $textOk && $imageOk ? null : __('Plus sľubuje AI; bez kľúča (OPENAI_API_KEY) sa predplatné nesmie predávať.'));
 
-        $checks[] = new LaunchCheck('ai.enabled', $g, 'AI zapnuté (kill switch)', $this->aiSettings->enabled() ? LaunchCheckStatus::Ok : LaunchCheckStatus::Warn,
-            $this->aiSettings->enabled() ? 'zapnuté' : 'vypnuté', $this->aiSettings->enabled() ? null : 'Pred zapnutím platieb AI zapni v /admin/ai/settings.');
+        $checks[] = new LaunchCheck('ai.enabled', $g, __('AI zapnuté (kill switch)'), $this->aiSettings->enabled() ? LaunchCheckStatus::Ok : LaunchCheckStatus::Warn,
+            $this->aiSettings->enabled() ? __('zapnuté') : __('vypnuté'), $this->aiSettings->enabled() ? null : __('Pred zapnutím platieb AI zapni v /admin/ai/settings.'));
 
         $textModel = $this->aiSettings->textModel();
         $imageModel = $this->aiSettings->imageModel();
         $textRate = $textModel ? $this->costs->rateFor($this->aiSettings->textProvider(), $textModel, AiCostRate::MODALITY_TEXT, null, null, now()) : null;
         $imageRate = $imageModel ? $this->costs->rateFor($this->aiSettings->imageProvider(), $imageModel, AiCostRate::MODALITY_IMAGE, $this->aiSettings->imageQuality(), $this->aiSettings->imagePixelSize(), now()) : null;
-        $checks[] = new LaunchCheck('ai.models', $g, 'Modely a cenník AI', $textRate !== null && $imageRate !== null ? LaunchCheckStatus::Ok : LaunchCheckStatus::Fail,
-            'text: '.($textModel ?? 'predvolený').($textRate ? ' · sadzba ✓' : ' · bez sadzby').' · obrázky: '.($imageModel ?? 'predvolený').' '.$this->aiSettings->defaultImageProfile()->value.' ('.$this->aiSettings->imageQuality().' '.$this->aiSettings->imagePixelSize().')'.($imageRate ? ' · sadzba ✓' : ' · bez sadzby'),
-            $textRate !== null && $imageRate !== null ? null : 'Nastav RECIPES_AI_TEXT_MODEL / RECIPES_AI_IMAGE_MODEL (gpt-6-luna, gpt-image-2) a nahraj cenník (AiCostRateSeeder), inak sú náklady neocenené.');
+        $checks[] = new LaunchCheck('ai.models', $g, __('Modely a cenník AI'), $textRate !== null && $imageRate !== null ? LaunchCheckStatus::Ok : LaunchCheckStatus::Fail,
+            __('text: :text · obrázky: :image', ['text' => ($textModel ?? __('predvolený')).($textRate ? ' · '.__('sadzba ✓') : ' · '.__('bez sadzby')), 'image' => ($imageModel ?? __('predvolený')).' '.$this->aiSettings->defaultImageProfile()->value.' ('.$this->aiSettings->imageQuality().' '.$this->aiSettings->imagePixelSize().')'.($imageRate ? ' · '.__('sadzba ✓') : ' · '.__('bez sadzby'))]),
+            $textRate !== null && $imageRate !== null ? null : __('Nastav RECIPES_AI_TEXT_MODEL / RECIPES_AI_IMAGE_MODEL (gpt-6-luna, gpt-image-2) a nahraj cenník (AiCostRateSeeder), inak sú náklady neocenené.'));
 
         $checks[] = $this->measurementCheck();
 
         $budget = $this->aiSettings->monthlyBudgetMicroUsd();
-        $checks[] = new LaunchCheck('ai.budget', $g, 'Mesačný AI rozpočet (alarm)', $budget !== null ? LaunchCheckStatus::Ok : LaunchCheckStatus::Warn,
-            $budget !== null ? 'nastavený' : 'nenastavený', $budget !== null ? null : 'Alarm na prehľade; nastav RECIPES_AI_MONTHLY_BUDGET_USD alebo v AI nastaveniach.');
+        $checks[] = new LaunchCheck('ai.budget', $g, __('Mesačný AI rozpočet (alarm)'), $budget !== null ? LaunchCheckStatus::Ok : LaunchCheckStatus::Warn,
+            $budget !== null ? __('nastavený') : __('nenastavený'), $budget !== null ? null : __('Alarm na prehľade; nastav RECIPES_AI_MONTHLY_BUDGET_USD alebo v AI nastaveniach.'));
 
         return $checks;
     }
@@ -420,7 +420,7 @@ class LaunchReadiness
         $g = self::GROUP_AI;
         $m = $this->measurement();
         if ($m === null) {
-            return new LaunchCheck('ai.measurement', $g, 'Meranie 30 + 30 AI úloh', LaunchCheckStatus::Fail, 'zatiaľ nemerané', 'php artisan app:ai-measure <domácnosť> --yes na reálnom kľúči; výsledok sa uloží sem.');
+            return new LaunchCheck('ai.measurement', $g, __('Meranie 30 + 30 AI úloh'), LaunchCheckStatus::Fail, __('zatiaľ nemerané'), __('php artisan app:ai-measure <domácnosť> --yes na reálnom kľúči; výsledok sa uloží sem.'));
         }
 
         $text = (int) ($m['kinds']['text']['succeeded'] ?? 0);
@@ -428,9 +428,9 @@ class LaunchReadiness
         $enough = $text >= self::MEASUREMENT_MINIMUM && $image >= self::MEASUREMENT_MINIMUM;
         $current = ($m['kinds']['text']['model'] ?? null) === $this->aiSettings->textModel() && ($m['kinds']['image']['model'] ?? null) === $this->aiSettings->imageModel();
 
-        return new LaunchCheck('ai.measurement', $g, 'Meranie 30 + 30 AI úloh', $enough && $current ? LaunchCheckStatus::Ok : LaunchCheckStatus::Warn,
-            $text.' textov, '.$image.' obrázkov · '.($m['at'] ?? '?').($current ? '' : ' · iný model než aktuálne nastavenie'),
-            $enough && $current ? null : 'Zopakuj meranie s aktuálnym modelom a aspoň '.self::MEASUREMENT_MINIMUM.' úlohami každého druhu.');
+        return new LaunchCheck('ai.measurement', $g, __('Meranie 30 + 30 AI úloh'), $enough && $current ? LaunchCheckStatus::Ok : LaunchCheckStatus::Warn,
+            $current ? __(':text textov, :image obrázkov · :at', ['text' => $text, 'image' => $image, 'at' => $m['at'] ?? '?']) : __(':text textov, :image obrázkov · :at · iný model než aktuálne nastavenie', ['text' => $text, 'image' => $image, 'at' => $m['at'] ?? '?']),
+            $enough && $current ? null : __('Zopakuj meranie s aktuálnym modelom a aspoň :minimum úlohami každého druhu.', ['minimum' => self::MEASUREMENT_MINIMUM]));
     }
 
     /** @return array<string, mixed>|null the last stored measurement summary */
@@ -447,10 +447,10 @@ class LaunchReadiness
         $checks = [];
         foreach ($this->signoffs->all() as $key => $confirmation) {
             $item = LaunchSignoffs::ITEMS[$key];
-            $checks[] = new LaunchCheck('signoff.'.$key, self::GROUP_SIGNOFFS, $item['label'],
+            $checks[] = new LaunchCheck('signoff.'.$key, self::GROUP_SIGNOFFS, __($item['label']),
                 $confirmation !== null ? LaunchCheckStatus::Ok : (LaunchSignoffs::isOptional($key) ? LaunchCheckStatus::Warn : LaunchCheckStatus::Fail),
-                $confirmation !== null ? 'potvrdené '.CarbonImmutable::parse($confirmation['at'])->format('j. n. Y').': '.$confirmation['note'] : 'nepotvrdené',
-                $confirmation !== null ? null : $item['hint']);
+                $confirmation !== null ? __('potvrdené :date: :note', ['date' => CarbonImmutable::parse($confirmation['at'])->format('j. n. Y'), 'note' => $confirmation['note']]) : __('nepotvrdené'),
+                $confirmation !== null ? null : __($item['hint']));
         }
 
         return $checks;
@@ -463,11 +463,11 @@ class LaunchReadiness
         $fails = count(array_filter($checks, fn (LaunchCheck $c) => $c->isFail()));
 
         return match (true) {
-            $on && $fails > 0 => new LaunchCheck('launch.switch', self::GROUP_SWITCH, 'Prepínač platieb', LaunchCheckStatus::Fail, 'platby sú ZAPNUTÉ, hoci checklist má '.$fails.' blokujúcich položiek',
-                'Vypni RECIPES_CHECKOUT_ENABLED alebo dorieš položky vyššie; predávať s nesplneným checklistom sa nesmie.'),
-            $on => new LaunchCheck('launch.switch', self::GROUP_SWITCH, 'Prepínač platieb', LaunchCheckStatus::Ok, 'platby sú zapnuté a checklist je bez blokujúcich položiek'),
-            $fails > 0 => new LaunchCheck('launch.switch', self::GROUP_SWITCH, 'Prepínač platieb', LaunchCheckStatus::Warn, 'platby vypnuté · '.$fails.' blokujúcich položiek', 'Zapnutie (RECIPES_CHECKOUT_ENABLED=true) až po vyriešení všetkých blokujúcich položiek, samostatným nasadením.'),
-            default => new LaunchCheck('launch.switch', self::GROUP_SWITCH, 'Prepínač platieb', LaunchCheckStatus::Warn, 'checklist splnený, platby ešte vypnuté', 'Zapni RECIPES_CHECKOUT_ENABLED=true samostatným, kontrolovaným nasadením a over prvý nákup v živom režime.'),
+            $on && $fails > 0 => new LaunchCheck('launch.switch', self::GROUP_SWITCH, __('Prepínač platieb'), LaunchCheckStatus::Fail, __('platby sú ZAPNUTÉ, hoci checklist má :count blokujúcich položiek', ['count' => $fails]),
+                __('Vypni RECIPES_CHECKOUT_ENABLED alebo dorieš položky vyššie; predávať s nesplneným checklistom sa nesmie.')),
+            $on => new LaunchCheck('launch.switch', self::GROUP_SWITCH, __('Prepínač platieb'), LaunchCheckStatus::Ok, __('platby sú zapnuté a checklist je bez blokujúcich položiek')),
+            $fails > 0 => new LaunchCheck('launch.switch', self::GROUP_SWITCH, __('Prepínač platieb'), LaunchCheckStatus::Warn, __('platby vypnuté · :count blokujúcich položiek', ['count' => $fails]), __('Zapnutie (RECIPES_CHECKOUT_ENABLED=true) až po vyriešení všetkých blokujúcich položiek, samostatným nasadením.')),
+            default => new LaunchCheck('launch.switch', self::GROUP_SWITCH, __('Prepínač platieb'), LaunchCheckStatus::Warn, __('checklist splnený, platby ešte vypnuté'), __('Zapni RECIPES_CHECKOUT_ENABLED=true samostatným, kontrolovaným nasadením a over prvý nákup v živom režime.')),
         };
     }
 

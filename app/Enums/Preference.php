@@ -11,9 +11,9 @@ enum Preference: string
     public function label(): string
     {
         return match ($this) {
-            self::Favorite => 'Obľúbené',
-            self::Eats => 'Zje',
-            self::Dislikes => 'Nemá rád',
+            self::Favorite => __('Obľúbené'),
+            self::Eats => __('Zje'),
+            self::Dislikes => __('Nemá rád'),
         };
     }
 }

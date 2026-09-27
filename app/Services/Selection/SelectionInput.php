@@ -22,6 +22,6 @@ final class SelectionInput
 
     public function nameOf(int $personId): string
     {
-        return $this->personNames[$personId] ?? 'stravník';
+        return $this->personNames[$personId] ?? __('stravník');
     }
 }

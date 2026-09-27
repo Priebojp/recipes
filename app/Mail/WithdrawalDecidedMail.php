@@ -21,7 +21,7 @@ class WithdrawalDecidedMail extends Mailable implements ShouldQueue
 
     public function envelope(): Envelope
     {
-        $subject = $this->request->status === WithdrawalStatus::Refunded ? 'Odstúpenie od zmluvy '.$this->request->reference.' – refundácia' : 'Odstúpenie od zmluvy '.$this->request->reference.' – rozhodnutie';
+        $subject = $this->request->status === WithdrawalStatus::Refunded ? __('Odstúpenie od zmluvy :reference – refundácia', ['reference' => $this->request->reference]) : __('Odstúpenie od zmluvy :reference – rozhodnutie', ['reference' => $this->request->reference]);
 
         return new Envelope(subject: $subject);
     }

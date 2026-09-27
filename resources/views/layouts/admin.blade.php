@@ -7,34 +7,34 @@
     <body class="min-h-screen bg-paper text-zinc-800 antialiased dark:bg-zinc-900 dark:text-zinc-100">
         @php
             $nav = [
-                'Prehľad' => [
-                    ['route' => 'admin.index', 'label' => 'Prehľad', 'icon' => 'chart-bar', 'match' => 'admin.index'],
-                    ['route' => 'admin.households', 'label' => 'Domácnosti', 'icon' => 'home-modern', 'match' => 'admin.households*'],
+                __('Prehľad') => [
+                    ['route' => 'admin.index', 'label' => __('Prehľad'), 'icon' => 'chart-bar', 'match' => 'admin.index'],
+                    ['route' => 'admin.households', 'label' => __('Domácnosti'), 'icon' => 'home-modern', 'match' => 'admin.households*'],
                 ],
-                'Financie' => [
-                    ['route' => 'admin.subscriptions', 'label' => 'Predplatné', 'icon' => 'arrow-path', 'match' => 'admin.subscriptions'],
-                    ['route' => 'admin.orders', 'label' => 'Objednávky', 'icon' => 'shopping-bag', 'match' => 'admin.orders*'],
-                    ['route' => 'admin.refunds', 'label' => 'Refundácie', 'icon' => 'receipt-refund', 'match' => 'admin.refunds'],
-                    ['route' => 'admin.usage', 'label' => 'AI použitia', 'icon' => 'ticket', 'match' => 'admin.usage'],
-                    ['route' => 'admin.catalog', 'label' => 'Katalóg', 'icon' => 'tag', 'match' => 'admin.catalog'],
-                    ['route' => 'admin.stripe-events', 'label' => 'Stripe udalosti', 'icon' => 'bolt', 'match' => 'admin.stripe-events'],
+                __('Financie') => [
+                    ['route' => 'admin.subscriptions', 'label' => __('Predplatné'), 'icon' => 'arrow-path', 'match' => 'admin.subscriptions'],
+                    ['route' => 'admin.orders', 'label' => __('Objednávky'), 'icon' => 'shopping-bag', 'match' => 'admin.orders*'],
+                    ['route' => 'admin.refunds', 'label' => __('Refundácie'), 'icon' => 'receipt-refund', 'match' => 'admin.refunds'],
+                    ['route' => 'admin.usage', 'label' => __('AI použitia'), 'icon' => 'ticket', 'match' => 'admin.usage'],
+                    ['route' => 'admin.catalog', 'label' => __('Katalóg'), 'icon' => 'tag', 'match' => 'admin.catalog'],
+                    ['route' => 'admin.stripe-events', 'label' => __('Stripe udalosti'), 'icon' => 'bolt', 'match' => 'admin.stripe-events'],
                 ],
-                'AI' => [
-                    ['route' => 'admin.ai', 'label' => 'Použitie a náklady', 'icon' => 'cpu-chip', 'match' => 'admin.ai'],
-                    ['route' => 'admin.ai.settings', 'label' => 'Nastavenia', 'icon' => 'adjustments-horizontal', 'match' => 'admin.ai.settings'],
-                    ['route' => 'admin.ai.rates', 'label' => 'Cenník AI', 'icon' => 'currency-dollar', 'match' => 'admin.ai.rates'],
+                __('AI') => [
+                    ['route' => 'admin.ai', 'label' => __('Použitie a náklady'), 'icon' => 'cpu-chip', 'match' => 'admin.ai'],
+                    ['route' => 'admin.ai.settings', 'label' => __('Nastavenia'), 'icon' => 'adjustments-horizontal', 'match' => 'admin.ai.settings'],
+                    ['route' => 'admin.ai.rates', 'label' => __('Cenník AI'), 'icon' => 'currency-dollar', 'match' => 'admin.ai.rates'],
                 ],
-                'Výživa' => [
-                    ['route' => 'admin.food', 'label' => 'Potraviny', 'icon' => 'cake', 'match' => 'admin.food'],
+                __('Výživa') => [
+                    ['route' => 'admin.food', 'label' => __('Potraviny'), 'icon' => 'cake', 'match' => 'admin.food'],
                 ],
-                'Právne a súkromie' => [
-                    ['route' => 'admin.legal', 'label' => 'Právne dokumenty', 'icon' => 'scale', 'match' => 'admin.legal*'],
-                    ['route' => 'admin.services', 'label' => 'Služby a cookies', 'icon' => 'squares-2x2', 'match' => 'admin.services'],
-                    ['route' => 'admin.privacy', 'label' => 'Súkromie a odstúpenia', 'icon' => 'lock-closed', 'match' => 'admin.privacy'],
+                __('Právne a súkromie') => [
+                    ['route' => 'admin.legal', 'label' => __('Právne dokumenty'), 'icon' => 'scale', 'match' => 'admin.legal*'],
+                    ['route' => 'admin.services', 'label' => __('Služby a cookies'), 'icon' => 'squares-2x2', 'match' => 'admin.services'],
+                    ['route' => 'admin.privacy', 'label' => __('Súkromie a odstúpenia'), 'icon' => 'lock-closed', 'match' => 'admin.privacy'],
                 ],
-                'Dohľad' => [
-                    ['route' => 'admin.audit', 'label' => 'Audit', 'icon' => 'document-magnifying-glass', 'match' => 'admin.audit'],
-                    ['route' => 'admin.launch', 'label' => 'Launch checklist', 'icon' => 'rocket-launch', 'match' => 'admin.launch'],
+                __('Dohľad') => [
+                    ['route' => 'admin.audit', 'label' => __('Audit'), 'icon' => 'document-magnifying-glass', 'match' => 'admin.audit'],
+                    ['route' => 'admin.launch', 'label' => __('Launch checklist'), 'icon' => 'rocket-launch', 'match' => 'admin.launch'],
                 ],
             ];
         @endphp
@@ -60,23 +60,23 @@
             <flux:spacer />
 
             <flux:sidebar.nav>
-                <flux:sidebar.item icon="arrow-uturn-left" :href="route('cook.index')" wire:navigate>Späť do aplikácie</flux:sidebar.item>
+                <flux:sidebar.item icon="arrow-uturn-left" :href="route('cook.index')" wire:navigate>{{ __('Späť do aplikácie') }}</flux:sidebar.item>
             </flux:sidebar.nav>
 
             <div class="px-2 pb-2 text-xs text-zinc-500 dark:text-zinc-400">
-                Prihlásený administrátor: {{ auth()->user()->email }}
+                {{ __('Prihlásený administrátor: :email', ['email' => auth()->user()->email]) }}
             </div>
         </flux:sidebar>
 
         <flux:header class="sticky top-0 z-30 h-14 items-center gap-3 border-b border-zinc-200/70 bg-paper/90 !px-4 backdrop-blur lg:hidden dark:border-zinc-800 dark:bg-zinc-900/90">
             <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
-            <flux:heading class="truncate font-display text-lg">{{ $title ?? 'Administrácia' }}</flux:heading>
+            <flux:heading class="truncate font-display text-lg">{{ isset($title) ? __($title) : __('Administrácia') }}</flux:heading>
         </flux:header>
 
         <flux:main container class="max-w-7xl pb-16">
             <div class="mb-4 hidden items-center gap-2 lg:flex">
-                <flux:badge color="amber" size="sm" icon="shield-check">Administrácia platformy</flux:badge>
-                <flux:text class="text-xs">Neobsahuje obsah receptov ani mená členov domácností.</flux:text>
+                <flux:badge color="amber" size="sm" icon="shield-check">{{ __('Administrácia platformy') }}</flux:badge>
+                <flux:text class="text-xs">{{ __('Neobsahuje obsah receptov ani mená členov domácností.') }}</flux:text>
             </div>
             {{ $slot }}
         </flux:main>

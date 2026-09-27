@@ -83,15 +83,15 @@ class AiAvailability
         $jobKind = $kind->aiJobKind();
         $configured = $jobKind === AiJobKind::Text ? $this->textConfigured() : $this->imageConfigured();
         if (! $configured) {
-            return 'AI nie je nakonfigurované – chýba API kľúč poskytovateľa. Recept funguje bez AI.';
+            return __('AI nie je nakonfigurované – chýba API kľúč poskytovateľa. Recept funguje bez AI.');
         }
 
         if (! $this->enabled()) {
-            return 'AI funkcie sú dočasne nedostupné. Recepty môžeš ďalej upravovať ručne.';
+            return __('AI funkcie sú dočasne nedostupné. Recepty môžeš ďalej upravovať ručne.');
         }
 
         if ($household->isBlocked()) {
-            return 'AI funkcie sú pre túto domácnosť pozastavené. Recepty môžeš ďalej upravovať ručne; ozvi sa podpore.';
+            return __('AI funkcie sú pre túto domácnosť pozastavené. Recepty môžeš ďalej upravovať ručne; ozvi sa podpore.');
         }
 
         // The ledger decides whether the household has a use left; the trial and the current monthly grant of a paid
@@ -116,7 +116,7 @@ class AiAvailability
             ->count();
 
         if ($used >= $limit) {
-            return "Denný limit {$limit} AI úloh pre domácnosť je vyčerpaný. Skús to zajtra.";
+            return __('Denný limit :limit AI úloh pre domácnosť je vyčerpaný. Skús to zajtra.', ['limit' => $limit]);
         }
 
         $running = AiJob::query()
@@ -125,7 +125,7 @@ class AiAvailability
             ->count();
 
         if ($running >= $this->settings->maxConcurrentJobs()) {
-            return 'Prebieha už maximálny počet AI úloh. Počkaj na ich dokončenie.';
+            return __('Prebieha už maximálny počet AI úloh. Počkaj na ich dokončenie.');
         }
 
         return null;

@@ -10,7 +10,7 @@ new class extends Component {}; ?>
         <flux:subheading>{{ __('Delete your account and all of its resources') }}</flux:subheading>
     </div>
 
-    <flux:text class="text-sm">Pred vymazaním uvidíš dopad na domácnosť, predplatné a nevyužité balíky. Vymazanie je v nastaveniach súkromia.</flux:text>
+    <flux:text class="text-sm">{{ __('Pred vymazaním uvidíš dopad na domácnosť, predplatné a nevyužité balíky. Vymazanie je v nastaveniach súkromia.') }}</flux:text>
     <flux:button variant="danger" :href="route('privacy.edit')" wire:navigate data-test="delete-user-button">
         {{ __('Delete account') }}
     </flux:button>

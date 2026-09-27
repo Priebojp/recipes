@@ -6,10 +6,10 @@
     <body class="min-h-screen bg-paper text-zinc-800 antialiased dark:bg-zinc-900 dark:text-zinc-100">
         @php
             $nav = [
-                ['route' => 'cook.index', 'label' => 'Čo variť', 'icon' => 'sparkles', 'match' => 'cook.*'],
-                ['route' => 'recipes.index', 'label' => 'Recepty', 'icon' => 'book-open', 'match' => 'recipes.*'],
-                ['route' => 'plan.index', 'label' => 'Plán', 'icon' => 'calendar-days', 'match' => 'plan.*'],
-                ['route' => 'family.index', 'label' => 'Rodina', 'icon' => 'users', 'match' => 'family.*'],
+                ['route' => 'cook.index', 'label' => __('Čo variť'), 'icon' => 'sparkles', 'match' => 'cook.*'],
+                ['route' => 'recipes.index', 'label' => __('Recepty'), 'icon' => 'book-open', 'match' => 'recipes.*'],
+                ['route' => 'plan.index', 'label' => __('Plán'), 'icon' => 'calendar-days', 'match' => 'plan.*'],
+                ['route' => 'family.index', 'label' => __('Rodina'), 'icon' => 'users', 'match' => 'family.*'],
             ];
             $accountActive = request()->routeIs('household.edit', 'plan.history', 'profile.edit', 'security.edit', 'appearance.edit', 'subscription.edit', 'usage.index', 'privacy.edit');
         @endphp
@@ -24,7 +24,7 @@
                     <span class="font-display text-lg font-semibold text-zinc-900 dark:text-white">{{ config('app.name') }}</span>
                 </a>
 
-                <nav class="flex flex-1 items-center justify-center gap-1" aria-label="Hlavná navigácia">
+                <nav class="flex flex-1 items-center justify-center gap-1" aria-label="{{ __('Hlavná navigácia') }}">
                     @foreach ($nav as $item)
                         @php($active = request()->routeIs($item['match']))
                         <a href="{{ route($item['route']) }}" wire:navigate
@@ -37,13 +37,13 @@
                 </nav>
 
                 <flux:button :href="route('recipes.create')" wire:navigate variant="filled" icon="plus" size="sm" class="shrink-0 rounded-full" data-test="header-new-recipe">
-                    Nový recept
+                    {{ __('Nový recept') }}
                 </flux:button>
 
                 <flux:dropdown position="bottom" align="end">
                     <button type="button"
                             class="flex shrink-0 items-center rounded-full p-0.5 transition ring-offset-2 ring-offset-paper focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent {{ $accountActive ? 'ring-2 ring-accent' : 'hover:bg-zinc-900/5 dark:hover:bg-white/5' }}"
-                            aria-label="Účet a nastavenia" data-test="desktop-menu-button">
+                            aria-label="{{ __('Účet a nastavenia') }}" data-test="desktop-menu-button">
                         <flux:avatar :name="auth()->user()->name" :initials="auth()->user()->initials()" size="sm" color="auto" />
                     </button>
                     <x-user-menu />
@@ -56,7 +56,7 @@
             <a href="{{ route('cook.index') }}" wire:navigate class="flex size-8 items-center justify-center rounded-lg bg-accent text-accent-foreground" aria-label="{{ config('app.name') }}">
                 <x-app-logo-icon class="size-4" />
             </a>
-            <flux:heading class="truncate font-display text-lg">{{ $title ?? config('app.name') }}</flux:heading>
+            <flux:heading class="truncate font-display text-lg">{{ isset($title) ? __($title) : config('app.name') }}</flux:heading>
         </flux:header>
 
         {{ $slot }}
@@ -64,7 +64,7 @@
         @include('partials.consent')
 
         {{-- Mobile bottom navigation: four sections plus the account menu. --}}
-        <nav class="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200/70 bg-paper/95 backdrop-blur lg:hidden dark:border-zinc-800 dark:bg-zinc-900/95" aria-label="Hlavná navigácia">
+        <nav class="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200/70 bg-paper/95 backdrop-blur lg:hidden dark:border-zinc-800 dark:bg-zinc-900/95" aria-label="{{ __('Hlavná navigácia') }}">
             <div class="grid grid-cols-5">
                 @foreach ($nav as $item)
                     @php($active = request()->routeIs($item['match']))
@@ -83,7 +83,7 @@
                         <span class="flex h-7 w-12 items-center justify-center">
                             <flux:avatar :name="auth()->user()->name" :initials="auth()->user()->initials()" size="xs" color="auto" />
                         </span>
-                        <span>Viac</span>
+                        <span>{{ __('Viac') }}</span>
                     </button>
                     <x-user-menu />
                 </flux:dropdown>

@@ -106,15 +106,15 @@ new #[Layout('layouts::admin')] #[Title('Domácnosti')] class extends Component 
 }; ?>
 
 <div class="space-y-6">
-    <x-page-header title="Domácnosti" subtitle="Stav, plán a aktivita domácností. Detail otvára predplatné, objednávky, použitia, kompenzácie a blokovanie." />
+    <x-page-header :title="__('Domácnosti')" :subtitle="__('Stav, plán a aktivita domácností. Detail otvára predplatné, objednávky, použitia, kompenzácie a blokovanie.')" />
 
     <div class="flex flex-wrap items-end gap-3">
-        <flux:input wire:model.live.debounce.400ms="search" icon="magnifying-glass" placeholder="Hľadať podľa názvu, e-mailu vlastníka alebo ID" clearable class="max-w-md" />
+        <flux:input wire:model.live.debounce.400ms="search" icon="magnifying-glass" :placeholder="__('Hľadať podľa názvu, e-mailu vlastníka alebo ID')" clearable class="max-w-md" />
         <flux:select wire:model.live="plan" class="w-44">
-            <flux:select.option value="">všetky plány</flux:select.option>
+            <flux:select.option value="">{{ __('všetky plány') }}</flux:select.option>
             <flux:select.option value="plus">Plus</flux:select.option>
             <flux:select.option value="free">Free</flux:select.option>
-            <flux:select.option value="blocked">blokované</flux:select.option>
+            <flux:select.option value="blocked">{{ __('blokované') }}</flux:select.option>
         </flux:select>
     </div>
 
@@ -122,9 +122,9 @@ new #[Layout('layouts::admin')] #[Title('Domácnosti')] class extends Component 
         <table class="w-full text-sm">
             <thead class="text-left text-xs uppercase text-zinc-500">
                 <tr>
-                    <th class="py-1 pe-2">ID</th><th class="py-1 pe-2">Domácnosť</th><th class="py-1 pe-2">Vlastník</th><th class="py-1 pe-2">Plán</th>
-                    <th class="py-1 pe-2 text-right">Účty</th><th class="py-1 pe-2 text-right">Recepty</th>
-                    <th class="py-1 pe-2 text-right">AI tento mesiac</th><th class="py-1">Vytvorená</th>
+                    <th class="py-1 pe-2">ID</th><th class="py-1 pe-2">{{ __('Domácnosť') }}</th><th class="py-1 pe-2">{{ __('Vlastník') }}</th><th class="py-1 pe-2">{{ __('Plán') }}</th>
+                    <th class="py-1 pe-2 text-right">{{ __('Účty') }}</th><th class="py-1 pe-2 text-right">{{ __('Recepty') }}</th>
+                    <th class="py-1 pe-2 text-right">{{ __('AI tento mesiac') }}</th><th class="py-1">{{ __('Vytvorená') }}</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-zinc-200/70 dark:divide-zinc-800">
@@ -135,14 +135,14 @@ new #[Layout('layouts::admin')] #[Title('Domácnosti')] class extends Component 
                         <td class="py-1.5 pe-2 text-zinc-500"><a href="{{ route('admin.households.show', $household) }}" class="underline" wire:navigate>#{{ $household->id }}</a></td>
                         <td class="py-1.5 pe-2 font-medium">
                             <a href="{{ route('admin.households.show', $household) }}" wire:navigate>{{ $household->name }}</a>
-                            @if ($household->isBlocked())<flux:badge color="red" size="sm" class="ms-1">blokovaná</flux:badge>@endif
-                            <div class="text-xs text-zinc-500">{{ $household->timezone }} · {{ $household->people_count }} stravníkov</div>
+                            @if ($household->isBlocked())<flux:badge color="red" size="sm" class="ms-1">{{ __('blokovaná') }}</flux:badge>@endif
+                            <div class="text-xs text-zinc-500">{{ $household->timezone }} · {{ __(':count stravníkov', ['count' => $household->people_count]) }}</div>
                         </td>
-                        <td class="py-1.5 pe-2">{{ $household->owner?->email ?? '–' }}@unless ($household->owner?->email_verified_at)<span class="ms-1 text-xs text-amber-600">neoverený</span>@endunless</td>
+                        <td class="py-1.5 pe-2">{{ $household->owner?->email ?? '–' }}@unless ($household->owner?->email_verified_at)<span class="ms-1 text-xs text-amber-600">{{ __('neoverený') }}</span>@endunless</td>
                         <td class="py-1.5 pe-2 whitespace-nowrap">
                             @if ($current)
                                 <flux:badge color="green" size="sm">Plus</flux:badge>
-                                <div class="text-xs text-zinc-500">do {{ $current->ends_at->setTimezone(config('recipes.default_timezone'))->format('d.m.Y') }}@if ($current->order_id === null) · kompenzácia @endif</div>
+                                <div class="text-xs text-zinc-500">{{ __('do :date', ['date' => $current->ends_at->setTimezone(config('recipes.default_timezone'))->format('d.m.Y')]) }}@if ($current->order_id === null) · {{ __('kompenzácia') }} @endif</div>
                             @else
                                 <flux:badge color="zinc" size="sm">Free</flux:badge>
                             @endif
@@ -153,7 +153,7 @@ new #[Layout('layouts::admin')] #[Title('Domácnosti')] class extends Component 
                         <td class="py-1.5 whitespace-nowrap">{{ $household->created_at?->setTimezone(config('recipes.default_timezone'))->format('d.m.Y') }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="8" class="py-3 text-zinc-500">Žiadne domácnosti.</td></tr>
+                    <tr><td colspan="8" class="py-3 text-zinc-500">{{ __('Žiadne domácnosti.') }}</td></tr>
                 @endforelse
             </tbody>
         </table>

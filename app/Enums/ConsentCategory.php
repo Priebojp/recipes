@@ -15,18 +15,18 @@ enum ConsentCategory: string
     public function label(): string
     {
         return match ($this) {
-            self::Necessary => 'Nevyhnutné',
-            self::Analytics => 'Analytika',
-            self::Marketing => 'Marketing',
+            self::Necessary => __('Nevyhnutné'),
+            self::Analytics => __('Analytika'),
+            self::Marketing => __('Marketing'),
         };
     }
 
     public function description(): string
     {
         return match ($this) {
-            self::Necessary => 'Prihlásenie, bezpečnosť a zapamätanie vašej voľby. Nedajú sa vypnúť.',
-            self::Analytics => 'Meranie používania aplikácie bez obsahu receptov a bez údajov o rodine. Spustí sa až po vašom súhlase.',
-            self::Marketing => 'Reklamné technológie. Momentálne nepoužívame žiadne.',
+            self::Necessary => __('Prihlásenie, bezpečnosť a zapamätanie vašej voľby. Nedajú sa vypnúť.'),
+            self::Analytics => __('Meranie používania aplikácie bez obsahu receptov a bez údajov o rodine. Spustí sa až po vašom súhlase.'),
+            self::Marketing => __('Reklamné technológie. Momentálne nepoužívame žiadne.'),
         };
     }
 

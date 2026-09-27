@@ -136,7 +136,7 @@ class AiTextAssistant extends Component
         }
 
         $this->error = '';
-        $this->notice = 'Návrh bol použitý ako nová revízia. Pôvodný text zostáva v histórii revízií.';
+        $this->notice = __('Návrh bol použitý ako nová revízia. Pôvodný text zostáva v histórii revízií.');
         unset($this->job, $this->recipe);
         $this->dispatch('ai-applied');
     }

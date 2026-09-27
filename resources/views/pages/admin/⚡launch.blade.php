@@ -69,7 +69,7 @@ new #[Layout('layouts::admin')] #[Title('Launch checklist')] class extends Compo
         $this->resetErrorBag('notes.'.$key);
         $note = trim((string) ($this->notes[$key] ?? ''));
         if ($note === '') {
-            $this->addError('notes.'.$key, 'Napíš, kto a čo overil (dátum, dokument, výsledok).');
+            $this->addError('notes.'.$key, __('Napíš, kto a čo overil (dátum, dokument, výsledok).'));
 
             return;
         }
@@ -85,7 +85,7 @@ new #[Layout('layouts::admin')] #[Title('Launch checklist')] class extends Compo
         unset($this->notes[$key]);
         $this->withStripe = false;
         $this->refresh();
-        Flux::toast(variant: 'success', text: 'Potvrdenie zapísané do auditu.');
+        Flux::toast(variant: 'success', text: __('Potvrdenie zapísané do auditu.'));
     }
 
     public function withdraw(string $key): void
@@ -94,7 +94,7 @@ new #[Layout('layouts::admin')] #[Title('Launch checklist')] class extends Compo
         $this->resetErrorBag('notes.'.$key);
         $reason = trim((string) ($this->notes[$key] ?? ''));
         if ($reason === '') {
-            $this->addError('notes.'.$key, 'Odvolanie potrebuje dôvod.');
+            $this->addError('notes.'.$key, __('Odvolanie potrebuje dôvod.'));
 
             return;
         }
@@ -103,7 +103,7 @@ new #[Layout('layouts::admin')] #[Title('Launch checklist')] class extends Compo
         unset($this->notes[$key]);
         $this->withStripe = false;
         $this->refresh();
-        Flux::toast(variant: 'success', text: 'Potvrdenie odvolané; položka opäť blokuje launch.');
+        Flux::toast(variant: 'success', text: __('Potvrdenie odvolané; položka opäť blokuje launch.'));
     }
 
     private function refresh(): void
@@ -113,30 +113,30 @@ new #[Layout('layouts::admin')] #[Title('Launch checklist')] class extends Compo
 }; ?>
 
 <div class="space-y-6">
-    <x-page-header title="Launch checklist" subtitle="Čo aplikácia vie overiť sama a čo musí potvrdiť prevádzkovateľ pred zapnutím platieb. Zapnutie je samostatné nasadenie (RECIPES_CHECKOUT_ENABLED), nie tlačidlo." />
+    <x-page-header :title="__('Launch checklist')" :subtitle="__('Čo aplikácia vie overiť sama a čo musí potvrdiť prevádzkovateľ pred zapnutím platieb. Zapnutie je samostatné nasadenie (RECIPES_CHECKOUT_ENABLED), nie tlačidlo.')" />
 
     @php($s = $this->summary)
     @if ($s['ready'])
         <flux:callout variant="success" icon="check-badge" data-test="launch-ready">
-            <flux:callout.heading>Bez blokujúcich položiek</flux:callout.heading>
-            <flux:callout.text>{{ $s['ok'] }} OK · {{ $s['warn'] }} upozornení · {{ $s['skip'] }} neoverených. Platby sa zapínajú nastavením <code>RECIPES_CHECKOUT_ENABLED=true</code> v samostatnom nasadení; potom over prvý nákup v živom režime a webhook v <a href="{{ route('admin.stripe-events') }}" class="underline" wire:navigate>Stripe udalostiach</a>.</flux:callout.text>
+            <flux:callout.heading>{{ __('Bez blokujúcich položiek') }}</flux:callout.heading>
+            <flux:callout.text>{{ $s['ok'] }} OK · {{ __(':count upozornení', ['count' => $s['warn']]) }} · {{ __(':count neoverených', ['count' => $s['skip']]) }}. {!! __('Platby sa zapínajú nastavením :setting v samostatnom nasadení; potom over prvý nákup v živom režime a webhook v :link.', ['setting' => '<code>RECIPES_CHECKOUT_ENABLED=true</code>', 'link' => '<a href="'.route('admin.stripe-events').'" class="underline" wire:navigate>'.__('Stripe udalostiach').'</a>']) !!}</flux:callout.text>
         </flux:callout>
     @else
         <flux:callout variant="warning" icon="exclamation-triangle" data-test="launch-blocked">
-            <flux:callout.heading>Launch je blokovaný: {{ $s['fail'] }} položiek</flux:callout.heading>
-            <flux:callout.text>{{ $s['ok'] }} OK · {{ $s['warn'] }} upozornení · {{ $s['skip'] }} neoverených. Rovnaký výsledok dáva <code>php artisan app:launch-check</code> (exit 1, kým niečo blokuje) – vhodné do deploy pipeline.</flux:callout.text>
+            <flux:callout.heading>{{ __('Launch je blokovaný: :count položiek', ['count' => $s['fail']]) }}</flux:callout.heading>
+            <flux:callout.text>{{ $s['ok'] }} OK · {{ __(':count upozornení', ['count' => $s['warn']]) }} · {{ __(':count neoverených', ['count' => $s['skip']]) }}. {!! __('Rovnaký výsledok dáva :command (exit 1, kým niečo blokuje) – vhodné do deploy pipeline.', ['command' => '<code>php artisan app:launch-check</code>']) !!}</flux:callout.text>
         </flux:callout>
     @endif
 
     <div class="flex flex-wrap items-center gap-2">
-        <flux:button size="sm" variant="primary" icon="bolt" wire:click="verifyStripe" wire:loading.attr="disabled" data-test="verify-stripe">Overiť ceny a webhook v Stripe</flux:button>
-        <flux:text class="text-xs">Volá Stripe API s nakonfigurovaným kľúčom ({{ \App\Support\StripeDashboard::isLive() ? 'živý režim' : 'sandbox' }}); porovná ceny s katalógom a udalosti na webhook endpointe.</flux:text>
+        <flux:button size="sm" variant="primary" icon="bolt" wire:click="verifyStripe" wire:loading.attr="disabled" data-test="verify-stripe">{{ __('Overiť ceny a webhook v Stripe') }}</flux:button>
+        <flux:text class="text-xs">{{ __('Volá Stripe API s nakonfigurovaným kľúčom (:mode); porovná ceny s katalógom a udalosti na webhook endpointe.', ['mode' => \App\Support\StripeDashboard::isLive() ? __('živý režim') : __('sandbox')]) }}</flux:text>
     </div>
 
     @foreach ($this->grouped as $group => $checks)
         @continue($group === LaunchReadiness::GROUP_SIGNOFFS)
         <flux:card class="space-y-3">
-            <flux:heading size="lg" class="font-display">{{ $group }}</flux:heading>
+            <flux:heading size="lg" class="font-display">{{ __($group) }}</flux:heading>
             <ul class="divide-y divide-zinc-200/70 dark:divide-zinc-800" data-test="group-{{ \Illuminate\Support\Str::slug($group) }}">
                 @foreach ($checks as $check)
                     <li class="flex flex-col gap-1 py-2 sm:flex-row sm:items-start sm:gap-4">
@@ -154,18 +154,18 @@ new #[Layout('layouts::admin')] #[Title('Launch checklist')] class extends Compo
 
     <flux:card class="space-y-4" data-test="signoffs">
         <div>
-            <flux:heading size="lg" class="font-display">Ručné potvrdenia</flux:heading>
-            <flux:text class="text-sm">Rozhodnutia, ktoré aplikácia overiť nevie (zadanie kap. 7 a 18). Potvrdenie zapisuje kto, kedy a poznámku do auditu; nie je právnym posúdením.</flux:text>
+            <flux:heading size="lg" class="font-display">{{ __('Ručné potvrdenia') }}</flux:heading>
+            <flux:text class="text-sm">{{ __('Rozhodnutia, ktoré aplikácia overiť nevie (zadanie kap. 7 a 18). Potvrdenie zapisuje kto, kedy a poznámku do auditu; nie je právnym posúdením.') }}</flux:text>
         </div>
         <ul class="divide-y divide-zinc-200/70 dark:divide-zinc-800">
             @foreach (LaunchSignoffs::ITEMS as $key => $item)
                 @php($confirmation = $this->signoffs[$key] ?? null)
                 <li class="py-3 space-y-2" data-test="signoff-{{ $key }}">
                     <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:gap-4">
-                        <div class="sm:w-28 shrink-0"><flux:badge size="sm" :color="$confirmation ? 'green' : (LaunchSignoffs::isOptional($key) ? 'amber' : 'red')">{{ $confirmation ? 'Potvrdené' : (LaunchSignoffs::isOptional($key) ? 'Voliteľné' : 'Chýba') }}</flux:badge></div>
+                        <div class="sm:w-28 shrink-0"><flux:badge size="sm" :color="$confirmation ? 'green' : (LaunchSignoffs::isOptional($key) ? 'amber' : 'red')">{{ $confirmation ? __('Potvrdené') : (LaunchSignoffs::isOptional($key) ? __('Voliteľné') : __('Chýba')) }}</flux:badge></div>
                         <div class="min-w-0 flex-1 text-sm">
-                            <div class="font-medium">{{ $item['label'] }}</div>
-                            <div class="text-xs text-zinc-500">{{ $item['hint'] }}</div>
+                            <div class="font-medium">{{ __($item['label']) }}</div>
+                            <div class="text-xs text-zinc-500">{{ __($item['hint']) }}</div>
                             @if ($confirmation)
                                 <div class="mt-1 text-zinc-600 dark:text-zinc-400">{{ \Carbon\CarbonImmutable::parse($confirmation['at'])->timezone(config('recipes.default_timezone'))->format('j. n. Y H:i') }} · {{ $confirmation['note'] }}</div>
                             @endif
@@ -173,13 +173,13 @@ new #[Layout('layouts::admin')] #[Title('Launch checklist')] class extends Compo
                     </div>
                     <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:ps-32">
                         <div class="flex-1">
-                            <flux:input wire:model="notes.{{ $key }}" size="sm" placeholder="{{ $confirmation ? 'Dôvod odvolania' : 'Kto a čo overil, dátum, dokument' }}" />
+                            <flux:input wire:model="notes.{{ $key }}" size="sm" :placeholder="$confirmation ? __('Dôvod odvolania') : __('Kto a čo overil, dátum, dokument')" />
                             @error('notes.'.$key) <flux:text class="text-xs text-red-600 mt-1">{{ $message }}</flux:text> @enderror
                         </div>
                         @if ($confirmation)
-                            <flux:button size="sm" variant="ghost" wire:click="withdraw('{{ $key }}')" wire:confirm="Odvolať potvrdenie? Položka bude opäť blokovať launch." data-test="withdraw-{{ $key }}">Odvolať</flux:button>
+                            <flux:button size="sm" variant="ghost" wire:click="withdraw('{{ $key }}')" wire:confirm="{{ __('Odvolať potvrdenie? Položka bude opäť blokovať launch.') }}" data-test="withdraw-{{ $key }}">{{ __('Odvolať') }}</flux:button>
                         @else
-                            <flux:button size="sm" variant="primary" wire:click="confirm('{{ $key }}')" data-test="confirm-{{ $key }}">Potvrdiť</flux:button>
+                            <flux:button size="sm" variant="primary" wire:click="confirm('{{ $key }}')" data-test="confirm-{{ $key }}">{{ __('Potvrdiť') }}</flux:button>
                         @endif
                     </div>
                 </li>
@@ -189,31 +189,31 @@ new #[Layout('layouts::admin')] #[Title('Launch checklist')] class extends Compo
 
     <div class="grid gap-4 lg:grid-cols-2">
         <flux:card class="space-y-3" data-test="measurement">
-            <flux:heading size="lg" class="font-display">Meranie AI nákladov</flux:heading>
+            <flux:heading size="lg" class="font-display">{{ __('Meranie AI nákladov') }}</flux:heading>
             @php($m = $this->measurement)
             @if ($m === null)
-                <flux:text class="text-sm">Zatiaľ nemerané. Na reálnom kľúči spusti <code>php artisan app:ai-measure &lt;domácnosť&gt; --yes</code> (predvolene 30 textov + 30 obrázkov); výsledok sa zobrazí tu.</flux:text>
+                <flux:text class="text-sm">{{ __('Zatiaľ nemerané.') }} {!! __('Na reálnom kľúči spusti :command (predvolene 30 textov + 30 obrázkov); výsledok sa zobrazí tu.', ['command' => '<code>php artisan app:ai-measure &lt;domácnosť&gt; --yes</code>']) !!}</flux:text>
             @else
-                <flux:text class="text-xs">Beh {{ $m['run'] }} · {{ \Carbon\CarbonImmutable::parse($m['at'])->timezone(config('recipes.default_timezone'))->format('j. n. Y H:i') }} · spolu {{ Money::microUsd((int) $m['total_cost_micro']) }} (ceny poskytovateľa v USD)</flux:text>
+                <flux:text class="text-xs">{{ __('Beh :run', ['run' => $m['run']]) }} · {{ \Carbon\CarbonImmutable::parse($m['at'])->timezone(config('recipes.default_timezone'))->format('j. n. Y H:i') }} · {{ __('spolu :cost (ceny poskytovateľa v USD)', ['cost' => Money::microUsd((int) $m['total_cost_micro'])]) }}</flux:text>
                 <dl class="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-sm">
                     @foreach ($m['kinds'] as $kind => $k)
-                        <dt class="text-zinc-500">{{ $kind === 'text' ? 'Text' : 'Obrázok' }} · {{ $k['model'] ?? '?' }} · {{ $k['succeeded'] }}/{{ $k['jobs'] }} doručených</dt>
+                        <dt class="text-zinc-500">{{ $kind === 'text' ? __('Text') : __('Obrázok') }} · {{ $k['model'] ?? '?' }} · {{ __(':succeeded/:jobs doručených', ['succeeded' => $k['succeeded'], 'jobs' => $k['jobs']]) }}</dt>
                         <dd class="text-right tabular-nums">Ø {{ $k['avg_cost_micro'] !== null ? Money::microUsd($k['avg_cost_micro']) : '–' }}</dd>
                     @endforeach
-                    <dt class="font-medium">Plný mesiac Plus (30 + 5) vs. 2,49 € / 2,00 €</dt>
+                    <dt class="font-medium">{{ __('Plný mesiac Plus (30 + 5) vs. 2,49 € / 2,00 €') }}</dt>
                     <dd class="text-right font-medium tabular-nums">{{ $m['projection']['plus_month_micro'] !== null ? Money::microUsd($m['projection']['plus_month_micro'], 2) : '–' }}</dd>
-                    <dt class="text-zinc-500">20 obrázkov vs. 3,99 €</dt>
+                    <dt class="text-zinc-500">{{ __('20 obrázkov vs. 3,99 €') }}</dt>
                     <dd class="text-right tabular-nums">{{ $m['projection']['images_20_micro'] !== null ? Money::microUsd($m['projection']['images_20_micro'], 2) : '–' }}</dd>
-                    <dt class="text-zinc-500">100 textov vs. 1,99 €</dt>
+                    <dt class="text-zinc-500">{{ __('100 textov vs. 1,99 €') }}</dt>
                     <dd class="text-right tabular-nums">{{ $m['projection']['text_100_micro'] !== null ? Money::microUsd($m['projection']['text_100_micro'], 2) : '–' }}</dd>
                 </dl>
             @endif
         </flux:card>
 
         <flux:card class="space-y-3">
-            <flux:heading size="lg" class="font-display">Simulácia a nasadenie</flux:heading>
-            <flux:text class="text-sm">Sandbox: <code>php artisan app:billing-test-clock start &lt;domácnosť&gt; --plan=plus_yearly --at="2027-01-31 10:00"</code>, potom <code>advance clock_… --at="+1 month"</code> a <code>status clock_… --sync</code>. Webhooky musia doraziť do tejto inštancie.</flux:text>
-            <flux:text class="text-sm">Produkcia: <code>php artisan cashier:webhook</code> vytvorí endpoint s presným zoznamom udalostí; <code>php artisan app:launch-check --stripe</code> v deploy pipeline. Postup krok za krokom je v <code>docs/runbook-launch.md</code>.</flux:text>
+            <flux:heading size="lg" class="font-display">{{ __('Simulácia a nasadenie') }}</flux:heading>
+            <flux:text class="text-sm">{!! __('Sandbox: :start, potom :advance a :status.', ['start' => '<code>php artisan app:billing-test-clock start &lt;domácnosť&gt; --plan=plus_yearly --at="2027-01-31 10:00"</code>', 'advance' => '<code>advance clock_… --at="+1 month"</code>', 'status' => '<code>status clock_… --sync</code>']) !!} {{ __('Webhooky musia doraziť do tejto inštancie.') }}</flux:text>
+            <flux:text class="text-sm">{!! __('Produkcia: :webhook vytvorí endpoint s presným zoznamom udalostí; :check v deploy pipeline.', ['webhook' => '<code>php artisan cashier:webhook</code>', 'check' => '<code>php artisan app:launch-check --stripe</code>']) !!} {!! __('Postup krok za krokom je v :file.', ['file' => '<code>docs/runbook-launch.md</code>']) !!}</flux:text>
         </flux:card>
     </div>
 </div>

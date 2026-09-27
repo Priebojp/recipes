@@ -52,12 +52,12 @@ class WithdrawalService
     {
         $order = $request->order;
         if ($request->status !== WithdrawalStatus::Received || $order === null) {
-            throw new InvalidArgumentException('Odstúpenie nie je otvorené alebo nemá priradenú objednávku.');
+            throw new InvalidArgumentException(__('Odstúpenie nie je otvorené alebo nemá priradenú objednávku.'));
         }
 
         $amount = $order->amount_cents - $this->refunds->refundedCents($order);
         if ($amount < 1) {
-            throw new InvalidArgumentException('Objednávka je už celá refundovaná.');
+            throw new InvalidArgumentException(__('Objednávka je už celá refundovaná.'));
         }
 
         $case = $this->refunds->request(
@@ -73,7 +73,7 @@ class WithdrawalService
 
         if ($case->status === RefundStatus::Failed) {
             $request->update(['refund_case_id' => $case->id, 'decision_note' => 'Refundácia v Stripe zlyhala: '.$case->error]);
-            throw new InvalidArgumentException('Refundácia v Stripe zlyhala: '.$case->error);
+            throw new InvalidArgumentException(__('Refundácia v Stripe zlyhala: :error', ['error' => $case->error]));
         }
 
         $request->update([
@@ -92,7 +92,7 @@ class WithdrawalService
     public function reject(WithdrawalRequest $request, User $by, string $note): WithdrawalRequest
     {
         if ($request->status !== WithdrawalStatus::Received) {
-            throw new InvalidArgumentException('Odstúpenie už bolo rozhodnuté.');
+            throw new InvalidArgumentException(__('Odstúpenie už bolo rozhodnuté.'));
         }
 
         $request->update(['status' => WithdrawalStatus::Rejected, 'decision_note' => $note, 'handled_by' => $by->id, 'decided_at' => now()]);

@@ -32,15 +32,15 @@ new #[Title('Overenie platby')] class extends Component {
 }; ?>
 
 <div class="mx-auto max-w-xl space-y-6" @if ($this->order?->status === OrderStatus::Pending) wire:poll.3s="refresh" @endif>
-    <x-page-header title="Overenie platby" :back="route('subscription.edit')" />
+    <x-page-header :title="__('Overenie platby')" :back="route('subscription.edit')" />
 
     @php($order = $this->order)
     @if ($order === null)
-        <flux:callout icon="information-circle" variant="secondary">Platbu overujeme. Stav objednávky nájdeš v Nastavenia → Predplatné.</flux:callout>
+        <flux:callout icon="information-circle" variant="secondary">{{ __('Platbu overujeme. Stav objednávky nájdeš v Nastavenia → Predplatné.') }}</flux:callout>
     @elseif ($order->status === OrderStatus::Pending)
         <flux:callout icon="clock" variant="secondary" data-test="checkout-pending">
-            <flux:callout.heading>Platbu overujeme</flux:callout.heading>
-            <flux:callout.text>{{ $order->productName() }} · {{ App\Services\Billing\Catalog::formatCents($order->amount_cents, $order->currency) }}. Potvrdenie od platobnej brány môže trvať niekoľko sekúnd; stránka sa obnoví sama.</flux:callout.text>
+            <flux:callout.heading>{{ __('Platbu overujeme') }}</flux:callout.heading>
+            <flux:callout.text>{{ $order->productName() }} · {{ App\Services\Billing\Catalog::formatCents($order->amount_cents, $order->currency) }}. {{ __('Potvrdenie od platobnej brány môže trvať niekoľko sekúnd; stránka sa obnoví sama.') }}</flux:callout.text>
         </flux:callout>
     @elseif ($order->status->isSettled())
         @php($event = App\Services\Consent\AnalyticsEvents::sanitize($order->kind === App\Enums\OrderKind::Subscription ? 'subscription_started' : 'addon_purchased', ['offer' => (string) ($order->product_snapshot['code'] ?? '')]))
@@ -49,15 +49,15 @@ new #[Title('Overenie platby')] class extends Component {
             <script type="application/json" id="mr-analytics-event">@json($event)</script>
         @endif
         <flux:callout icon="check-circle" variant="success" data-test="checkout-paid">
-            <flux:callout.heading>Zaplatené</flux:callout.heading>
-            <flux:callout.text>{{ $order->productName() }} je aktívne. Doklad nájdeš v správe platby.</flux:callout.text>
+            <flux:callout.heading>{{ __('Zaplatené') }}</flux:callout.heading>
+            <flux:callout.text>{{ __(':product je aktívne.', ['product' => $order->productName()]) }} {{ __('Doklad nájdeš v správe platby.') }}</flux:callout.text>
         </flux:callout>
     @else
         <flux:callout icon="exclamation-triangle" variant="warning">
-            <flux:callout.heading>Platba nebola dokončená</flux:callout.heading>
-            <flux:callout.text>{{ $order->failure_reason ?? 'Nič sa neúčtovalo.' }} Môžeš to skúsiť znova z cenníka.</flux:callout.text>
+            <flux:callout.heading>{{ __('Platba nebola dokončená') }}</flux:callout.heading>
+            <flux:callout.text>{{ $order->failure_reason ?? __('Nič sa neúčtovalo.') }} {{ __('Môžeš to skúsiť znova z cenníka.') }}</flux:callout.text>
         </flux:callout>
     @endif
 
-    <flux:button :href="route('subscription.edit')" wire:navigate>Predplatné a doklady</flux:button>
+    <flux:button :href="route('subscription.edit')" wire:navigate>{{ __('Predplatné a doklady') }}</flux:button>
 </div>

@@ -14,12 +14,12 @@ enum RefundStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::Requested => 'požiadaná',
-            self::Processed => 'spracovaná',
-            self::Failed => 'zlyhala',
-            self::NeedsReview => 'čaká na posúdenie',
-            self::Reviewed => 'posúdená',
-            self::Disputed => 'spor',
+            self::Requested => __('požiadaná'),
+            self::Processed => __('spracovaná'),
+            self::Failed => __('zlyhala'),
+            self::NeedsReview => __('čaká na posúdenie'),
+            self::Reviewed => __('posúdená'),
+            self::Disputed => __('spor'),
         };
     }
 

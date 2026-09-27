@@ -67,7 +67,7 @@ class AiImageService
     {
         $preview = $this->preview($recipe, $description, $mode);
         if ($preview['needs_description'] || $preview['prompt'] === null) {
-            throw new InvalidArgumentException('Doplň krátky opis jedla, z názvu sa nedá určiť, čo zobraziť.');
+            throw new InvalidArgumentException(__('Doplň krátky opis jedla, z názvu sa nedá určiť, čo zobraziť.'));
         }
 
         $recipe->loadMissing(['ingredients', 'steps', 'mealTypes']);
@@ -177,7 +177,7 @@ class AiImageService
     {
         $media = $this->resultMedia($job);
         if ($media === null) {
-            throw new InvalidArgumentException('Výsledok už nie je dostupný.');
+            throw new InvalidArgumentException(__('Výsledok už nie je dostupný.'));
         }
 
         $this->uploads->activateCover($job->recipe, $media);

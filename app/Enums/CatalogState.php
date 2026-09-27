@@ -11,9 +11,9 @@ enum CatalogState: string
     public function label(): string
     {
         return match ($this) {
-            self::Draft => 'návrh',
-            self::Active => 'aktívna',
-            self::Retired => 'stiahnutá',
+            self::Draft => __('návrh'),
+            self::Active => __('aktívna'),
+            self::Retired => __('stiahnutá'),
         };
     }
 

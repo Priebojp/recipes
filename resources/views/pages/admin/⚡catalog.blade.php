@@ -90,7 +90,7 @@ new #[Layout('layouts::admin')] #[Title('Katalóg')] class extends Component {
 
         $cents = Money::parseEurToCents($validated['draft_price']);
         if ($cents === null || $cents < 1) {
-            $this->addError('draft_price', 'Zadaj konečnú cenu v eurách, napr. 2,49.');
+            $this->addError('draft_price', __('Zadaj konečnú cenu v eurách, napr. 2,49.'));
 
             return;
         }
@@ -116,7 +116,7 @@ new #[Layout('layouts::admin')] #[Title('Katalóg')] class extends Component {
 
         $this->cancelDraft();
         unset($this->plans, $this->addons);
-        Flux::toast(variant: 'success', text: "Návrh {$version->code} v{$version->version} uložený. Predáva sa až po aktivácii.");
+        Flux::toast(variant: 'success', text: __('Návrh :code v:version uložený. Predáva sa až po aktivácii.', ['code' => $version->code, 'version' => $version->version]));
     }
 
     public function activate(string $type, int $id, CatalogManager $manager): void
@@ -135,7 +135,7 @@ new #[Layout('layouts::admin')] #[Title('Katalóg')] class extends Component {
 
         $this->reset('reason');
         unset($this->plans, $this->addons);
-        Flux::toast(variant: 'success', text: "{$version->code} v{$version->version} je aktívna; predchádzajúca verzia je stiahnutá. Kúpené snímky sa nemenia.");
+        Flux::toast(variant: 'success', text: __(':code v:version je aktívna; predchádzajúca verzia je stiahnutá. Kúpené snímky sa nemenia.', ['code' => $version->code, 'version' => $version->version]));
     }
 
     public function retire(string $type, int $id, CatalogManager $manager): void
@@ -148,19 +148,19 @@ new #[Layout('layouts::admin')] #[Title('Katalóg')] class extends Component {
 
         $this->reset('reason');
         unset($this->plans, $this->addons);
-        Flux::toast(text: "{$version->code} v{$version->version} sa už nepredáva.");
+        Flux::toast(text: __(':code v:version sa už nepredáva.', ['code' => $version->code, 'version' => $version->version]));
     }
 }; ?>
 
 <div class="space-y-6">
-    <x-page-header title="Katalóg" subtitle="Návrh → aktívna → stiahnutá. Zmena ceny alebo obsahu je nová verzia; zakúpené objednávky, doklady a zaplatené obdobia zostávajú na pôvodnej." />
+    <x-page-header :title="__('Katalóg')" :subtitle="__('Návrh → aktívna → stiahnutá. Zmena ceny alebo obsahu je nová verzia; zakúpené objednávky, doklady a zaplatené obdobia zostávajú na pôvodnej.')" />
 
-    <flux:input wire:model="reason" label="Dôvod pre aktiváciu / stiahnutie (ide do auditu)" placeholder="napr. potvrdený cenník 10/2026" class="max-w-lg" />
+    <flux:input wire:model="reason" :label="__('Dôvod pre aktiváciu / stiahnutie (ide do auditu)')" :placeholder="__('napr. potvrdený cenník 10/2026')" class="max-w-lg" />
 
     <flux:card class="space-y-3 overflow-x-auto" data-test="catalog-plans">
-        <flux:heading size="lg" class="font-display">Plány</flux:heading>
+        <flux:heading size="lg" class="font-display">{{ __('Plány') }}</flux:heading>
         <table class="w-full text-sm">
-            <thead class="text-left text-xs uppercase text-zinc-500"><tr><th class="py-1 pe-2">Kód</th><th class="py-1 pe-2">Verzia</th><th class="py-1 pe-2">Názov</th><th class="py-1 pe-2 text-right">Cena</th><th class="py-1 pe-2">Použitia / obdobie</th><th class="py-1 pe-2">Stripe price</th><th class="py-1 pe-2">Stav</th><th class="py-1"></th></tr></thead>
+            <thead class="text-left text-xs uppercase text-zinc-500"><tr><th class="py-1 pe-2">{{ __('Kód') }}</th><th class="py-1 pe-2">{{ __('Verzia') }}</th><th class="py-1 pe-2">{{ __('Názov') }}</th><th class="py-1 pe-2 text-right">{{ __('Cena') }}</th><th class="py-1 pe-2">{{ __('Použitia / obdobie') }}</th><th class="py-1 pe-2">{{ __('Stripe price') }}</th><th class="py-1 pe-2">{{ __('Stav') }}</th><th class="py-1"></th></tr></thead>
             <tbody class="divide-y divide-zinc-200/70 dark:divide-zinc-800">
                 @foreach ($this->plans as $code => $versions)
                     @foreach ($versions as $plan)
@@ -169,13 +169,13 @@ new #[Layout('layouts::admin')] #[Title('Katalóg')] class extends Component {
                             <td class="py-1.5 pe-2">v{{ $plan->version }}</td>
                             <td class="py-1.5 pe-2">{{ $plan->name }} <span class="text-xs text-zinc-500">({{ $plan->interval->label() }})</span></td>
                             <td class="py-1.5 pe-2 text-right tabular-nums">{{ Catalog::formatCents($plan->final_price_cents, $plan->currency) }}</td>
-                            <td class="py-1.5 pe-2">{{ $plan->text_uses_per_period }} textov · {{ $plan->image_uses_per_period }} obrázkov</td>
-                            <td class="py-1.5 pe-2 font-mono text-xs">{{ $plan->stripe_price_id ?? '— (nepredajné)' }}</td>
-                            <td class="py-1.5 pe-2"><flux:badge size="sm" :color="$plan->state->badgeColor()">{{ $plan->state->label() }}</flux:badge>@if ($plan->effective_from)<div class="text-xs text-zinc-500">od {{ $plan->effective_from->setTimezone(config('recipes.default_timezone'))->format('d.m.Y') }}</div>@endif</td>
+                            <td class="py-1.5 pe-2">{{ __(':count textov', ['count' => $plan->text_uses_per_period]) }} · {{ __(':count obrázkov', ['count' => $plan->image_uses_per_period]) }}</td>
+                            <td class="py-1.5 pe-2 font-mono text-xs">{{ $plan->stripe_price_id ?? __('— (nepredajné)') }}</td>
+                            <td class="py-1.5 pe-2"><flux:badge size="sm" :color="$plan->state->badgeColor()">{{ $plan->state->label() }}</flux:badge>@if ($plan->effective_from)<div class="text-xs text-zinc-500">{{ __('od :date', ['date' => $plan->effective_from->setTimezone(config('recipes.default_timezone'))->format('d.m.Y')]) }}</div>@endif</td>
                             <td class="py-1.5 whitespace-nowrap text-right">
-                                @if ($loop->first)<flux:button size="xs" variant="ghost" icon="document-duplicate" wire:click="startDraft('plan', {{ $plan->id }})">Nová verzia</flux:button>@endif
-                                @if ($plan->state === CatalogState::Draft)<flux:button size="xs" variant="primary" wire:click="activate('plan', {{ $plan->id }})" wire:confirm="Aktivovať túto verziu a stiahnuť predchádzajúcu aktívnu?" data-test="activate-plan-{{ $plan->id }}">Aktivovať</flux:button>@endif
-                                @if ($plan->state !== CatalogState::Retired)<flux:button size="xs" variant="ghost" wire:click="retire('plan', {{ $plan->id }})" wire:confirm="Prestať predávať túto verziu?">Stiahnuť</flux:button>@endif
+                                @if ($loop->first)<flux:button size="xs" variant="ghost" icon="document-duplicate" wire:click="startDraft('plan', {{ $plan->id }})">{{ __('Nová verzia') }}</flux:button>@endif
+                                @if ($plan->state === CatalogState::Draft)<flux:button size="xs" variant="primary" wire:click="activate('plan', {{ $plan->id }})" wire:confirm="{{ __('Aktivovať túto verziu a stiahnuť predchádzajúcu aktívnu?') }}" data-test="activate-plan-{{ $plan->id }}">{{ __('Aktivovať') }}</flux:button>@endif
+                                @if ($plan->state !== CatalogState::Retired)<flux:button size="xs" variant="ghost" wire:click="retire('plan', {{ $plan->id }})" wire:confirm="{{ __('Prestať predávať túto verziu?') }}">{{ __('Stiahnuť') }}</flux:button>@endif
                             </td>
                         </tr>
                     @endforeach
@@ -185,9 +185,9 @@ new #[Layout('layouts::admin')] #[Title('Katalóg')] class extends Component {
     </flux:card>
 
     <flux:card class="space-y-3 overflow-x-auto" data-test="catalog-addons">
-        <flux:heading size="lg" class="font-display">Balíky</flux:heading>
+        <flux:heading size="lg" class="font-display">{{ __('Balíky') }}</flux:heading>
         <table class="w-full text-sm">
-            <thead class="text-left text-xs uppercase text-zinc-500"><tr><th class="py-1 pe-2">Kód</th><th class="py-1 pe-2">Verzia</th><th class="py-1 pe-2">Názov</th><th class="py-1 pe-2 text-right">Cena</th><th class="py-1 pe-2">Obsah</th><th class="py-1 pe-2">Stripe price</th><th class="py-1 pe-2">Stav</th><th class="py-1"></th></tr></thead>
+            <thead class="text-left text-xs uppercase text-zinc-500"><tr><th class="py-1 pe-2">{{ __('Kód') }}</th><th class="py-1 pe-2">{{ __('Verzia') }}</th><th class="py-1 pe-2">{{ __('Názov') }}</th><th class="py-1 pe-2 text-right">{{ __('Cena') }}</th><th class="py-1 pe-2">{{ __('Obsah') }}</th><th class="py-1 pe-2">{{ __('Stripe price') }}</th><th class="py-1 pe-2">{{ __('Stav') }}</th><th class="py-1"></th></tr></thead>
             <tbody class="divide-y divide-zinc-200/70 dark:divide-zinc-800">
                 @foreach ($this->addons as $code => $versions)
                     @foreach ($versions as $addon)
@@ -197,12 +197,12 @@ new #[Layout('layouts::admin')] #[Title('Katalóg')] class extends Component {
                             <td class="py-1.5 pe-2">{{ $addon->name }}</td>
                             <td class="py-1.5 pe-2 text-right tabular-nums">{{ Catalog::formatCents($addon->final_price_cents, $addon->currency) }}</td>
                             <td class="py-1.5 pe-2">{{ $addon->unit_count }} × {{ $addon->unit_kind->label() }}</td>
-                            <td class="py-1.5 pe-2 font-mono text-xs">{{ $addon->stripe_price_id ?? '— (nepredajné)' }}</td>
+                            <td class="py-1.5 pe-2 font-mono text-xs">{{ $addon->stripe_price_id ?? __('— (nepredajné)') }}</td>
                             <td class="py-1.5 pe-2"><flux:badge size="sm" :color="$addon->state->badgeColor()">{{ $addon->state->label() }}</flux:badge></td>
                             <td class="py-1.5 whitespace-nowrap text-right">
-                                @if ($loop->first)<flux:button size="xs" variant="ghost" icon="document-duplicate" wire:click="startDraft('addon', {{ $addon->id }})">Nová verzia</flux:button>@endif
-                                @if ($addon->state === CatalogState::Draft)<flux:button size="xs" variant="primary" wire:click="activate('addon', {{ $addon->id }})" wire:confirm="Aktivovať túto verziu a stiahnuť predchádzajúcu aktívnu?" data-test="activate-addon-{{ $addon->id }}">Aktivovať</flux:button>@endif
-                                @if ($addon->state !== CatalogState::Retired)<flux:button size="xs" variant="ghost" wire:click="retire('addon', {{ $addon->id }})" wire:confirm="Prestať predávať túto verziu?">Stiahnuť</flux:button>@endif
+                                @if ($loop->first)<flux:button size="xs" variant="ghost" icon="document-duplicate" wire:click="startDraft('addon', {{ $addon->id }})">{{ __('Nová verzia') }}</flux:button>@endif
+                                @if ($addon->state === CatalogState::Draft)<flux:button size="xs" variant="primary" wire:click="activate('addon', {{ $addon->id }})" wire:confirm="{{ __('Aktivovať túto verziu a stiahnuť predchádzajúcu aktívnu?') }}" data-test="activate-addon-{{ $addon->id }}">{{ __('Aktivovať') }}</flux:button>@endif
+                                @if ($addon->state !== CatalogState::Retired)<flux:button size="xs" variant="ghost" wire:click="retire('addon', {{ $addon->id }})" wire:confirm="{{ __('Prestať predávať túto verziu?') }}">{{ __('Stiahnuť') }}</flux:button>@endif
                             </td>
                         </tr>
                     @endforeach
@@ -214,23 +214,23 @@ new #[Layout('layouts::admin')] #[Title('Katalóg')] class extends Component {
     @if ($draft_type !== '')
         <flux:card class="space-y-3" data-test="draft-form">
             <form wire:submit="saveDraft" class="space-y-3">
-                <flux:heading size="lg" class="font-display">Nová verzia {{ $draft_type === 'plan' ? 'plánu' : 'balíka' }}</flux:heading>
-                <flux:text class="text-xs">Vznikne návrh; predávať sa začne až po aktivácii. Stripe price ID musí byť cena s rovnakou sumou a intervalom v Stripe – aplikácia ceny v Stripe nevytvára.</flux:text>
+                <flux:heading size="lg" class="font-display">{{ $draft_type === 'plan' ? __('Nová verzia plánu') : __('Nová verzia balíka') }}</flux:heading>
+                <flux:text class="text-xs">{{ __('Vznikne návrh; predávať sa začne až po aktivácii. Stripe price ID musí byť cena s rovnakou sumou a intervalom v Stripe – aplikácia ceny v Stripe nevytvára.') }}</flux:text>
                 <div class="grid gap-3 sm:grid-cols-3">
-                    <flux:input wire:model="draft_name" label="Názov" />
-                    <flux:input wire:model="draft_price" label="Konečná cena (EUR)" placeholder="2,49" />
-                    <flux:input wire:model="draft_stripe_price_id" label="Stripe price ID" placeholder="price_…" />
+                    <flux:input wire:model="draft_name" :label="__('Názov')" />
+                    <flux:input wire:model="draft_price" :label="__('Konečná cena (EUR)')" placeholder="2,49" />
+                    <flux:input wire:model="draft_stripe_price_id" :label="__('Stripe price ID')" placeholder="price_…" />
                     @if ($draft_type === 'plan')
-                        <flux:input wire:model="draft_text_uses" type="number" min="0" label="Textových operácií / obdobie" />
-                        <flux:input wire:model="draft_image_uses" type="number" min="0" label="Obrázkov / obdobie" />
+                        <flux:input wire:model="draft_text_uses" type="number" min="0" :label="__('Textových operácií / obdobie')" />
+                        <flux:input wire:model="draft_image_uses" type="number" min="0" :label="__('Obrázkov / obdobie')" />
                     @else
-                        <flux:input wire:model="draft_unit_count" type="number" min="1" label="Počet jednotiek" />
+                        <flux:input wire:model="draft_unit_count" type="number" min="1" :label="__('Počet jednotiek')" />
                     @endif
                 </div>
-                <flux:textarea wire:model="draft_reason" rows="2" label="Dôvod (ide do auditu)" />
+                <flux:textarea wire:model="draft_reason" rows="2" :label="__('Dôvod (ide do auditu)')" />
                 <div class="flex gap-2">
-                    <flux:button type="submit" variant="primary" size="sm">Uložiť návrh</flux:button>
-                    <flux:button size="sm" variant="ghost" wire:click="cancelDraft">Zrušiť</flux:button>
+                    <flux:button type="submit" variant="primary" size="sm">{{ __('Uložiť návrh') }}</flux:button>
+                    <flux:button size="sm" variant="ghost" wire:click="cancelDraft">{{ __('Zrušiť') }}</flux:button>
                 </div>
             </form>
         </flux:card>

@@ -57,17 +57,17 @@ new #[Layout('layouts::admin')] #[Title('Refundácie')] class extends Component 
 }; ?>
 
 <div class="space-y-6">
-    <x-page-header title="Refundácie a spory" subtitle="Každý prípad má sumu, dôvod, autora, odobraté jednotky a väzbu na objednávku a Stripe. Refundácie zo Stripe dashboardu čakajú na posúdenie." />
+    <x-page-header :title="__('Refundácie a spory')" :subtitle="__('Každý prípad má sumu, dôvod, autora, odobraté jednotky a väzbu na objednávku a Stripe. Refundácie zo Stripe dashboardu čakajú na posúdenie.')" />
 
     <div class="flex flex-wrap items-end gap-3">
         <flux:select wire:model.live="status" class="w-56">
-            <flux:select.option value="">všetky stavy</flux:select.option>
+            <flux:select.option value="">{{ __('všetky stavy') }}</flux:select.option>
             @foreach (RefundStatus::cases() as $case)
                 <flux:select.option :value="$case->value">{{ $case->label() }} ({{ $this->counts[$case->value] ?? 0 }})</flux:select.option>
             @endforeach
         </flux:select>
         <flux:select wire:model.live="kind" class="w-56">
-            <flux:select.option value="">všetky druhy</flux:select.option>
+            <flux:select.option value="">{{ __('všetky druhy') }}</flux:select.option>
             @foreach (RefundKind::cases() as $case)
                 <flux:select.option :value="$case->value">{{ $case->label() }}</flux:select.option>
             @endforeach
@@ -77,14 +77,14 @@ new #[Layout('layouts::admin')] #[Title('Refundácie')] class extends Component 
     <flux:card class="space-y-3 overflow-x-auto">
         <table class="w-full text-sm">
             <thead class="text-left text-xs uppercase text-zinc-500">
-                <tr><th class="py-1 pe-2">#</th><th class="py-1 pe-2">Kedy</th><th class="py-1 pe-2">Objednávka</th><th class="py-1 pe-2">Druh</th><th class="py-1 pe-2 text-right">Suma</th><th class="py-1 pe-2">Odobraté</th><th class="py-1 pe-2">Stav</th><th class="py-1 pe-2">Kto</th><th class="py-1">Dôvod</th></tr>
+                <tr><th class="py-1 pe-2">#</th><th class="py-1 pe-2">{{ __('Kedy') }}</th><th class="py-1 pe-2">{{ __('Objednávka') }}</th><th class="py-1 pe-2">{{ __('Druh') }}</th><th class="py-1 pe-2 text-right">{{ __('Suma') }}</th><th class="py-1 pe-2">{{ __('Odobraté') }}</th><th class="py-1 pe-2">{{ __('Stav') }}</th><th class="py-1 pe-2">{{ __('Kto') }}</th><th class="py-1">{{ __('Dôvod') }}</th></tr>
             </thead>
             <tbody class="divide-y divide-zinc-200/70 dark:divide-zinc-800">
                 @forelse ($this->cases as $case)
                     <tr wire:key="case-{{ $case->id }}" class="align-top">
                         <td class="py-1.5 pe-2">{{ $case->id }}</td>
                         <td class="py-1.5 pe-2 whitespace-nowrap">{{ ($case->processed_at ?? $case->created_at)->setTimezone(config('recipes.default_timezone'))->format('d.m.Y H:i') }}</td>
-                        <td class="py-1.5 pe-2"><a href="{{ route('admin.orders.show', $case->order_id) }}" class="underline" wire:navigate>#{{ $case->order_id }}</a> <span class="text-xs text-zinc-500">{{ $case->order?->productName() }} · dom. #{{ $case->household_id }}</span></td>
+                        <td class="py-1.5 pe-2"><a href="{{ route('admin.orders.show', $case->order_id) }}" class="underline" wire:navigate>#{{ $case->order_id }}</a> <span class="text-xs text-zinc-500">{{ __(':product · dom. #:id', ['product' => $case->order?->productName(), 'id' => $case->household_id]) }}</span></td>
                         <td class="py-1.5 pe-2">{{ $case->kind->label() }}</td>
                         <td class="py-1.5 pe-2 text-right tabular-nums">{{ Catalog::formatCents($case->amount_cents, $case->currency) }}</td>
                         <td class="py-1.5 pe-2 text-xs">{{ collect($case->units_revoked ?? [])->map(fn ($n, $k) => $n.' × '.$k)->implode(', ') ?: '–' }}@if ($case->revoke_entitlement) · Plus @endif</td>
@@ -92,11 +92,11 @@ new #[Layout('layouts::admin')] #[Title('Refundácie')] class extends Component 
                             <flux:badge size="sm" :color="$case->status->badgeColor()">{{ $case->status->label() }}</flux:badge>
                             @if ($case->stripe_refund_id)<a href="{{ StripeDashboard::refund($case->stripe_refund_id) }}" class="ms-1 text-xs underline" target="_blank" rel="noopener noreferrer">Stripe</a>@endif
                         </td>
-                        <td class="py-1.5 pe-2 text-xs">{{ $case->requester?->email ?? 'systém' }}</td>
+                        <td class="py-1.5 pe-2 text-xs">{{ $case->requester?->email ?? __('systém') }}</td>
                         <td class="py-1.5 max-w-xs truncate text-xs" title="{{ $case->reason }}">{{ $case->reason }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="9" class="py-3 text-zinc-500">Žiadne prípady.</td></tr>
+                    <tr><td colspan="9" class="py-3 text-zinc-500">{{ __('Žiadne prípady.') }}</td></tr>
                 @endforelse
             </tbody>
         </table>

@@ -137,10 +137,10 @@ class PlanPanel extends Component
             'personIds' => ['array'],
             'date' => ['nullable', 'date_format:Y-m-d', 'required_if:term,date'],
             'servings' => ['nullable', 'integer', 'min:1', 'max:200'],
-        ], ['date.required_if' => 'Vyber dátum.']);
+        ], ['date.required_if' => __('Vyber dátum.')]);
 
         if ($this->collisions->isNotEmpty() && ! $this->forceDuplicate) {
-            $this->error = 'Toto jedlo už je naplánované v blízkych dňoch. Môžeš otvoriť existujúci plán alebo vedome pridať ďalší.';
+            $this->error = __('Toto jedlo už je naplánované v blízkych dňoch. Môžeš otvoriť existujúci plán alebo vedome pridať ďalší.');
 
             return;
         }

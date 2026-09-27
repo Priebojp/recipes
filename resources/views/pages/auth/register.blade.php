@@ -58,11 +58,11 @@
             @if ($terms)
                 <flux:field variant="inline">
                     <flux:checkbox name="terms" value="1" :checked="old('terms')" data-test="register-terms" />
-                    <flux:label>Prijímam <a href="{{ route('legal.show', ['slug' => 'vop']) }}" target="_blank" rel="noopener" class="underline">obchodné podmienky</a> (verzia {{ $terms->version }})</flux:label>
+                    <flux:label>{!! __('Prijímam :link (verzia :version)', ['link' => '<a href="'.route('legal.show', ['slug' => 'vop']).'" target="_blank" rel="noopener" class="underline">'.__('obchodné podmienky').'</a>', 'version' => e($terms->version)]) !!}</flux:label>
                 </flux:field>
                 @error('terms') <flux:text class="-mt-4 text-sm text-red-600">{{ $message }}</flux:text> @enderror
             @endif
-            <flux:text class="text-xs">Ako spracúvame údaje potrebné na prevádzku účtu, sa dočítaš v <a href="{{ route('legal.show', ['slug' => 'ochrana-osobnych-udajov']) }}" target="_blank" rel="noopener" class="underline">informáciách o súkromí</a>. Súhlas so spracúvaním na prevádzku účtu nepotrebujeme; voliteľná analytika sa riadi tvojou voľbou cookies.</flux:text>
+            <flux:text class="text-xs">{!! __('Ako spracúvame údaje potrebné na prevádzku účtu, sa dočítaš v :link.', ['link' => '<a href="'.route('legal.show', ['slug' => 'ochrana-osobnych-udajov']).'" target="_blank" rel="noopener" class="underline">'.__('informáciách o súkromí').'</a>']) !!} {{ __('Súhlas so spracúvaním na prevádzku účtu nepotrebujeme; voliteľná analytika sa riadi tvojou voľbou cookies.') }}</flux:text>
 
             <div class="flex items-center justify-end">
                 <flux:button type="submit" variant="primary" class="w-full" data-test="register-user-button">
