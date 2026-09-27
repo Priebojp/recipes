@@ -42,6 +42,17 @@ class IngredientMatcher
     }
 
     /**
+     * Dictionary candidates for a bare name (a component recognised on a photo, v2.1 stage 11). The amount is
+     * already in grams or unknown, so no unit conversion takes part; the search hits of the provider are not used.
+     */
+    public function proposeName(string $name, ?float $grams = null): MatchProposal
+    {
+        $line = new IngredientLine(['name' => $name, 'numeric_amount' => $grams, 'unit' => $grams === null ? null : 'g']);
+
+        return $this->propose($line);
+    }
+
+    /**
      * Grams the line stands for with this food. Mass units convert directly; volumes need the food's density row;
      * pieces and spoons need the food's own conversion. "Podľa chuti" and unknown units are unresolved.
      *

@@ -76,12 +76,14 @@ class AiAvailability
      * Returns null when a new job may start, otherwise the reason why not.
      *
      * @param  bool  $rateLimits  false skips the daily and concurrency caps (operator-run cost measurement); the key,
-     *                            the kill switch, household blocking and the ledger always apply
+     *                            the kill switch and household blocking always apply
+     * @param  bool  $ledger  false skips the balance check for a job that reserves no use (a clarification inside
+     *                        an already charged photo analysis)
      */
-    public function reasonUnavailable(Household $household, UsageKind $kind, bool $rateLimits = true): ?string
+    public function reasonUnavailable(Household $household, UsageKind $kind, bool $rateLimits = true, bool $ledger = true): ?string
     {
         $jobKind = $kind->aiJobKind();
-        $configured = $jobKind === AiJobKind::Text ? $this->textConfigured() : $this->imageConfigured();
+        $configured = $jobKind->usesTextProvider() ? $this->textConfigured() : $this->imageConfigured();
         if (! $configured) {
             return __('AI nie je nakonfigurované – chýba API kľúč poskytovateľa. Recept funguje bez AI.');
         }
@@ -96,7 +98,7 @@ class AiAvailability
 
         // The ledger decides whether the household has a use left; the trial and the current monthly grant of a paid
         // period are opened lazily here (idempotent), so nothing depends on the scheduler having run.
-        if ($this->ledger->enforced()) {
+        if ($ledger && $this->ledger->enforced()) {
             $this->provisioner->ensureFor($household);
             if ($this->ledger->available($household, $kind) < 1) {
                 return $this->ledger->exhaustedMessage($kind);
@@ -108,7 +110,11 @@ class AiAvailability
         }
 
         // Daily limits remain as a frequency cap (abuse protection), not as the paid quota.
-        $limit = $jobKind === AiJobKind::Text ? $this->settings->dailyTextLimit() : $this->settings->dailyImageLimit();
+        $limit = match ($jobKind) {
+            AiJobKind::Text => $this->settings->dailyTextLimit(),
+            AiJobKind::Image => $this->settings->dailyImageLimit(),
+            AiJobKind::MealAnalysis => $this->settings->dailyMealAnalysisLimit(),
+        };
         $used = AiJob::query()
             ->where('household_id', $household->id)
             ->where('kind', $jobKind)

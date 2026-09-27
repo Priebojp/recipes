@@ -12,6 +12,7 @@ use App\Models\CookingEvent;
 use App\Models\Household;
 use App\Models\HouseholdInvitation;
 use App\Models\HouseholdMembership;
+use App\Models\MealAnalysis;
 use App\Models\MealPlan;
 use App\Models\Person;
 use App\Models\PrivacyRequest;
@@ -26,6 +27,7 @@ use App\Services\Billing\Gateway\StripeGateway;
 use App\Services\Billing\PlanStatus;
 use App\Services\Usage\UsageLedger;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -189,11 +191,14 @@ class AccountErasure
     public function hasContent(Household $household): bool
     {
         return $household->recipes()->exists() || $household->people()->exists() || $household->mealPlans()->exists()
-            || $household->cookingEvents()->exists() || AiJob::query()->where('household_id', $household->id)->exists();
+            || $household->cookingEvents()->exists() || AiJob::query()->where('household_id', $household->id)->exists()
+            || MealAnalysis::query()->where('household_id', $household->id)->exists();
     }
 
     private function leaveHousehold(User $user, Household $household): string
     {
+        // Photo analyses are the person's own records: they go with them, not with the household.
+        $this->purgeMealAnalyses(MealAnalysis::query()->where('household_id', $household->id)->where('user_id', $user->id));
         Person::query()->where('household_id', $household->id)->where('user_id', $user->id)
             ->update(['name' => 'Bývalý člen', 'user_id' => null, 'archived_at' => now(), 'updated_at' => now()]);
         HouseholdMembership::query()->where('household_id', $household->id)->where('user_id', $user->id)->delete();
@@ -213,7 +218,9 @@ class AccountErasure
 
     private function purgeHouseholdContent(Household $household): string
     {
-        $counts = ['recipes' => 0, 'people' => 0, 'ai_jobs' => 0];
+        $counts = ['recipes' => 0, 'people' => 0, 'ai_jobs' => 0, 'meal_analyses' => 0];
+
+        $counts['meal_analyses'] = $this->purgeMealAnalyses(MealAnalysis::query()->where('household_id', $household->id));
 
         foreach (Recipe::query()->where('household_id', $household->id)->get() as $recipe) {
             $recipe->clearMediaCollection(Recipe::COVER_COLLECTION);
@@ -234,7 +241,23 @@ class AccountErasure
         $counts['people'] = Person::query()->where('household_id', $household->id)->delete();
         HouseholdMembership::query()->where('household_id', $household->id)->delete();
 
-        return "Domácnosť #{$household->id}: zmazaných {$counts['recipes']} receptov s obrázkami, {$counts['people']} profilov, {$counts['ai_jobs']} AI úloh, plány, história, pozvánky a členstvá.";
+        return "Domácnosť #{$household->id}: zmazaných {$counts['recipes']} receptov s obrázkami, {$counts['people']} profilov, {$counts['ai_jobs']} AI úloh, {$counts['meal_analyses']} analýz jedla s fotkami, plány, história, pozvánky a členstvá.";
+    }
+
+    /**
+     * Model deletes so the media library removes the photo files too (a plain SQL cascade would leave them).
+     *
+     * @param  Builder<MealAnalysis>  $query
+     */
+    private function purgeMealAnalyses($query): int
+    {
+        $count = 0;
+        foreach ($query->get() as $analysis) {
+            $analysis->delete();
+            $count++;
+        }
+
+        return $count;
     }
 
     private function anonymiseUser(User $user): void

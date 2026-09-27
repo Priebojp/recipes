@@ -7,13 +7,15 @@ use App\Enums\AiJobStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
  * @property int $household_id
- * @property int $recipe_id
+ * @property int|null $recipe_id
+ * @property int|null $parent_ai_job_id
  * @property AiJobKind $kind
  * @property int|null $input_revision_id
  * @property AiJobStatus $status
@@ -43,7 +45,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  */
 #[Fillable([
-    'household_id', 'recipe_id', 'kind', 'input_revision_id', 'status', 'request_key', 'provider', 'model', 'profile',
+    'household_id', 'recipe_id', 'parent_ai_job_id', 'kind', 'input_revision_id', 'status', 'request_key', 'provider', 'model', 'profile',
     'provider_job_id', 'prompt_version', 'input', 'prompt', 'output', 'error', 'input_tokens', 'cached_input_tokens',
     'output_tokens', 'reasoning_tokens', 'image_output_tokens', 'estimated_cost_micro_usd', 'cost_rate_id', 'duration_ms',
     'result_media_id', 'applied_at', 'started_at', 'finished_at', 'created_by',
@@ -68,6 +70,19 @@ class AiJob extends Model
     public function recipe(): BelongsTo
     {
         return $this->belongsTo(Recipe::class);
+    }
+
+    /** A clarification of a photo analysis belongs to the charged root job (v2.1 stage 11). */
+    /** @return BelongsTo<AiJob, $this> */
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(AiJob::class, 'parent_ai_job_id');
+    }
+
+    /** @return HasMany<AiJob, $this> */
+    public function followUps(): HasMany
+    {
+        return $this->hasMany(AiJob::class, 'parent_ai_job_id');
     }
 
     /** @return BelongsTo<Household, $this> */

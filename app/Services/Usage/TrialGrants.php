@@ -9,8 +9,10 @@ use App\Models\UsageGrant;
 use App\Models\User;
 
 /**
- * The one-time trial: 3 text operations and 1 Standard image per verified user and per household.
- * The source key is bound to the owner, so a second household or a rollout re-run never re-grants it.
+ * The one-time trial: 3 text operations, 1 Standard image and 3 meal analyses per verified user and per household.
+ * The source key is bound to the owner, so a second household or a rollout re-run never re-grants it. Each kind is
+ * decided on its own, so a kind added later (meal analyses, v2.1 stage 11) reaches households that already hold
+ * the older trial – once, through the same listener and backfill.
  */
 class TrialGrants
 {
@@ -29,15 +31,15 @@ class TrialGrants
             return [];
         }
 
-        if (UsageGrant::query()->where('household_id', $household->id)->where('source', UsageGrantSource::Trial)->exists()) {
-            return [];
-        }
-
         $created = [];
         foreach (UsageKind::cases() as $kind) {
             $quantity = (int) config("recipes.usage.trial.{$kind->value}", 0);
             if ($quantity < 1) {
                 continue;
+            }
+
+            if (UsageGrant::query()->where('household_id', $household->id)->where('source', UsageGrantSource::Trial)->where('kind', $kind)->exists()) {
+                continue; // this household already had its trial of this kind (possibly under a previous owner)
             }
 
             $key = self::sourceKey($owner, $kind);

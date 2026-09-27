@@ -121,7 +121,7 @@ class AiUsageReport
     /**
      * Households ordered by spend (id + name only; no recipe content).
      *
-     * @return Collection<int, object{household_id: int, name: string, jobs: int, text_jobs: int, image_jobs: int, cost_micro: int}>
+     * @return Collection<int, object{household_id: int, name: string, jobs: int, text_jobs: int, image_jobs: int, meal_analysis_jobs: int, cost_micro: int}>
      */
     public function byHousehold(CarbonInterface $from, CarbonInterface $to, int $limit = 20): Collection
     {
@@ -131,6 +131,7 @@ class AiUsageReport
             ->selectRaw('count(*) as jobs')
             ->selectRaw("sum(case when ai_jobs.kind = 'text' then 1 else 0 end) as text_jobs")
             ->selectRaw("sum(case when ai_jobs.kind = 'image' then 1 else 0 end) as image_jobs")
+            ->selectRaw("sum(case when ai_jobs.kind = 'meal_analysis' then 1 else 0 end) as meal_analysis_jobs")
             ->selectRaw('coalesce(sum(ai_jobs.estimated_cost_micro_usd), 0) as cost_micro')
             ->groupBy('ai_jobs.household_id', 'households.name')
             ->orderByDesc('cost_micro')
@@ -143,6 +144,7 @@ class AiUsageReport
                 'jobs' => (int) $row->jobs,
                 'text_jobs' => (int) $row->text_jobs,
                 'image_jobs' => (int) $row->image_jobs,
+                'meal_analysis_jobs' => (int) $row->meal_analysis_jobs,
                 'cost_micro' => (int) $row->cost_micro,
             ]);
     }
@@ -150,7 +152,7 @@ class AiUsageReport
     /**
      * One row per local calendar day (application timezone), zero-filled, oldest first.
      *
-     * @return list<array{date: string, jobs: int, text_jobs: int, image_jobs: int, failed: int, cost_micro: int}>
+     * @return list<array{date: string, jobs: int, text_jobs: int, image_jobs: int, meal_analysis_jobs: int, failed: int, cost_micro: int}>
      */
     public function daily(CarbonInterface $from, CarbonInterface $to): array
     {
@@ -159,7 +161,7 @@ class AiUsageReport
         $cursor = CarbonImmutable::instance($from)->setTimezone($tz)->startOfDay();
         $end = CarbonImmutable::instance($to)->setTimezone($tz)->startOfDay();
         while ($cursor->lessThanOrEqualTo($end)) {
-            $days[$cursor->toDateString()] = ['date' => $cursor->toDateString(), 'jobs' => 0, 'text_jobs' => 0, 'image_jobs' => 0, 'failed' => 0, 'cost_micro' => 0];
+            $days[$cursor->toDateString()] = ['date' => $cursor->toDateString(), 'jobs' => 0, 'text_jobs' => 0, 'image_jobs' => 0, 'meal_analysis_jobs' => 0, 'failed' => 0, 'cost_micro' => 0];
             $cursor = $cursor->addDay();
         }
 
@@ -173,7 +175,7 @@ class AiUsageReport
                     return;
                 }
                 $days[$day]['jobs']++;
-                $days[$day][$job->kind->value === 'image' ? 'image_jobs' : 'text_jobs']++;
+                $days[$day][$job->kind->value.'_jobs']++;
                 if ($job->status === AiJobStatus::Failed) {
                     $days[$day]['failed']++;
                 }
@@ -212,7 +214,7 @@ class AiUsageReport
     {
         return $this->between($from, $to)
             ->select([
-                'id', 'household_id', 'recipe_id', 'kind', 'status', 'provider', 'model', 'profile', 'error',
+                'id', 'household_id', 'recipe_id', 'parent_ai_job_id', 'kind', 'status', 'provider', 'model', 'profile', 'error',
                 'input_tokens', 'cached_input_tokens', 'output_tokens', 'reasoning_tokens', 'image_output_tokens',
                 'estimated_cost_micro_usd', 'cost_rate_id', 'duration_ms', 'created_by', 'created_at', 'finished_at',
             ])

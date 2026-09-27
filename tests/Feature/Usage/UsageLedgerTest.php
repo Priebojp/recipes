@@ -61,15 +61,17 @@ it('grants the trial once per verified owner and never again for a rollout re-ru
     $h = household();
     $trials = app(TrialGrants::class);
 
-    expect($trials->ensureFor($h['household']))->toHaveCount(2)
+    // Text, Standard image and (v2.1 stage 11) meal analyses – each kind once.
+    expect($trials->ensureFor($h['household']))->toHaveCount(3)
         ->and($trials->ensureFor($h['household']))->toBe([])
         ->and($trials->backfill())->toBe(['households' => 1, 'granted' => 0]);
 
     $second = CurrentHousehold::createFor($h['user'], 'Druhá');
     expect($trials->ensureFor($second))->toBe([])
-        ->and(UsageGrant::query()->where('source', UsageGrantSource::Trial)->count())->toBe(2)
+        ->and(UsageGrant::query()->where('source', UsageGrantSource::Trial)->count())->toBe(3)
         ->and(app(UsageLedger::class)->available($h['household'], UsageKind::Text))->toBe(3)
-        ->and(app(UsageLedger::class)->available($h['household'], UsageKind::ImageStandard))->toBe(1);
+        ->and(app(UsageLedger::class)->available($h['household'], UsageKind::ImageStandard))->toBe(1)
+        ->and(app(UsageLedger::class)->available($h['household'], UsageKind::MealAnalysis))->toBe(3);
 
     $this->artisan('app:usage-backfill-trials')->expectsOutputToContain('nových skúšobných grantov: 0')->assertSuccessful();
 });
@@ -83,7 +85,7 @@ it('does not grant the trial to a household whose owner has not verified the e-m
     $owner->markEmailAsVerified();
     event(new Verified($owner));
 
-    expect(UsageGrant::query()->where('household_id', $household->id)->count())->toBe(2);
+    expect(UsageGrant::query()->where('household_id', $household->id)->count())->toBe(3);
 });
 
 it('spends the grant expiring soonest before the oldest purchased one', function () {
