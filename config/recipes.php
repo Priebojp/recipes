@@ -54,9 +54,12 @@ return [
         'image_quality' => env('RECIPES_AI_IMAGE_QUALITY', 'medium'),
         'text_prompt_version' => '1',
         'image_prompt_version' => '1',
+        'meal_analysis_prompt_version' => '1',
         // Per household limits; the UI shows exhaustion before another run.
         'daily_text_limit' => (int) env('RECIPES_AI_DAILY_TEXT_LIMIT', 30),
         'daily_image_limit' => (int) env('RECIPES_AI_DAILY_IMAGE_LIMIT', 10),
+        // Frequency cap for photo analyses (v2.1 stage 11); it also counts attempts that were not charged.
+        'daily_meal_analysis_limit' => (int) env('RECIPES_AI_DAILY_MEAL_ANALYSIS_LIMIT', 10),
         'max_concurrent_jobs' => (int) env('RECIPES_AI_MAX_CONCURRENT', 2),
         'timeout_seconds' => (int) env('RECIPES_AI_TIMEOUT', 120),
         // Soft monthly budget for the admin dashboard (USD, provider list prices). Alarm only – never cuts paid usage.
@@ -78,7 +81,25 @@ return [
             'image_standard' => (int) env('RECIPES_USAGE_TRIAL_IMAGES', 1),
             // Economy images are not offered until the v2.1 comparison decides (stage 13); 0 = no trial grant.
             'image_economy' => 0,
+            // v2.1 stage 11: three photo analyses once per verified user, separate from the text trial.
+            'meal_analysis' => (int) env('RECIPES_USAGE_TRIAL_MEAL_ANALYSES', 3),
         ],
+    ],
+
+    /*
+     * Photo analysis of a meal (v2.1 stage 11). Photos live on a private disk and are working material: deleted
+     * a short time after the analysis finishes unless the person keeps them with the record; unfinished proposals
+     * are deleted after the draft TTL. Both are product retention settings, applied by app:meal-analysis-cleanup.
+     */
+    'meal_analysis' => [
+        'disk' => env('RECIPES_MEAL_PHOTO_DISK', 'local'),
+        'photo_ttl_hours' => (int) env('RECIPES_MEAL_PHOTO_TTL_HOURS', 24),
+        'draft_ttl_days' => (int) env('RECIPES_MEAL_DRAFT_TTL_DAYS', 7),
+        // Longest edge sent to the provider; larger uploads are shrunk (and always re-encoded without EXIF/GPS).
+        'max_dimension' => 1536,
+        // Follow-up questions answered with AI in the same session without a second use.
+        'max_clarifications' => 2,
+        'max_items' => 30,
     ],
 
     /*

@@ -27,6 +27,7 @@ class AiSettings
         'image_profile' => 'ai.image_profile',
         'daily_text_limit' => 'ai.daily_text_limit',
         'daily_image_limit' => 'ai.daily_image_limit',
+        'daily_meal_analysis_limit' => 'ai.daily_meal_analysis_limit',
         'monthly_budget_micro_usd' => 'ai.monthly_budget_micro_usd',
     ];
 
@@ -101,6 +102,12 @@ class AiSettings
         return max(0, (int) $this->settings->get(self::KEYS['daily_image_limit'], config('recipes.ai.daily_image_limit')));
     }
 
+    /** Frequency cap for photo analyses per household and day (v2.1 stage 11); counts uncharged attempts too. */
+    public function dailyMealAnalysisLimit(): int
+    {
+        return max(0, (int) $this->settings->get(self::KEYS['daily_meal_analysis_limit'], config('recipes.ai.daily_meal_analysis_limit')));
+    }
+
     public function maxConcurrentJobs(): int
     {
         return (int) config('recipes.ai.max_concurrent_jobs');
@@ -159,6 +166,7 @@ class AiSettings
             'image_profile' => $this->defaultImageProfile()->value,
             'daily_text_limit' => $this->dailyTextLimit(),
             'daily_image_limit' => $this->dailyImageLimit(),
+            'daily_meal_analysis_limit' => $this->dailyMealAnalysisLimit(),
             'monthly_budget_micro_usd' => $this->monthlyBudgetMicroUsd(),
         ];
     }
@@ -178,6 +186,7 @@ class AiSettings
             'image_profile' => ImageProfile::fromQuality($this->stringOrNull(config('recipes.ai.image_quality', 'medium')))->value,
             'daily_text_limit' => (int) config('recipes.ai.daily_text_limit'),
             'daily_image_limit' => (int) config('recipes.ai.daily_image_limit'),
+            'daily_meal_analysis_limit' => (int) config('recipes.ai.daily_meal_analysis_limit'),
             'monthly_budget_micro_usd' => filled(config('recipes.ai.monthly_budget_usd')) ? Money::parseUsdToMicro((string) config('recipes.ai.monthly_budget_usd')) : null,
         ];
     }

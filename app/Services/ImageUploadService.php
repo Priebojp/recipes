@@ -2,9 +2,12 @@
 
 namespace App\Services;
 
+use App\Models\MealAnalysis;
 use App\Models\Recipe;
 use App\Models\RecipeStep;
 use Illuminate\Http\UploadedFile;
+use Spatie\Image\Enums\Fit;
+use Spatie\Image\Enums\ImageDriver;
 use Spatie\Image\Image;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
@@ -53,6 +56,20 @@ class ImageUploadService
     }
 
     /**
+     * The working photo of a meal analysis (v2.1 stage 11): re-encoded without metadata and shrunk to the
+     * configured longest edge before anything leaves the server. One photo per analysis, private disk.
+     */
+    public function addMealPhoto(MealAnalysis $analysis, UploadedFile|string $file): Media
+    {
+        $path = $this->normalise($file, (int) config('recipes.meal_analysis.max_dimension', 1536));
+
+        return $analysis->addMedia($path)
+            ->usingFileName('meal-'.$analysis->id.'-'.time().'.jpg')
+            ->withCustomProperties(['origin' => 'uploaded'])
+            ->toMediaCollection(MealAnalysis::PHOTO_COLLECTION);
+    }
+
+    /**
      * Activate a previously uploaded cover (restore the previous photo).
      */
     public function activateCover(Recipe $recipe, Media $media): void
@@ -68,17 +85,20 @@ class ImageUploadService
     }
 
     /**
-     * Re-encode the image as JPEG using GD: applies EXIF orientation and drops all metadata (incl. GPS).
+     * Re-encode the image as JPEG: applies EXIF orientation and drops all metadata (incl. GPS). With a maximum
+     * dimension the longest edge is shrunk to it (never enlarged). Always through GD: Imagick (spatie/image's
+     * default when installed) copies the EXIF profile into the new file, GD never does.
      */
-    private function normalise(UploadedFile|string $file): string
+    public function normalise(UploadedFile|string $file, ?int $maxDimension = null): string
     {
         $source = $file instanceof UploadedFile ? $file->getRealPath() : $file;
         $target = tempnam(sys_get_temp_dir(), 'recipe-img').'.jpg';
 
-        Image::load($source)
-            ->orientation()
-            ->quality(88)
-            ->save($target);
+        $image = Image::useImageDriver(ImageDriver::Gd)->loadFile($source)->orientation();
+        if ($maxDimension !== null && $maxDimension > 0) {
+            $image->fit(Fit::Max, $maxDimension, $maxDimension);
+        }
+        $image->quality(88)->save($target);
 
         return $target;
     }

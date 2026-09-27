@@ -29,6 +29,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string|null $remember_token
  * @property bool $is_platform_admin
  * @property Carbon|null $platform_admin_granted_at
+ * @property Carbon|null $meal_photo_notice_accepted_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -51,6 +52,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             'password' => 'hashed',
             'is_platform_admin' => 'boolean',
             'platform_admin_granted_at' => 'datetime',
+            'meal_photo_notice_accepted_at' => 'datetime',
         ];
     }
 
@@ -72,6 +74,18 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         }
 
         return ! config('admin.require_two_factor') || $this->two_factor_confirmed_at !== null;
+    }
+
+    /** Whether the one-time notice "your photo is sent to the AI provider" was acknowledged (v2.1 stage 11). */
+    public function hasAcceptedMealPhotoNotice(): bool
+    {
+        return $this->meal_photo_notice_accepted_at !== null;
+    }
+
+    /** @return HasMany<MealAnalysis, $this> */
+    public function mealAnalyses(): HasMany
+    {
+        return $this->hasMany(MealAnalysis::class);
     }
 
     /** @return BelongsToMany<Household, $this> */

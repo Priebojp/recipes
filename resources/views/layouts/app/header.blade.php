@@ -10,6 +10,7 @@
                 ['route' => 'recipes.index', 'label' => __('Recepty'), 'icon' => 'book-open', 'match' => 'recipes.*'],
                 ['route' => 'plan.index', 'label' => __('Plán'), 'icon' => 'calendar-days', 'match' => 'plan.*'],
                 ['route' => 'family.index', 'label' => __('Rodina'), 'icon' => 'users', 'match' => 'family.*'],
+                ['route' => 'meals.analyze', 'label' => __('Jedlo'), 'icon' => 'camera', 'match' => 'meals.*'],
             ];
             $accountActive = request()->routeIs('household.edit', 'plan.history', 'profile.edit', 'security.edit', 'appearance.edit', 'subscription.edit', 'usage.index', 'privacy.edit');
         @endphp
@@ -63,9 +64,9 @@
 
         @include('partials.consent')
 
-        {{-- Mobile bottom navigation: four sections plus the account menu. --}}
+        {{-- Mobile bottom navigation: five sections plus the account menu. --}}
         <nav class="pb-safe fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200/70 bg-paper/95 backdrop-blur lg:hidden dark:border-zinc-800 dark:bg-zinc-900/95" aria-label="{{ __('Hlavná navigácia') }}">
-            <div class="grid grid-cols-5">
+            <div class="grid grid-cols-6">
                 @foreach ($nav as $item)
                     @php($active = request()->routeIs($item['match']))
                     <a href="{{ route($item['route']) }}" wire:navigate

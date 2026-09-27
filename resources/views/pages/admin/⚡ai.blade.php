@@ -27,7 +27,7 @@ new #[Layout('layouts::admin')] #[Title('AI použitie a náklady')] class extend
         if ($property === 'days' && ! in_array($this->days, [7, 30, 90], true)) {
             $this->days = 30;
         }
-        if ($property === 'kind' && ! in_array($this->kind, ['', 'text', 'image'], true)) {
+        if ($property === 'kind' && ! in_array($this->kind, ['', 'text', 'image', 'meal_analysis'], true)) {
             $this->kind = '';
         }
         if ($property === 'status' && ! in_array($this->status, ['', 'succeeded', 'failed', 'queued', 'running', 'reconciling'], true)) {
@@ -123,6 +123,7 @@ new #[Layout('layouts::admin')] #[Title('AI použitie a náklady')] class extend
             <flux:select.option value="">{{ __('Všetky') }}</flux:select.option>
             <flux:select.option value="text">{{ __('Text') }}</flux:select.option>
             <flux:select.option value="image">{{ __('Obrázok') }}</flux:select.option>
+            <flux:select.option value="meal_analysis">{{ __('Analýza jedla') }}</flux:select.option>
         </flux:select>
         <flux:select wire:model.live="status" :label="__('Stav')" size="sm" class="w-40">
             <flux:select.option value="">{{ __('Všetky') }}</flux:select.option>
@@ -176,7 +177,7 @@ new #[Layout('layouts::admin')] #[Title('AI použitie a náklady')] class extend
                 <tbody class="divide-y divide-zinc-200/70 dark:divide-zinc-800">
                     @forelse ($this->byModel as $row)
                         <tr>
-                            <td class="py-1.5 pe-2">{{ $row->kind === 'image' ? __('Obrázok') : __('Text') }}</td>
+                            <td class="py-1.5 pe-2">{{ \App\Enums\AiJobKind::tryFrom($row->kind)?->label() ?? $row->kind }}</td>
                             <td class="py-1.5 pe-2 font-mono text-xs">{{ $row->model ?? __('(predvolený)') }}</td>
                             <td class="py-1.5 pe-2 text-right">{{ $row->jobs }}</td>
                             <td class="py-1.5 pe-2 text-right">{{ $row->succeeded }} @if ($row->failed) <span class="text-red-600">/ {{ $row->failed }}</span> @endif</td>
@@ -195,7 +196,7 @@ new #[Layout('layouts::admin')] #[Title('AI použitie a náklady')] class extend
             <flux:heading size="lg" class="font-display">{{ __('Podľa domácnosti') }}</flux:heading>
             <table class="w-full text-sm">
                 <thead class="text-left text-xs uppercase text-zinc-500">
-                    <tr><th class="py-1 pe-2">{{ __('Domácnosť') }}</th><th class="py-1 pe-2 text-right">{{ __('Text') }}</th><th class="py-1 pe-2 text-right">{{ __('Obrázky') }}</th><th class="py-1 text-right">{{ __('Náklad') }}</th></tr>
+                    <tr><th class="py-1 pe-2">{{ __('Domácnosť') }}</th><th class="py-1 pe-2 text-right">{{ __('Text') }}</th><th class="py-1 pe-2 text-right">{{ __('Obrázky') }}</th><th class="py-1 pe-2 text-right">{{ __('Jedlá') }}</th><th class="py-1 text-right">{{ __('Náklad') }}</th></tr>
                 </thead>
                 <tbody class="divide-y divide-zinc-200/70 dark:divide-zinc-800">
                     @forelse ($this->byHousehold as $row)
@@ -203,10 +204,11 @@ new #[Layout('layouts::admin')] #[Title('AI použitie a náklady')] class extend
                             <td class="py-1.5 pe-2">#{{ $row->household_id }} {{ $row->name }}</td>
                             <td class="py-1.5 pe-2 text-right">{{ $row->text_jobs }}</td>
                             <td class="py-1.5 pe-2 text-right">{{ $row->image_jobs }}</td>
+                            <td class="py-1.5 pe-2 text-right">{{ $row->meal_analysis_jobs }}</td>
                             <td class="py-1.5 text-right">{{ Money::microUsd($row->cost_micro) }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="4" class="py-3 text-zinc-500">{{ __('Žiadne dáta.') }}</td></tr>
+                        <tr><td colspan="5" class="py-3 text-zinc-500">{{ __('Žiadne dáta.') }}</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -265,7 +267,7 @@ new #[Layout('layouts::admin')] #[Title('AI použitie a náklady')] class extend
         <flux:heading size="lg" class="font-display">{{ __('Po dňoch (:timezone)', ['timezone' => $this->timezone]) }}</flux:heading>
         <table class="w-full text-sm">
             <thead class="text-left text-xs uppercase text-zinc-500">
-                <tr><th class="py-1 pe-2">{{ __('Deň') }}</th><th class="py-1 pe-2 text-right">{{ __('Úlohy') }}</th><th class="py-1 pe-2 text-right">{{ __('Text') }}</th><th class="py-1 pe-2 text-right">{{ __('Obrázky') }}</th><th class="py-1 pe-2 text-right">{{ __('Chyby') }}</th><th class="py-1 text-right">{{ __('Náklad') }}</th></tr>
+                <tr><th class="py-1 pe-2">{{ __('Deň') }}</th><th class="py-1 pe-2 text-right">{{ __('Úlohy') }}</th><th class="py-1 pe-2 text-right">{{ __('Text') }}</th><th class="py-1 pe-2 text-right">{{ __('Obrázky') }}</th><th class="py-1 pe-2 text-right">{{ __('Jedlá') }}</th><th class="py-1 pe-2 text-right">{{ __('Chyby') }}</th><th class="py-1 text-right">{{ __('Náklad') }}</th></tr>
             </thead>
             <tbody class="divide-y divide-zinc-200/70 dark:divide-zinc-800">
                 @foreach ($this->daily as $day)
@@ -274,6 +276,7 @@ new #[Layout('layouts::admin')] #[Title('AI použitie a náklady')] class extend
                         <td class="py-1 pe-2 text-right">{{ $day['jobs'] }}</td>
                         <td class="py-1 pe-2 text-right">{{ $day['text_jobs'] }}</td>
                         <td class="py-1 pe-2 text-right">{{ $day['image_jobs'] }}</td>
+                        <td class="py-1 pe-2 text-right">{{ $day['meal_analysis_jobs'] }}</td>
                         <td class="py-1 pe-2 text-right {{ $day['failed'] > 0 ? 'text-red-600' : '' }}">{{ $day['failed'] }}</td>
                         <td class="py-1 text-right">{{ Money::microUsd($day['cost_micro']) }}</td>
                     </tr>
@@ -284,7 +287,7 @@ new #[Layout('layouts::admin')] #[Title('AI použitie a náklady')] class extend
 
     <flux:card class="space-y-3 overflow-x-auto">
         <flux:heading size="lg" class="font-display">{{ __('Posledné úlohy') }}</flux:heading>
-        <flux:text class="text-xs">{{ __('Bez promptu a výsledku – podporný prístup k obsahu receptu iba pri konkrétnej potrebe a s auditom (neskoršia etapa).') }}</flux:text>
+        <flux:text class="text-xs">{{ __('Bez promptu a výsledku – podporný prístup k obsahu receptu iba pri konkrétnej potrebe a s auditom (neskoršia etapa).') }} {{ __('Analýzy jedla: iba metadáta úlohy (stav, tokeny, cena, redigovaná chyba) – nikdy fotka ani zložky; doplnenia sú úlohy s nadradenou úlohou.') }}</flux:text>
         <table class="w-full text-sm">
             <thead class="text-left text-xs uppercase text-zinc-500">
                 <tr>
@@ -297,7 +300,7 @@ new #[Layout('layouts::admin')] #[Title('AI použitie a náklady')] class extend
                     <tr>
                         <td class="py-1.5 pe-2 whitespace-nowrap">{{ $job->created_at?->setTimezone($this->timezone)->format('d.m. H:i') }}</td>
                         <td class="py-1.5 pe-2">#{{ $job->household_id }} {{ $job->household?->name }}</td>
-                        <td class="py-1.5 pe-2">{{ $job->kind->value === 'image' ? __('Obrázok') : __('Text') }}</td>
+                        <td class="py-1.5 pe-2">{{ $job->kind->label() }}@if ($job->parent_ai_job_id) <span class="text-xs text-zinc-500">{{ __('(doplnenie #:id)', ['id' => $job->parent_ai_job_id]) }}</span>@endif</td>
                         <td class="py-1.5 pe-2 font-mono text-xs">{{ $job->model ?? __('(predvolený)') }}<br><span class="text-zinc-500">{{ $job->profileLabel() }}</span></td>
                         <td class="py-1.5 pe-2 text-right">{{ $job->input_tokens !== null ? number_format($job->input_tokens, 0, ',', ' ') : '–' }}</td>
                         <td class="py-1.5 pe-2 text-right">

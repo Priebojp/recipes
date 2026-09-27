@@ -30,6 +30,8 @@ new #[Layout('layouts::admin')] #[Title('AI nastavenia')] class extends Componen
 
     public int $daily_image_limit = 10;
 
+    public int $daily_meal_analysis_limit = 10;
+
     public string $monthly_budget_usd = '';
 
     public string $reason = '';
@@ -49,6 +51,7 @@ new #[Layout('layouts::admin')] #[Title('AI nastavenia')] class extends Componen
         $this->image_profile = (string) $values['image_profile'];
         $this->daily_text_limit = (int) $values['daily_text_limit'];
         $this->daily_image_limit = (int) $values['daily_image_limit'];
+        $this->daily_meal_analysis_limit = (int) $values['daily_meal_analysis_limit'];
         $this->monthly_budget_usd = Money::microToUsdString($values['monthly_budget_micro_usd']);
     }
 
@@ -94,6 +97,7 @@ new #[Layout('layouts::admin')] #[Title('AI nastavenia')] class extends Componen
             'image_profile' => ['required', 'in:'.implode(',', array_map(fn (ImageProfile $p) => $p->value, ImageProfile::selectable()))],
             'daily_text_limit' => ['required', 'integer', 'min:0', 'max:10000'],
             'daily_image_limit' => ['required', 'integer', 'min:0', 'max:10000'],
+            'daily_meal_analysis_limit' => ['required', 'integer', 'min:0', 'max:10000'],
             'monthly_budget_usd' => ['nullable', 'string', 'max:20'],
             'reason' => ['nullable', 'string', 'max:500'],
         ]);
@@ -113,6 +117,7 @@ new #[Layout('layouts::admin')] #[Title('AI nastavenia')] class extends Componen
             'image_profile' => $validated['image_profile'],
             'daily_text_limit' => (int) $validated['daily_text_limit'],
             'daily_image_limit' => (int) $validated['daily_image_limit'],
+            'daily_meal_analysis_limit' => (int) $validated['daily_meal_analysis_limit'],
             'monthly_budget_micro_usd' => $budget,
         ], auth()->user(), $this->reason !== '' ? $this->reason : null);
 
@@ -171,6 +176,7 @@ new #[Layout('layouts::admin')] #[Title('AI nastavenia')] class extends Componen
                 <div class="grid gap-4 sm:grid-cols-3">
                     <flux:input wire:model="daily_text_limit" type="number" min="0" :label="__('Denný limit textov / domácnosť')" />
                     <flux:input wire:model="daily_image_limit" type="number" min="0" :label="__('Denný limit obrázkov / domácnosť')" />
+                    <flux:input wire:model="daily_meal_analysis_limit" type="number" min="0" :label="__('Denný limit analýz jedla / domácnosť')" />
                     <flux:input wire:model="monthly_budget_usd" :label="__('Mesačný rozpočet (USD)')" :placeholder="__('napr. 5')" :description="__('Iba alarm na prehľade, nikdy neskracuje zaplatené použitia.')" />
                 </div>
                 <flux:text class="text-xs">{{ __('Denné limity sú dočasná ochrana pred etapou „granty a ledger“ (predplatné 30 textov a 5 obrázkov za obdobie).') }}</flux:text>

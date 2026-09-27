@@ -1,10 +1,12 @@
 <?php
 
+use App\Ai\Agents\MealAnalysisAgent;
 use App\Ai\Agents\RecipeTextAgent;
 use App\Enums\AiJobStatus;
 use App\Enums\UsageKind;
 use App\Models\AdminAudit;
 use App\Models\AiJob;
+use App\Models\MealAnalysis;
 use App\Models\Recipe;
 use App\Models\UsageGrant;
 use App\Services\Admin\AppSettings;
@@ -100,4 +102,41 @@ it('refuses to run without recipes or a provider key and runs from the command w
 
     $this->artisan('app:ai-measure', ['household' => $h['household']->id, '--text' => 1, '--images' => 0, '--yes' => true])->assertSuccessful()->expectsOutputToContain('Plný mesiac Plus');
     expect(AiJob::query()->count())->toBe(1);
+});
+
+it('measures meal analyses on the operator\'s own fixture photos with a dedicated grant and reports median and p95', function () {
+    $h = household();
+    $dir = sys_get_temp_dir().'/meal-fixtures-'.uniqid();
+    mkdir($dir);
+    foreach (['a', 'b'] as $name) {
+        $image = imagecreatetruecolor(32, 24);
+        imagejpeg($image, "{$dir}/{$name}.jpg");
+    }
+    config()->set('recipes.ai.daily_meal_analysis_limit', 1);
+    MealAnalysisAgent::fake([
+        ['status' => 'recognized', 'dish_name' => 'Halušky', 'components' => [['label' => 'halušky', 'is_unknown' => false, 'alternatives' => [], 'preparation_state' => 'cooked', 'estimated_grams' => 250, 'portion_basis' => null, 'visible_evidence' => null, 'assumptions' => []]], 'questions' => [], 'limitations' => []],
+        ['status' => 'needs_clarification', 'dish_name' => 'Polievka', 'components' => [], 'questions' => ['Aká polievka?'], 'limitations' => []],
+        ['status' => 'not_food', 'dish_name' => null, 'components' => [], 'questions' => [], 'limitations' => ['Nie je jedlo.']],
+    ]);
+
+    $summary = app(AiMeasurement::class)->run($h['household'], 0, 0, 'full', null, null, 3, $dir);
+    $meal = $summary['kinds']['meal_analysis'];
+
+    expect($meal['jobs'])->toBe(3)
+        ->and($meal['analyses'])->toBe(3)
+        ->and($meal['delivered'])->toBe(2)
+        ->and($meal['outcomes']['not_food'])->toBe(1)
+        ->and($meal['questions_asked'])->toBe(1)
+        ->and($meal['median_cost_micro'])->not->toBeNull()
+        ->and($meal['p95_cost_micro'])->toBeGreaterThanOrEqual($meal['median_cost_micro'])
+        ->and($meal['model'])->toBe('gpt-6-luna')
+        ->and(MealAnalysis::query()->where('user_id', $h['user']->id)->count())->toBe(3);
+
+    // Two delivered proposals consumed, the photo without food returned its use to the measurement grant.
+    $grant = UsageGrant::query()->where('source_key', 'compensation:'.Str::slug("measure:{$summary['run']}:meal"))->firstOrFail();
+    expect($grant->kind)->toBe(UsageKind::MealAnalysis)->and($grant->quantity)->toBe(3)->and($grant->consumed_quantity)->toBe(2)->and($grant->reserved_quantity)->toBe(0);
+
+    $this->artisan('app:ai-measure', ['--report' => $summary['run']])->assertSuccessful()->expectsOutputToContain('Analýzy jedla');
+
+    expect(fn () => app(AiMeasurement::class)->run($h['household'], 0, 0, 'full', null, null, 1, $dir.'/missing'))->toThrow(InvalidArgumentException::class, 'prázdny');
 });

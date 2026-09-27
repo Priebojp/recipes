@@ -11,7 +11,7 @@ vystavenie. Nič z v2 sa neprerába – Cashier, ledger, oprávnenia a admin sa 
 | 8 | **Profily obrázkov a porovnanie low/medium** | ✅ kód hotový (vetva `v2-1-etapa-8-image-profiles`) · ⏳ porovnávací beh a rozhodnutie prevádzkovateľa | Verzované profily `image_economy_v1` / `image_standard_v1` / `image_high_v1`, snímka kódu profilu na úlohe, druh použitia `image_economy` v ledgeri, rozšírené `app:ai-measure` o porovnávací beh 10 jedál × (2 low + 2 medium), admin prehľad nákladov podľa profilu; **žiadna zmena ponuky** |
 | 9 | **Databáza potravín a priradenie ingrediencií** | ✅ kód hotový (vetva `v2-1-etapa-9-food-database`) · ⏳ `USDA_FDC_API_KEY` a prvý `app:food-sync` na serveri | `FoodSourceRecord` (USDA FoodData Central ako jediný prvý zdroj, cache, licencia), ručný SK/CZ slovník bežných surovín, `IngredientFoodMapping` s prevodom jednotiek a stavom suroviny, admin kurátorstvo a neúspešné priradenia |
 | 10 | **Výživové hodnoty receptu** | ✅ kód hotový (vetva `v2-1-etapa-10-nutrition`) | `NutritionCalculation` (revízia receptu, kompletnosť, predpoklady, verzia výpočtu), tok „Vypočítať výživové hodnoty“ s potvrdením priradení, zobrazenie na recept / porciu / 100 g, neaktuálnosť po editácii; bez AI a bez použití |
-| 11 | **Rozpoznanie jedla z fotografie** | ⏳ naplánované | `MealAnalysis` + `MealAnalysisItem`, `AiJobKind::MealAnalysis` s obrazovým vstupom gpt-6-luna, druh použitia `meal_analysis` (3 skúšobné na používateľa), obrazovka „Skontroluj jedlo“, súkromné úložisko fotiek s TTL a odstránením EXIF, meranie nákladu analýzy |
+| 11 | **Rozpoznanie jedla z fotografie** | ✅ kód hotový (vetva `v2-1-etapa-11-meal-analysis`) · ⏳ testovacie fotky v `tests/fixtures/meals/` a `app:ai-measure --meal-analyses` na serveri | `MealAnalysis` + `MealAnalysisItem`, `AiJobKind::MealAnalysis` s obrazovým vstupom gpt-6-luna, druh použitia `meal_analysis` (3 skúšobné na používateľa), obrazovka „Skontroluj jedlo“, súkromné úložisko fotiek s TTL a odstránením EXIF, meranie nákladu analýzy |
 | 12 | **Súkromný denník „Zjedol som“** | ⏳ naplánované | `MealConsumption` + `ConsumptionNutritionSnapshot` (recept / analýza / manuálne jedlo), zjedený podiel a opravy po zložkách, oprávnenia iba pre vlastníka denníka, export/výmaz/čistenie, oddelenie od `CookingEvent` |
 | 13 | **Ponuka v2.1, admin, právne a Stripe údaje** | ⏳ naplánované · vstupy prevádzkovateľa | Katalóg verzia 2 (Economy obrázky, analýzy jedla, balík analýz) len po rozhodnutí z etapy 8, granty `meal_analysis` z predplatného, admin moduly (profily, náklady analýz, stav kľúčov, kurátorstvo), nová verzia informácií o súkromí, kap. 11 (Stripe údaje) do identity prevádzkovateľa a launch checklistu |
 
@@ -294,10 +294,54 @@ kcal ani ID potravín; iba kandidátov, stav a otázky. Prvá verzia bez automat
    fotka má odstránené EXIF a nie je verejne dostupná; cleanup maže po TTL; cudzí používateľ 403 (scenár 13);
    skúšobné 3 analýzy raz na používateľa; kill switch a blokovanie domácnosti platia.
 
+### Čo je hotové (kód)
+
+- Migrácia `2026_09_27_104258`: `ai_jobs.recipe_id` nullable, `ai_jobs.parent_ai_job_id` (doplnenia pod koreňovou úlohou), tabuľky `meal_analyses`
+  (vlastník `user_id`, `ai_job_id`, `status`, `note`, `ai_result`, `ai_status`, `dish_name`, `questions`, `limitations`, `clarification_count`,
+  `nutrition` – zmrazený databázový výpočet, `photo_retain_until`, `photo_removed_at`, `confirmed_at`, `expires_at`) a `meal_analysis_items` (`label`,
+  `alternatives`, `preparation_state`, `estimated_grams` + `grams` + `grams_origin` `estimated|confirmed|measured`, `portion_basis`, `visible_evidence`,
+  `assumptions`, `food_source_record_id` overený serverom, `mapping_status`, `is_unknown`, `included`), `users.meal_photo_notice_accepted_at`.
+  Modely `MealAnalysis` (media kolekcia `photo` na disku `recipes.meal_analysis.disk`, predvolene `local`, bez verejnej URL) a `MealAnalysisItem`, enumy
+  `MealAnalysisStatus`, `MealAnalysisAiStatus`, `MealGramsOrigin`, `AiJobKind::MealAnalysis`, `UsageKind::MealAnalysis`.
+- Ledger: skúšobné 3 analýzy raz na overeného používateľa (`recipes.usage.trial.meal_analysis`, kľúč `trial:meal_analysis:user:{id}`); `TrialGrants`
+  rozhoduje po druhoch, takže domácnosti so starším text/obrázok trialom dostanú analýzy raz cez listener alebo `app:usage-backfill-trials`. Rezervácia pri
+  vytvorení koreňovej úlohy, `AiJobLifecycle::succeed` (spotreba) len pri `recognized|needs_clarification`; `not_food|unusable` → nové
+  `succeedWithoutCharge` (úloha doručená a ocenená, použitie vrátené); definitívna chyba uvoľní, timeout → `reconciling`. Denný limit
+  `RECIPES_AI_DAILY_MEAL_ANALYSIS_LIMIT` (aj v `/admin/ai/settings`) počíta i neúčtované pokusy. `AiAvailability::reasonUnavailable(..., ledger: false)` pre
+  doplnenia bez rezervácie; `AiJobLifecycle::create($attrs, null)` = úloha bez rezervácie.
+- `App\Services\Ai\MealAnalysisService`: `upload` (normalizácia cez `ImageUploadService::normalise` – GD, bez EXIF/GPS, ≤ 1 536 px), `analyze`
+  (idempotentný kľúč `meal|analýza|verzia|pokus`; bežiaca/držaná/doručená úloha sa vracia, nový pokus až po definitívnej chybe), `run`
+  (`MealAnalysisAgent` s obrazovým vstupom `Laravel\Ai\Files\Image::fromPath`, prompt = iba poznámka + prípadné doplnenie; `validateOutput` ponechá len polia
+  schémy – `food_id`, kcal či „pravdepodobnosti“ zahodí; kandidáti sa hľadajú serverom cez `IngredientMatcher::proposeName` v slovníku etapy 9),
+  `clarify` (max. `recipes.meal_analysis.max_clarifications` = 2, dieťa koreňovej úlohy bez rezervácie, náklad meraný), `updateItem`/`addItem`/`removeItem`/
+  `chooseFood` (iba ID spomedzi serverových kandidátov), `calculate` (`NutritionCalculator` etapy 10, 1 porcia), `confirm` (zmrazí `nutrition` alebo uloží bez
+  kalórií, potvrdí navrhnuté priradenia, `expires_at` null, fotka podľa voľby „ponechať“), `discard`, `removePhoto`, `latestJob`.
+- Súkromie: jednorazové vysvetlenie „fotka sa odošle OpenAI“ pred prvým odoslaním (`users.meal_photo_notice_accepted_at`, produktové potvrdenie);
+  fotka sa servíruje iba vlastníkovi cez `GET /jedlo/analyza/{analysis}/foto` (`MealPhotoController`, `Cache-Control: no-store, private`), člen domácnosti
+  403, `MealAnalysisPolicy` len pre `user_id`. Oprava mimo etapy: `ImageUploadService::normalise` vynucuje GD driver – spatie/image s Imagick
+  (predvoľba, keď je rozšírenie nainštalované) EXIF pri prekódovaní kopíroval, takže ani fotky receptov predtým metadáta nestrácali.
+- Retencia: `app:meal-analysis-cleanup` (scheduler denne 03:40, `--dry-run`): pracovné fotky po `RECIPES_MEAL_PHOTO_TTL_HOURS` (24) od dokončenia/zlyhania,
+  ak si ich používateľ nenechal; nedokončené/zahodené návrhy po `RECIPES_MEAL_DRAFT_TTL_DAYS` (7). `AccountErasure` maže analýzy s fotkami pri výmaze
+  domácnosti aj pri odchode člena (sú osobné).
+- UI `/jedlo/analyza` (položka „Jedlo“ v navigácii, Livewire `MealPhotoAnalyzer`): upload/odfotenie (`capture="environment"`), poznámka, zostatok použití,
+  stav spracovania (poll), „Skontroluj jedlo“ (premenovanie, výber potraviny z kandidátov, gramáž s pôvodom potvrdené/odvážené/odhad a odznakom,
+  nezapočítať, neznáma zložka, odobrať, pridať), 1–2 otázky AI s odpoveďou bez ďalšieho odpočtu, predbežný súčet s odznakom „Čiastočný súčet“,
+  „Potvrdiť a vypočítať“ / „Uložiť bez kalórií“ / „Ponechať fotku“ / „Zahodiť“, výsledok `not_food|unusable` ako „Nedokážem určiť“ bez čísel, potvrdený
+  záznam s tabuľkou zložiek a zdrojov, zoznam posledných fotiek. „Zjedol som“ príde v etape 12.
+- Admin: `/admin/ai` pozná druh „Analýza jedla“ (filter, tabuľky po modeli/domácnosti/dňoch, doplnenia označené nadradenou úlohou) – iba metadáta úlohy,
+  nikdy fotka ani zložky. Meranie: `app:ai-measure --meal-analyses=N [--fixtures=dir]` beží na vlastných fotkách prevádzkovateľa z `tests/fixtures/meals/`
+  s vlastným kompenzačným grantom `meal_analysis`; report obsahuje medián/p95 ceny a trvania celej analýzy, úspešnosť, výsledky, otázky, opravy, doplnenia.
+- Testy: `tests/Feature/Ai/MealAnalysisTest.php` (scenáre 3, 4, 5, 6, 13, 14 + tok kontroly a potvrdenia, doplnenia, kill switch/blokovanie/denný limit/trial,
+  súhlasná obrazovka a validácia, cleanup, admin bez náhľadu a výmaz) a rozšírené `AiMeasurementTest`, `UsageLedgerTest` (3 skúšobné druhy).
+  Export a `ExportService` sa dopĺňajú v etape 12 spolu s denníkom.
+
 ### Migrácia a nasadenie
 
-`ai_jobs.recipe_id` nullable + `parent_ai_job_id`; dve nové tabuľky; scheduler `app:meal-analysis-cleanup`;
-`AiCostRateSeeder` bez zmeny (gpt-6-luna sadzby existujú), obrazové vstupné tokeny sa účtujú podľa usage.
+`php artisan migrate` (ai_jobs + dve tabuľky + users), `.env`: `RECIPES_AI_DAILY_MEAL_ANALYSIS_LIMIT`, `RECIPES_USAGE_TRIAL_MEAL_ANALYSES`,
+`RECIPES_MEAL_PHOTO_DISK`, `RECIPES_MEAL_PHOTO_TTL_HOURS`, `RECIPES_MEAL_DRAFT_TTL_DAYS` (všetky s predvoľbami); scheduler musí bežať
+(`app:meal-analysis-cleanup`); `app:usage-backfill-trials` pridelí existujúcim overeným vlastníkom 3 analýzy; `AiCostRateSeeder` bez zmeny (gpt-6-luna
+sadzby existujú), obrazové vstupné tokeny sa účtujú podľa usage z endpointu. Pred launch checklistom nahrať vlastné fotky do `tests/fixtures/meals/`
+a spustiť `app:ai-measure <domácnosť> --text=0 --images=0 --meal-analyses=10 --yes`.
 
 ## Etapa 12 – Súkromný denník „Zjedol som“
 
@@ -409,6 +453,6 @@ kód (pripravený a testovaný s konfigurovateľnými hodnotami) a vstupy prevá
 | Počty a ceny (obrázky, analýzy, balíky) | etapa 13 | hodnoty sú v katalógu, verzia 2 sa nezakladá |
 | USDA ako prvý zdroj | etapa 9 (implementácia) | plán počíta s USDA; zmena zdroja = iná implementácia `FoodDataSource` |
 | Gating výživy receptov (Free vs. Plus) | etapa 10 (UI) | predvolene bez gatingu – výpočet nemá variabilný náklad |
-| Retencia fotiek a právny základ nového účelu | etapa 11 (nasadenie), 13 | TTL konfigurovateľné, súhlasná obrazovka pred prvým odoslaním |
+| Retencia fotiek a právny základ nového účelu | etapa 11 (nasadenie), 13 | TTL konfigurovateľné (`RECIPES_MEAL_PHOTO_TTL_HOURS`, `RECIPES_MEAL_DRAFT_TTL_DAYS`), súhlasná obrazovka pred prvým odoslaním je hotová; text informácií o súkromí až v etape 13 |
 | Denník len pre dospelého prihláseného používateľa | etapa 12 | MVP presne takto; detské profily a hostia mimo rozsah |
 | Identita prevádzkovateľa, admin e-mail, DPH, Stripe aktivácia | etapa 13 a launch (v2 etapa 7) | checkout ostáva vypnutý |

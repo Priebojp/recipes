@@ -21,6 +21,8 @@ class AiMeasure extends Command
         {household? : ID domácnosti s receptami, na ktorej sa meria (odporúčaná vlastná testovacia)}
         {--text=30 : Počet textových úloh}
         {--images=30 : Počet obrázkových úloh}
+        {--meal-analyses=0 : Počet analýz jedla z testovacích fotiek (v2.1 etapa 11)}
+        {--fixtures= : Priečinok s vlastnými fotkami jedál (predvolene tests/fixtures/meals)}
         {--scope=full : Rozsah textovej úpravy (description|steps|full)}
         {--report= : Iba vypísať report skoršieho behu (kľúč behu)}
         {--yes : Potvrdiť, že meranie volá platené API poskytovateľa}';
@@ -44,6 +46,8 @@ class AiMeasure extends Command
 
         $texts = max(0, (int) $this->option('text'));
         $images = max(0, (int) $this->option('images'));
+        $meals = max(0, (int) $this->option('meal-analyses'));
+        $fixtures = $this->option('fixtures') ? (string) $this->option('fixtures') : null;
         $scope = (string) $this->option('scope');
         if (! in_array($scope, AiTextService::SCOPES, true)) {
             $this->components->error('Rozsah musí byť description, steps alebo full.');
@@ -51,19 +55,20 @@ class AiMeasure extends Command
             return self::INVALID;
         }
 
-        if (! $this->option('yes') && ! $this->confirm("Spustiť {$texts} textových a {$images} obrázkových úloh na reálnom kľúči pre domácnosť #{$household->id} „{$household->name}“? Volá to platené API.", false)) {
+        $what = "{$texts} textových a {$images} obrázkových úloh".($meals > 0 ? " a {$meals} analýz jedla" : '');
+        if (! $this->option('yes') && ! $this->confirm("Spustiť {$what} na reálnom kľúči pre domácnosť #{$household->id} „{$household->name}“? Volá to platené API.", false)) {
             $this->components->warn('Zrušené.');
 
             return self::SUCCESS;
         }
 
-        $bar = $this->output->createProgressBar($texts + $images);
+        $bar = $this->output->createProgressBar($texts + $images + $meals);
         $bar->start();
 
         try {
             $summary = $measurement->run($household, $texts, $images, $scope, function (AiJob $job) use ($bar) {
                 $bar->advance();
-            });
+            }, null, $meals, $fixtures);
         } catch (InvalidArgumentException $e) {
             $bar->clear();
             $this->components->error($e->getMessage());
@@ -100,9 +105,9 @@ class AiMeasure extends Command
                 $k['min_cost_micro'] !== null ? Money::microUsd($k['min_cost_micro']).' – '.Money::microUsd($k['max_cost_micro']) : '–',
                 Money::microUsd((int) $k['total_cost_micro']),
                 $k['avg_duration_ms'] !== null ? round($k['avg_duration_ms'] / 1000, 1).' s' : '–',
-                $kind === 'text'
-                    ? (($k['avg_input_tokens'] ?? '–').' / '.($k['avg_output_tokens'] ?? '–').' (reasoning '.($k['avg_reasoning_tokens'] ?? '–').')')
-                    : ('img out '.($k['avg_image_output_tokens'] ?? '–')),
+                $kind === 'image'
+                    ? ('img out '.($k['avg_image_output_tokens'] ?? '–'))
+                    : (($k['avg_input_tokens'] ?? '–').' / '.($k['avg_output_tokens'] ?? '–').' (reasoning '.($k['avg_reasoning_tokens'] ?? '–').')'),
             ];
         }
         $this->table(['Druh', 'Model · profil', 'Doručené', 'Ø cena', 'Rozpätie', 'Spolu', 'Ø trvanie', 'Ø tokeny vstup / výstup'], $rows);
@@ -111,6 +116,16 @@ class AiMeasure extends Command
             foreach ($k['errors'] ?? [] as $error) {
                 $this->line("  <fg=red>{$kind}:</> {$error}");
             }
+        }
+
+        if ($meal = $summary['kinds']['meal_analysis'] ?? null) {
+            $this->newLine();
+            $this->line('<options=bold>Analýzy jedla (celá analýza vrátane doplnení)</>');
+            $this->components->twoColumnDetail('Doručené / spustené', "{$meal['delivered']} / {$meal['analyses']}".($meal['success_rate'] !== null ? ' ('.round($meal['success_rate'] * 100).' %)' : ''));
+            $this->components->twoColumnDetail('Výsledky', implode(', ', array_map(fn ($k, $v) => "{$k}: {$v}", array_keys($meal['outcomes']), $meal['outcomes'])));
+            $this->components->twoColumnDetail('Cena medián / p95', ($meal['median_cost_micro'] !== null ? Money::microUsd($meal['median_cost_micro']) : '–').' / '.($meal['p95_cost_micro'] !== null ? Money::microUsd($meal['p95_cost_micro']) : '–'));
+            $this->components->twoColumnDetail('Trvanie medián / p95', ($meal['median_duration_ms'] !== null ? round($meal['median_duration_ms'] / 1000, 1).' s' : '–').' / '.($meal['p95_duration_ms'] !== null ? round($meal['p95_duration_ms'] / 1000, 1).' s' : '–'));
+            $this->components->twoColumnDetail('Otázky / opravy / doplnenia', "{$meal['questions_asked']} / {$meal['corrections']} / {$meal['clarifications']}");
         }
 
         $p = $summary['projection'];

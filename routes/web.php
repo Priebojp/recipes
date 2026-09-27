@@ -5,6 +5,7 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ConsentController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\InvitationController;
+use App\Http\Controllers\MealPhotoController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\StripeWebhookController;
 use Illuminate\Support\Facades\Route;
@@ -48,6 +49,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::livewire('plan/nakup', 'pages::plan.shopping')->name('plan.shopping');
 
     Route::livewire('family', 'pages::family.index')->name('family.index');
+
+    // Photo analysis of a meal (v2.1 stage 11): personal to the uploader; the photo is served only to them.
+    Route::livewire('jedlo/analyza', 'pages::meals.analyze')->name('meals.analyze');
+    Route::get('jedlo/analyza/{analysis}/foto', MealPhotoController::class)->name('meals.photo');
+
     Route::livewire('settings/household', 'pages::settings.household')->name('household.edit');
 
     Route::get('export', ExportController::class)->name('export');

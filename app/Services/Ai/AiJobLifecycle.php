@@ -28,17 +28,19 @@ class AiJobLifecycle
     /**
      * Create the queued job and reserve its use in one transaction. Nothing is created when no use is available.
      * The kind of use is the caller's decision: text jobs spend Text, image jobs the kind of their image profile.
+     * With $kind = null no use is reserved (a clarification inside an already charged photo analysis): the job
+     * still measures its cost, it just never touches the ledger.
      *
      * @param  array<string, mixed>  $attributes
      *
      * @throws InsufficientUsageException
      */
-    public function create(array $attributes, UsageKind $kind): AiJob
+    public function create(array $attributes, ?UsageKind $kind): AiJob
     {
         return DB::transaction(function () use ($attributes, $kind) {
             $job = AiJob::create($attributes);
 
-            if ($this->ledger->enforced()) {
+            if ($kind !== null && $this->ledger->enforced()) {
                 $this->ledger->reserve($job, $kind);
             }
 
@@ -71,6 +73,20 @@ class AiJobLifecycle
         DB::transaction(function () use ($job, $attributes) {
             $job->update(['status' => AiJobStatus::Succeeded, 'finished_at' => now(), 'error' => null, ...$attributes]);
             $this->ledger->consume($job);
+        });
+    }
+
+    /**
+     * The provider answered, but with nothing the person can use (photo without food, unusable image): the job is
+     * finished and measured – the internal cost stays on it – while the reserved use goes back to the household.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    public function succeedWithoutCharge(AiJob $job, array $attributes): void
+    {
+        DB::transaction(function () use ($job, $attributes) {
+            $job->update(['status' => AiJobStatus::Succeeded, 'finished_at' => now(), 'error' => null, ...$attributes]);
+            $this->ledger->release($job);
         });
     }
 
