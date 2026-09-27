@@ -13,9 +13,9 @@
 @endif
 
 @if ($isSubscription)
-{{ __('Obsah balíka: :text textových AI použití a :images obrázkov Standard za mesačné obdobie.', ['text' => $order->product_snapshot['text_uses_per_period'] ?? '–', 'images' => $order->product_snapshot['image_uses_per_period'] ?? '–']) }}
+{{ __('Obsah programu: :uses.', ['uses' => implode(', ', \App\Models\PlanVersion::describeUses((array) ($order->product_snapshot['uses_per_period'] ?? []))) ?: '–']) }}
 @else
-{{ __('Obsah balíka: :count × :kind.', ['count' => $order->product_snapshot['unit_count'] ?? '–', 'kind' => $order->product_snapshot['unit_kind'] ?? '']) }}
+{{ __('Obsah balíka: :count × :kind.', ['count' => $order->product_snapshot['unit_count'] ?? '–', 'kind' => \App\Enums\UsageKind::tryFrom((string) ($order->product_snapshot['unit_kind'] ?? ''))?->label() ?? ($order->product_snapshot['unit_kind'] ?? '')]) }}
 @endif
 
 ## {{ __('Odstúpenie od zmluvy') }}

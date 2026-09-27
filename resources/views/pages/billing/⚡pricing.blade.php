@@ -93,8 +93,9 @@ new #[Layout('layouts::public')] #[Title('Cenník')] class extends Component {
                 </div>
                 <ul class="space-y-1 text-sm">
                     <li>{{ __('Všetko z Free') }}</li>
-                    <li>{{ __(':count AI textových operácií za mesačné obdobie', ['count' => $plan->text_uses_per_period]) }}</li>
-                    <li>{{ __(':count AI obrázkov Standard za mesačné obdobie', ['count' => $plan->image_uses_per_period]) }}</li>
+                    @foreach (\App\Models\PlanVersion::describeUses($plan->usesPerPeriod()) as $line)
+                        <li>{{ __('AI: :line', ['line' => $line]) }}</li>
+                    @endforeach
                     @foreach ($plan->features ?? [] as $feature)
                         <li>{{ $feature }}</li>
                     @endforeach

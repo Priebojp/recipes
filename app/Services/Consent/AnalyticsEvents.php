@@ -25,7 +25,7 @@ class AnalyticsEvents
         'source' => ['manual', 'ai', 'import'],
         'term' => ['today', 'tomorrow', 'week'],
         'mode' => ['day', 'week'],
-        'offer' => ['plus_monthly', 'plus_yearly', 'images_20_standard', 'text_100'],
+        'offer' => ['plus_monthly', 'plus_yearly', 'images_20_standard', 'text_100', 'meal_analyses_100', 'images_economy_20'],
     ];
 
     /**

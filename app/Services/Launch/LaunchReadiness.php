@@ -5,6 +5,7 @@ namespace App\Services\Launch;
 use App\Enums\LaunchCheckStatus;
 use App\Enums\LegalDocumentType;
 use App\Enums\PlanInterval;
+use App\Enums\UsageKind;
 use App\Models\AddonVersion;
 use App\Models\AiCostRate;
 use App\Models\PlanVersion;
@@ -13,11 +14,14 @@ use App\Services\Admin\AppSettings;
 use App\Services\Ai\AiAvailability;
 use App\Services\Ai\AiCostCalculator;
 use App\Services\Ai\AiSettings;
+use App\Services\Ai\ImageProfile;
 use App\Services\Billing\Catalog;
 use App\Services\Billing\Gateway\StripeInspector;
 use App\Services\Billing\StripeWebhookEvents;
+use App\Services\Food\UsdaFoodDataCentral;
 use App\Services\Legal\CheckoutReadiness;
 use App\Services\Legal\LegalDocuments;
+use App\Services\Legal\OperatorIdentity;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -49,6 +53,12 @@ class LaunchReadiness
     public const MEASUREMENT_KEY = 'launch.ai_measurement';
 
     public const RECONCILE_KEY = 'ops.billing_reconcile_last_run_at';
+
+    /** Set by app:meal-analysis-cleanup (v2.1 stage 11); the checklist wants it running daily before photos are sold. */
+    public const MEAL_CLEANUP_KEY = 'ops.meal_analysis_cleanup_last_run_at';
+
+    /** Photo analyses the addendum asks to measure on the operator's own fixtures before a price promise. */
+    public const MEAL_MEASUREMENT_MINIMUM = 10;
 
     /** Text and image jobs the specification asks to measure before launch. */
     public const MEASUREMENT_MINIMUM = 30;
@@ -153,6 +163,17 @@ class LaunchReadiness
             $lastRunAt->lt(CarbonImmutable::now()->subHours(36)) => $this->productionOnly('env.scheduler', $g, __('Scheduler (app:billing-reconcile)'), false,
                 __('posledný beh :at UTC', ['at' => $lastRunAt->toDateTimeString()]), __('Denná úloha nebežala viac než 36 h – skontroluj cron.')),
             default => new LaunchCheck('env.scheduler', $g, __('Scheduler (app:billing-reconcile)'), LaunchCheckStatus::Ok, __('posledný beh :at UTC', ['at' => $lastRunAt->toDateTimeString()])),
+        };
+
+        $cleanup = $this->settings->get(self::MEAL_CLEANUP_KEY);
+        $cleanupAt = is_string($cleanup) ? CarbonImmutable::parse($cleanup) : null;
+        $sellsMeals = $this->sellsMealAnalyses();
+        $checks[] = match (true) {
+            $cleanupAt === null => new LaunchCheck('env.meal_cleanup', $g, __('Retencia fotiek (app:meal-analysis-cleanup)'), $sellsMeals && $this->isProduction() ? LaunchCheckStatus::Fail : LaunchCheckStatus::Warn,
+                __('zatiaľ nebežal'), __('Denná úloha maže pracovné fotky po TTL a nedokončené návrhy; beží zo scheduleru (schedule:run). Bez nej sľub retencie v informáciách o súkromí neplatí.')),
+            $cleanupAt->lt(CarbonImmutable::now()->subHours(36)) => $this->productionOnly('env.meal_cleanup', $g, __('Retencia fotiek (app:meal-analysis-cleanup)'), false,
+                __('posledný beh :at UTC', ['at' => $cleanupAt->toDateTimeString()]), __('Cleanup nebežal viac než 36 h – skontroluj cron.')),
+            default => new LaunchCheck('env.meal_cleanup', $g, __('Retencia fotiek (app:meal-analysis-cleanup)'), LaunchCheckStatus::Ok, __('posledný beh :at UTC', ['at' => $cleanupAt->toDateTimeString()])),
         };
 
         $failed = $this->safeCount(fn () => (int) DB::table('failed_jobs')->count());
@@ -351,6 +372,16 @@ class LaunchReadiness
             $blockers === [] ? __('identita vyplnená, VOP / súkromie / odstúpenie publikované') : implode(' ', $blockers),
             $blockers === [] ? null : __('Dopĺňa sa v /admin/legal; bez toho je platený checkout zablokovaný (akceptačný test 20).'));
 
+        // v2.1 addendum chapter 11: the public name and descriptor customers will see on statements, kept with the identity.
+        $operator = app(OperatorIdentity::class);
+        $publicName = $operator->get('public_business_name');
+        $descriptor = $operator->get('statement_descriptor');
+        $descriptorOk = $descriptor !== '' && mb_strlen($descriptor) >= 5 && mb_strlen($descriptor) <= 22;
+        $checks[] = new LaunchCheck('legal.stripe_identity', $g, __('Verejné meno a statement descriptor (Stripe)'),
+            $publicName !== '' && $descriptorOk ? LaunchCheckStatus::Ok : ($this->isProduction() ? LaunchCheckStatus::Fail : LaunchCheckStatus::Warn),
+            $publicName === '' && $descriptor === '' ? __('nevyplnené') : __('verejné meno: :name · descriptor: :descriptor', ['name' => $publicName !== '' ? $publicName : '–', 'descriptor' => $descriptor !== '' ? $descriptor.($descriptorOk ? '' : ' ('.__('5–22 znakov').')') : '–']),
+            $publicName !== '' && $descriptorOk ? null : __('Doplň v /admin/legal (identita): verejné meno „Moje recepty“ a descriptor MOJE-RECEPTY.SK, overený v Stripe; potvrdenie účtu je ručná položka.'));
+
         $cookies = $this->documents->current(LegalDocumentType::Cookies);
         $checks[] = new LaunchCheck('legal.cookies', $g, __('Stránka o cookies'), $cookies !== null && ! $cookies->hasPlaceholders() ? LaunchCheckStatus::Ok : LaunchCheckStatus::Warn,
             $cookies === null ? __('nie je publikovaná') : ($cookies->hasPlaceholders() ? __('v:version obsahuje nevyplnené údaje', ['version' => $cookies->version]) : 'v'.$cookies->version),
@@ -406,7 +437,10 @@ class LaunchReadiness
             __('text: :text · obrázky: :image', ['text' => ($textModel ?? __('predvolený')).($textRate ? ' · '.__('sadzba ✓') : ' · '.__('bez sadzby')), 'image' => ($imageModel ?? __('predvolený')).' '.$this->aiSettings->defaultImageProfile()->value.' ('.$this->aiSettings->imageQuality().' '.$this->aiSettings->imagePixelSize().')'.($imageRate ? ' · '.__('sadzba ✓') : ' · '.__('bez sadzby'))]),
             $textRate !== null && $imageRate !== null ? null : __('Nastav RECIPES_AI_TEXT_MODEL / RECIPES_AI_IMAGE_MODEL (gpt-6-luna, gpt-image-2) a nahraj cenník (AiCostRateSeeder), inak sú náklady neocenené.'));
 
+        $checks[] = $this->profileRatesCheck($imageModel);
         $checks[] = $this->measurementCheck();
+        $checks[] = $this->mealMeasurementCheck();
+        $checks[] = $this->usdaCheck();
 
         $budget = $this->aiSettings->monthlyBudgetMicroUsd();
         $checks[] = new LaunchCheck('ai.budget', $g, __('Mesačný AI rozpočet (alarm)'), $budget !== null ? LaunchCheckStatus::Ok : LaunchCheckStatus::Warn,
@@ -433,6 +467,90 @@ class LaunchReadiness
             $enough && $current ? null : __('Zopakuj meranie s aktuálnym modelom a aspoň :minimum úlohami každého druhu.', ['minimum' => self::MEASUREMENT_MINIMUM]));
     }
 
+    /**
+     * v2.1 stage 13: a cost rate for every selectable image profile (Economy = low, Standard = medium) of the current
+     * image model. A profile the catalogue sells without a rate blocks; an unsold one only warns.
+     */
+    private function profileRatesCheck(?string $imageModel): LaunchCheck
+    {
+        $g = self::GROUP_AI;
+        $missing = [];
+        foreach (ImageProfile::selectable() as $profile) {
+            $rate = $imageModel ? $this->costs->rateFor($this->aiSettings->imageProvider(), $imageModel, AiCostRate::MODALITY_IMAGE, $profile->quality(), $profile->pixelSize(), now()) : null;
+            if ($rate === null) {
+                $missing[] = $profile;
+            }
+        }
+        $soldMissing = array_filter($missing, fn (ImageProfile $p) => $this->sellsImageKind($p->usageKind()));
+        $status = match (true) {
+            $missing === [] => LaunchCheckStatus::Ok,
+            $soldMissing !== [] => LaunchCheckStatus::Fail,
+            default => LaunchCheckStatus::Warn,
+        };
+
+        return new LaunchCheck('ai.profile_rates', $g, __('Sadzby pre profily obrázkov'), $status,
+            $missing === [] ? __('Economy (low) aj Standard (medium) majú sadzbu') : __('bez sadzby: :profiles', ['profiles' => implode(', ', array_map(fn (ImageProfile $p) => $p->label().' ('.$p->quality().')', $missing))]),
+            $missing === [] ? null : __('Nahraj cenník (AiCostRateSeeder) alebo doplň sadzbu v /admin/ai/rates; ponuka s profilom bez sadzby by mala neocenené náklady.'));
+    }
+
+    /**
+     * v2.1 stage 13: the measurement of photo analyses on the operator's own fixtures. Required once the catalogue
+     * sells analyses (a plan with included analyses or an active pack); otherwise a reminder.
+     */
+    private function mealMeasurementCheck(): LaunchCheck
+    {
+        $g = self::GROUP_AI;
+        $m = $this->measurement();
+        $meals = $m['kinds']['meal_analysis'] ?? null;
+        $sells = $this->sellsMealAnalyses();
+        $label = __('Meranie analýz jedla');
+
+        if ($meals === null) {
+            return new LaunchCheck('ai.meal_measurement', $g, $label, $sells ? LaunchCheckStatus::Fail : LaunchCheckStatus::Warn, __('zatiaľ nemerané'),
+                __('php artisan app:ai-measure <domácnosť> --text=0 --images=0 --meal-analyses=:n --yes na vlastných fotkách v tests/fixtures/meals/; bez merania sa analýzy nesmú ponúkať.', ['n' => self::MEAL_MEASUREMENT_MINIMUM]));
+        }
+
+        $delivered = (int) ($meals['delivered'] ?? $meals['succeeded'] ?? 0);
+        $current = ($meals['model'] ?? null) === $this->aiSettings->textModel();
+        $enough = $delivered >= self::MEAL_MEASUREMENT_MINIMUM;
+        $detail = __(':delivered rozpoznaných z :count · medián :median · p95 :p95 · :at', [
+            'delivered' => $delivered,
+            'count' => (int) ($meals['analyses'] ?? $meals['jobs'] ?? 0),
+            'median' => isset($meals['median_cost_micro']) ? number_format($meals['median_cost_micro'] / 1_000_000, 4, ',', ' ').' USD' : '–',
+            'p95' => isset($meals['p95_cost_micro']) ? number_format($meals['p95_cost_micro'] / 1_000_000, 4, ',', ' ').' USD' : '–',
+            'at' => $m['at'] ?? '?',
+        ]).($current ? '' : ' · '.__('iný model než aktuálne nastavenie'));
+
+        return new LaunchCheck('ai.meal_measurement', $g, $label, $enough && $current ? LaunchCheckStatus::Ok : ($sells ? LaunchCheckStatus::Fail : LaunchCheckStatus::Warn), $detail,
+            $enough && $current ? null : __('Zopakuj meranie s aktuálnym modelom a aspoň :minimum rozpoznanými analýzami.', ['minimum' => self::MEAL_MEASUREMENT_MINIMUM]));
+    }
+
+    /** v2.1 stage 13: the food database key. The dictionary works without it; searching new foods does not. */
+    private function usdaCheck(): LaunchCheck
+    {
+        $g = self::GROUP_AI;
+        $configured = app(UsdaFoodDataCentral::class)->isConfigured();
+        $sells = $this->sellsMealAnalyses();
+
+        return new LaunchCheck('food.usda', $g, __('USDA FoodData Central kľúč'), $configured ? LaunchCheckStatus::Ok : ($sells && $this->isProduction() ? LaunchCheckStatus::Fail : LaunchCheckStatus::Warn),
+            $configured ? __('USDA_FDC_API_KEY nastavený') : __('USDA_FDC_API_KEY chýba'),
+            $configured ? null : __('Bez kľúča sa nové potraviny nehľadajú (slovník funguje); pred predajom analýz kľúč nastav a spusti app:food-sync.'));
+    }
+
+    /** Whether the active catalogue includes photo analyses (a plan with included uses or a pack). */
+    public function sellsMealAnalyses(): bool
+    {
+        return $this->catalog->plans()->contains(fn (PlanVersion $p) => $p->meal_analysis_uses_per_period > 0)
+            || $this->catalog->addons()->contains(fn (AddonVersion $a) => $a->unit_kind === UsageKind::MealAnalysis);
+    }
+
+    /** Whether the active catalogue grants or sells the given kind of image use. */
+    public function sellsImageKind(UsageKind $kind): bool
+    {
+        return $this->catalog->plans()->contains(fn (PlanVersion $p) => $p->image_uses_per_period > 0 && $p->imageProfile()->usageKind() === $kind)
+            || $this->catalog->addons()->contains(fn (AddonVersion $a) => $a->unit_kind === $kind);
+    }
+
     /** @return array<string, mixed>|null the last stored measurement summary */
     public function measurement(): ?array
     {
@@ -447,8 +565,10 @@ class LaunchReadiness
         $checks = [];
         foreach ($this->signoffs->all() as $key => $confirmation) {
             $item = LaunchSignoffs::ITEMS[$key];
+            // The image comparison is optional for the v2 offer, but not once Economy images are on sale (stage 13).
+            $optional = LaunchSignoffs::isOptional($key) && ! ($key === 'image_profile' && $this->sellsImageKind(UsageKind::ImageEconomy));
             $checks[] = new LaunchCheck('signoff.'.$key, self::GROUP_SIGNOFFS, __($item['label']),
-                $confirmation !== null ? LaunchCheckStatus::Ok : (LaunchSignoffs::isOptional($key) ? LaunchCheckStatus::Warn : LaunchCheckStatus::Fail),
+                $confirmation !== null ? LaunchCheckStatus::Ok : ($optional ? LaunchCheckStatus::Warn : LaunchCheckStatus::Fail),
                 $confirmation !== null ? __('potvrdené :date: :note', ['date' => CarbonImmutable::parse($confirmation['at'])->format('j. n. Y'), 'note' => $confirmation['note']]) : __('nepotvrdené'),
                 $confirmation !== null ? null : __($item['hint']));
         }

@@ -123,6 +123,9 @@ return [
             'plus_yearly' => env('STRIPE_PRICE_PLUS_YEARLY'),
             'images_20_standard' => env('STRIPE_PRICE_IMAGES_20_STANDARD'),
             'text_100' => env('STRIPE_PRICE_TEXT_100'),
+            // v2.1 stage 13 packs; sold only once the administrator activates them in /admin/catalog.
+            'meal_analyses_100' => env('STRIPE_PRICE_MEAL_ANALYSES_100'),
+            'images_economy_20' => env('STRIPE_PRICE_IMAGES_ECONOMY_20'),
         ],
     ],
 

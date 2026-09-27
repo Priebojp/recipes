@@ -91,7 +91,7 @@ new #[Title('Zhrnutie objednávky')] class extends Component {
                 <dt class="text-zinc-500">{{ __('Obsah') }}</dt>
                 <dd>
                     @if ($isPlan)
-                        {{ $offer->interval === PlanInterval::Year ? __(':text textových AI použití a :images obrázkov Standard za mesačné obdobie (pri ročnej platbe dopĺňané mesačne); Plus funkcie pre jednu domácnosť.', ['text' => $offer->text_uses_per_period, 'images' => $offer->image_uses_per_period]) : __(':text textových AI použití a :images obrázkov Standard za mesačné obdobie; Plus funkcie pre jednu domácnosť.', ['text' => $offer->text_uses_per_period, 'images' => $offer->image_uses_per_period]) }}
+                        {{ __('AI použitia: :uses', ['uses' => implode(', ', \App\Models\PlanVersion::describeUses($offer->usesPerPeriod()))]) }}{{ $offer->interval === PlanInterval::Year ? ' '.__('(pri ročnej platbe dopĺňané mesačne)') : '' }}; {{ __('Plus funkcie pre jednu domácnosť.') }}
                     @else
                         {{ __(':count × :kind, jednorazovo; použiteľné aj bez Plus, bez expirácie počas prevádzky služby.', ['count' => $offer->unit_count, 'kind' => $offer->unit_kind->label()]) }}
                     @endif

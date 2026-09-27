@@ -119,6 +119,86 @@ class AiUsageReport
     }
 
     /**
+     * Photo analyses (v2.1 stage 13): cost of a whole analysis (root job + its clarifications), median and p95, how
+     * the model answered and what a delivered result costs – from job metadata only, never from photos or components.
+     *
+     * @return array{analyses: int, delivered: int, not_food: int, unusable: int, failed: int, active: int, clarifications: int, cost_micro: int, median_cost_micro: int|null, p95_cost_micro: int|null, avg_delivered_cost_micro: int|null, median_duration_ms: int|null, success_rate: float|null, model: string|null}
+     */
+    public function mealAnalyses(CarbonInterface $from, CarbonInterface $to): array
+    {
+        $roots = $this->between($from, $to)
+            ->where('kind', AiJobKind::MealAnalysis)
+            ->whereNull('parent_ai_job_id')
+            ->get(['id', 'model', 'status', 'output', 'estimated_cost_micro_usd', 'duration_ms']);
+        $children = AiJob::query()
+            ->where('kind', AiJobKind::MealAnalysis)
+            ->whereIn('parent_ai_job_id', $roots->pluck('id'))
+            ->get(['id', 'parent_ai_job_id', 'estimated_cost_micro_usd', 'duration_ms'])
+            ->groupBy('parent_ai_job_id');
+
+        $costs = [];
+        $durations = [];
+        $outcomes = ['recognized' => 0, 'needs_clarification' => 0, 'not_food' => 0, 'unusable' => 0];
+        $failed = 0;
+        $active = 0;
+        $clarifications = 0;
+        $deliveredCost = 0;
+        foreach ($roots as $root) {
+            $family = collect([$root, ...($children->get($root->id) ?? collect())]);
+            $clarifications += $family->count() - 1;
+            $cost = (int) $family->sum(fn (AiJob $j) => (int) ($j->estimated_cost_micro_usd ?? 0));
+            if ($family->whereNotNull('estimated_cost_micro_usd')->isNotEmpty()) {
+                $costs[] = $cost;
+            }
+            if ($root->duration_ms !== null) {
+                $durations[] = (int) $family->sum(fn (AiJob $j) => (int) ($j->duration_ms ?? 0));
+            }
+            if ($root->status === AiJobStatus::Failed) {
+                $failed++;
+            } elseif ($root->status->isActive()) {
+                $active++;
+            }
+            $status = $root->output['status'] ?? null;
+            if (is_string($status) && isset($outcomes[$status])) {
+                $outcomes[$status]++;
+                if (in_array($status, ['recognized', 'needs_clarification'], true)) {
+                    $deliveredCost += $cost;
+                }
+            }
+        }
+        $delivered = $outcomes['recognized'] + $outcomes['needs_clarification'];
+
+        return [
+            'analyses' => $roots->count(),
+            'delivered' => $delivered,
+            'not_food' => $outcomes['not_food'],
+            'unusable' => $outcomes['unusable'],
+            'failed' => $failed,
+            'active' => $active,
+            'clarifications' => $clarifications,
+            'cost_micro' => (int) array_sum($costs),
+            'median_cost_micro' => self::percentile($costs, 0.5),
+            'p95_cost_micro' => self::percentile($costs, 0.95),
+            'avg_delivered_cost_micro' => $delivered > 0 ? intdiv($deliveredCost, $delivered) : null,
+            'median_duration_ms' => self::percentile($durations, 0.5),
+            'success_rate' => $roots->isNotEmpty() ? round($delivered / $roots->count(), 3) : null,
+            'model' => $roots->first()?->model,
+        ];
+    }
+
+    /** @param  list<int>  $values */
+    private static function percentile(array $values, float $p): ?int
+    {
+        if ($values === []) {
+            return null;
+        }
+        sort($values);
+        $index = (int) ceil($p * count($values)) - 1;
+
+        return $values[max(0, min(count($values) - 1, $index))];
+    }
+
+    /**
      * Households ordered by spend (id + name only; no recipe content).
      *
      * @return Collection<int, object{household_id: int, name: string, jobs: int, text_jobs: int, image_jobs: int, meal_analysis_jobs: int, cost_micro: int}>

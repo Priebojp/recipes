@@ -102,6 +102,32 @@ new #[Layout('layouts::admin')] #[Title('AI použitie a náklady')] class extend
         return $this->report()->timezone();
     }
 
+    /** Photo analyses in the range (v2.1 stage 13): job metadata only, never photos or components. */
+    #[Computed]
+    public function mealAnalyses(): array
+    {
+        return $this->report()->mealAnalyses(...$this->range);
+    }
+
+    /**
+     * Integration keys: configured or not, never the value.
+     *
+     * @return list<array{name: string, configured: bool, detail: string}>
+     */
+    #[Computed]
+    public function integrations(): array
+    {
+        $availability = app(\App\Services\Ai\AiAvailability::class);
+        $settings = app(\App\Services\Ai\AiSettings::class);
+        $usda = app(\App\Services\Food\UsdaFoodDataCentral::class)->isConfigured();
+
+        return [
+            ['name' => __('OpenAI – text a rozpoznanie jedla'), 'configured' => $availability->textConfigured(), 'detail' => $settings->textProvider().' · '.($settings->textModel() ?? __('predvolený model'))],
+            ['name' => __('OpenAI – obrázky'), 'configured' => $availability->imageConfigured(), 'detail' => $settings->imageProvider().' · '.($settings->imageModel() ?? __('predvolený model'))],
+            ['name' => __('USDA FoodData Central'), 'configured' => $usda, 'detail' => $usda ? __('vyhľadávanie nových potravín zapnuté') : __('USDA_FDC_API_KEY chýba – slovník funguje, nové potraviny sa nehľadajú')],
+        ];
+    }
+
     protected function report(): AiUsageReport
     {
         return app(AiUsageReport::class);
@@ -259,6 +285,42 @@ new #[Layout('layouts::admin')] #[Title('AI použitie a náklady')] class extend
                 @empty
                     <li class="py-2 text-zinc-500">{{ __('Zatiaľ žiadny beh porovnania.') }}</li>
                 @endforelse
+            </ul>
+        </flux:card>
+    </div>
+
+    @php($meals = $this->mealAnalyses)
+    <div class="grid gap-4 lg:grid-cols-2">
+        <flux:card class="space-y-3" data-test="meal-analysis-costs">
+            <flux:heading size="lg" class="font-display">{{ __('Analýzy jedla – náklady') }}</flux:heading>
+            <flux:text class="text-xs">{{ __('Jedna analýza = koreňová úloha + jej doplnenia. Iba metadáta úloh; fotky ani zložky sa tu nezobrazujú. Podklad pre cenu balíka analýz (etapa 13).') }}</flux:text>
+            @if ($meals['analyses'] === 0)
+                <flux:text class="text-sm text-zinc-500">{{ __('V období nie sú žiadne analýzy.') }}</flux:text>
+            @else
+                <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-3">
+                    <div><dt class="text-zinc-500">{{ __('Analýzy') }}</dt><dd class="font-medium">{{ $meals['analyses'] }}</dd></div>
+                    <div><dt class="text-zinc-500">{{ __('Rozpoznané') }}</dt><dd class="font-medium" data-test="meal-delivered">{{ $meals['delivered'] }} @if ($meals['success_rate'] !== null)<span class="text-xs text-zinc-500">({{ (int) round($meals['success_rate'] * 100) }} %)</span>@endif</dd></div>
+                    <div><dt class="text-zinc-500">{{ __('Bez jedla / nepoužiteľné') }}</dt><dd class="font-medium">{{ $meals['not_food'] }} / {{ $meals['unusable'] }}</dd></div>
+                    <div><dt class="text-zinc-500">{{ __('Zlyhané / bežiace') }}</dt><dd class="font-medium">{{ $meals['failed'] }} / {{ $meals['active'] }}</dd></div>
+                    <div><dt class="text-zinc-500">{{ __('Doplnenia') }}</dt><dd class="font-medium">{{ $meals['clarifications'] }}</dd></div>
+                    <div><dt class="text-zinc-500">{{ __('Náklad spolu') }}</dt><dd class="font-medium">{{ Money::microUsd($meals['cost_micro']) }}</dd></div>
+                    <div><dt class="text-zinc-500">{{ __('Medián / p95 analýzy') }}</dt><dd class="font-medium" data-test="meal-median">{{ $meals['median_cost_micro'] !== null ? Money::microUsd($meals['median_cost_micro']) : '–' }} / {{ $meals['p95_cost_micro'] !== null ? Money::microUsd($meals['p95_cost_micro']) : '–' }}</dd></div>
+                    <div><dt class="text-zinc-500">{{ __('Ø cena rozpoznaného výsledku') }}</dt><dd class="font-medium">{{ $meals['avg_delivered_cost_micro'] !== null ? Money::microUsd($meals['avg_delivered_cost_micro']) : '–' }}</dd></div>
+                    <div><dt class="text-zinc-500">{{ __('Medián trvania') }}</dt><dd class="font-medium">{{ $meals['median_duration_ms'] !== null ? number_format($meals['median_duration_ms'] / 1000, 1, ',', ' ').' s' : '–' }}</dd></div>
+                </dl>
+            @endif
+        </flux:card>
+
+        <flux:card class="space-y-3" data-test="integrations">
+            <flux:heading size="lg" class="font-display">{{ __('Integračné kľúče') }}</flux:heading>
+            <flux:text class="text-xs">{{ __('Iba stav nastavenia; hodnoty kľúčov sa nikde nezobrazujú. Kľúče sa menia v .env, nie tu.') }}</flux:text>
+            <ul class="divide-y divide-zinc-200/70 text-sm dark:divide-zinc-800">
+                @foreach ($this->integrations as $integration)
+                    <li class="flex flex-wrap items-center justify-between gap-2 py-2">
+                        <div><div class="font-medium">{{ $integration['name'] }}</div><div class="text-xs text-zinc-500">{{ $integration['detail'] }}</div></div>
+                        <flux:badge size="sm" :color="$integration['configured'] ? 'green' : 'red'">{{ $integration['configured'] ? __('nastavené') : __('chýba') }}</flux:badge>
+                    </li>
+                @endforeach
             </ul>
         </flux:card>
     </div>

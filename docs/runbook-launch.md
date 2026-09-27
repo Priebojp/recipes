@@ -112,6 +112,26 @@ php artisan app:ai-compare-images --report=<kľúč behu>
 - Výsledok sa uloží do `app_settings` (`launch.ai_measurement`) a zobrazuje v `/admin/launch`; checklist chce ≥ 30 + 30 s aktuálnym modelom.
 - Ak výsledok nesedí s cenníkom: zmena kvality obrázkov (`/admin/ai/settings`), nová verzia katalógu, alebo profily z dodatku v2.1.
 
+### 4b. Meranie analýz jedla a ponuka v2.1 (etapa 13)
+
+```bash
+php artisan app:ai-measure <domácnosť> --text=0 --images=0 --meal-analyses=10 --yes   # vlastné fotky z tests/fixtures/meals/
+```
+
+- Výsledok sa uloží do `launch.ai_measurement` (`kinds.meal_analysis`: rozpoznané, medián a p95 ceny celej analýzy vrátane doplnení,
+  úspešnosť, opravy); `/admin/ai` ukazuje náklady analýz a stav integračných kľúčov (OpenAI, USDA – bez hodnôt) za zvolené obdobie.
+- Ponuka v2.1 sa **nezakladá seederom**. Po rozhodnutí (výsledok porovnania low/medium, počty a ceny) v `/admin/catalog`:
+  „Nová verzia“ plánu (profil obrázkov Economy/Standard, obrázkov a analýz za obdobie, nové Stripe price ID) → „Aktivovať“;
+  „Nový balík“ (`images_economy_20` s cenou až po teste). Balík `meal_analyses_100` (návrh 1,99 €) je nasadený ako **návrh** – aktivovať
+  až po potvrdení ceny a doplnení `STRIPE_PRICE_MEAL_ANALYSES_100`. Aktivácia sa týka len nových a obnovených období; bežiace obdobia
+  a kúpené balíky sa nemenia (scenár 17, `CatalogVersion2Test`).
+- Checklist (`app:launch-check`) k tomu pridáva: sadzby pre profily Economy (low) a Standard (medium), meranie analýz (blokuje, keď
+  katalóg analýzy predáva), `USDA_FDC_API_KEY`, denný beh `app:meal-analysis-cleanup` (retencia fotiek), verejné meno a statement
+  descriptor v identite prevádzkovateľa; potvrdenie porovnania obrázkov blokuje, keď je v aktívnom katalógu Economy.
+- Právne: `LegalDocumentSeeder` pri `db:seed` založí **návrh** ďalšej verzie VOP a informácií o súkromí s novými účelmi (fotografia jedla
+  → OpenAI, výživa z USDA, denník, retencia fotiek, balíky, „nie je medicínske meranie“); publikuje prevádzkovateľ po právnej kontrole
+  v `/admin/legal`. Register služieb (`/admin/services`) má OpenAI ako príjemcu (informačne, bez cookies).
+
 ## 5. Doklady (overiť s účtovníkom pred launchom)
 
 Jeden autoritatívny proces: doklady vystavuje Stripe (faktúry za predplatné, faktúra pri jednorazovom balíku vďaka `invoice_creation`).
@@ -131,11 +151,34 @@ Výsledok potvrdiť v `/admin/launch` („Doklady zo Stripe overené s účtovn�
 1. Server: PHP 8.4, DB, fronta, cron, HTTPS; nasadiť kód, `php artisan migrate --force`, `php artisan db:seed --force`
    (`ADMIN_INITIAL_PASSWORD` iba na prvé prihlásenie, potom zmeniť a odstrániť). `npm run build`.
 2. Admin + 2FA, `/admin/legal` – identita, publikovanie schválených verzií (poznámka o schválení = kto a kedy).
-3. Stripe živý účet: aktivácia, výplaty, verejné meno „Moje recepty“, statement descriptor, support e-mail (dodatok v2.1 kap. 11);
-   produkty a ceny v živom režime, ID do `.env`, `CatalogSeeder` (alebo nová verzia katalógu, ak už majú sandbox ID).
+3. Stripe živý účet: aktivácia (overenie identity, výplaty), verejné meno „Moje recepty“, statement descriptor, support e-mail
+   (dodatok v2.1 kap. 11; hodnoty zapísať aj do identity prevádzkovateľa v `/admin/legal` – polia „Verejné obchodné meno“,
+   „Statement descriptor“, „Skrátený descriptor“); produkty a ceny v živom režime, ID do `.env`, `CatalogSeeder` (alebo nová verzia
+   katalógu, ak už majú sandbox ID). Pripravené vyplnenie Stripe:
+
+   | Pole | Hodnota / pravidlo |
+   |---|---|
+   | Legal / registered business name | presné meno zo živnostenského registra (doplniť; neodvodzovať) |
+   | Public business name | Moje recepty |
+   | Website | https://moje-recepty.sk |
+   | Category | Software |
+   | Statement descriptor | MOJE-RECEPTY.SK (návrh, overiť prijatie v Stripe; banky môžu zobraziť inak) |
+   | Shortened descriptor | MOJERECEPT (voliteľné) |
+   | Support email | skutočný fungujúci kontakt (rovnaký ako `support_email` v identite) |
+
+   Opis podnikania (EN) na registráciu:
+
+   > Moje recepty (moje-recepty.sk) is a web application for saving and organizing personal recipes, managing family food preferences,
+   > and planning meals. We offer monthly and annual subscriptions for premium features, including AI-assisted recipe text editing and
+   > food image generation. Customers can also purchase one-time packages for additional AI usage. The service is delivered entirely online.
+
+   Rozpoznanie jedla z fotografie do opisu doplniť až vtedy, keď je súčasťou aktívnej ponuky (aktivovaný plán s analýzami alebo balík);
+   aplikáciu neprezentovať ako zdravotnícku ani výživovú poradenskú službu. Stripe Tax nezapínať bez rozhodnutia o daňovom režime
+   (neplatiteľ / § 7a / platiteľ) – ručná položka „Daňový režim rozhodnutý“.
 4. `php artisan cashier:webhook` so živými kľúčmi → secret do `STRIPE_WEBHOOK_SECRET`.
 5. `php artisan app:launch-check --stripe` – všetko okrem ručných potvrdení a prepínača má byť OK.
-6. `/admin/launch`: potvrdiť ručné položky (ceny, Stripe účet, doklady, DPH, právne, test clock, meranie, prevádzka) s poznámkou.
+6. `/admin/launch`: potvrdiť ručné položky (ceny, Stripe účet aktivovaný – overenie a výplaty, doklady, daňový režim, právne, test clock,
+   meranie, prevádzka; porovnanie obrázkov, ak sa predáva Economy) s poznámkou.
 7. **Zapnutie platieb – samostatné nasadenie**: `RECIPES_CHECKOUT_ENABLED=true`, `php artisan config:cache`, `php artisan app:launch-check --stripe`
    musí skončiť bez blokujúcich položiek (inak hlási „platby sú ZAPNUTÉ, hoci checklist má chyby“).
 8. Kontrolný nákup vlastným účtom: mesačný plán skutočnou kartou za 2,49 €, overiť `/admin/stripe-events`, nárok, granty, e-mail, faktúru;

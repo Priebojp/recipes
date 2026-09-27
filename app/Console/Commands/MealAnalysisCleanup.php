@@ -4,7 +4,9 @@ namespace App\Console\Commands;
 
 use App\Enums\MealAnalysisStatus;
 use App\Models\MealAnalysis;
+use App\Services\Admin\AppSettings;
 use App\Services\Ai\MealAnalysisService;
+use App\Services\Launch\LaunchReadiness;
 use Illuminate\Console\Command;
 
 /**
@@ -18,10 +20,14 @@ class MealAnalysisCleanup extends Command
 
     protected $description = 'Zmaže pracovné fotky analýz jedla po TTL a nedokončené návrhy po lehote na dokončenie.';
 
-    public function handle(MealAnalysisService $service): int
+    public function handle(MealAnalysisService $service, AppSettings $settings): int
     {
         $dryRun = (bool) $this->option('dry-run');
         $now = now();
+        if (! $dryRun) {
+            // The launch checklist reads this: the retention promise holds only while the cleanup runs daily.
+            $settings->set(LaunchReadiness::MEAL_CLEANUP_KEY, $now->toIso8601String());
+        }
 
         $photos = MealAnalysis::query()
             ->whereNull('photo_removed_at')

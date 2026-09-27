@@ -13,7 +13,7 @@ vystavenie. Nič z v2 sa neprerába – Cashier, ledger, oprávnenia a admin sa 
 | 10 | **Výživové hodnoty receptu** | ✅ kód hotový (vetva `v2-1-etapa-10-nutrition`) | `NutritionCalculation` (revízia receptu, kompletnosť, predpoklady, verzia výpočtu), tok „Vypočítať výživové hodnoty“ s potvrdením priradení, zobrazenie na recept / porciu / 100 g, neaktuálnosť po editácii; bez AI a bez použití |
 | 11 | **Rozpoznanie jedla z fotografie** | ✅ kód hotový (vetva `v2-1-etapa-11-meal-analysis`) · ⏳ testovacie fotky v `tests/fixtures/meals/` a `app:ai-measure --meal-analyses` na serveri | `MealAnalysis` + `MealAnalysisItem`, `AiJobKind::MealAnalysis` s obrazovým vstupom gpt-6-luna, druh použitia `meal_analysis` (3 skúšobné na používateľa), obrazovka „Skontroluj jedlo“, súkromné úložisko fotiek s TTL a odstránením EXIF, meranie nákladu analýzy |
 | 12 | **Súkromný denník „Zjedol som“** | ✅ kód hotový (vetva `v2-1-etapa-12-meal-diary`) | `MealConsumption` + `ConsumptionNutritionSnapshot` (recept / analýza / manuálne jedlo), zjedený podiel a opravy po zložkách, oprávnenia iba pre vlastníka denníka, export/výmaz/čistenie, oddelenie od `CookingEvent` |
-| 13 | **Ponuka v2.1, admin, právne a Stripe údaje** | ⏳ naplánované · vstupy prevádzkovateľa | Katalóg verzia 2 (Economy obrázky, analýzy jedla, balík analýz) len po rozhodnutí z etapy 8, granty `meal_analysis` z predplatného, admin moduly (profily, náklady analýz, stav kľúčov, kurátorstvo), nová verzia informácií o súkromí, kap. 11 (Stripe údaje) do identity prevádzkovateľa a launch checklistu |
+| 13 | **Ponuka v2.1, admin, právne a Stripe údaje** | ✅ kód hotový (vetva `v2-1-etapa-12-meal-diary`, spolu s etapou 12) · ⏳ vstupy prevádzkovateľa | Katalóg verzia 2 (Economy obrázky, analýzy jedla, balík analýz) len po rozhodnutí z etapy 8, granty `meal_analysis` z predplatného, admin moduly (profily, náklady analýz, stav kľúčov, kurátorstvo), nová verzia informácií o súkromí, kap. 11 (Stripe údaje) do identity prevádzkovateľa a launch checklistu |
 
 ## Ako k tomu pristúpime
 
@@ -450,6 +450,41 @@ kód (pripravený a testovaný s konfigurovateľnými hodnotami) a vstupy prevá
    refund nových druhov; gating novej analýzy po skončení Plus vs. čitateľnosť denníka; launch checklist blokuje bez
    sadzieb/merania/signoffu; publikovanie právneho textu s placeholderom je odmietnuté (existujúci mechanizmus).
 
+### Čo je hotové (kód)
+
+- Migrácia `2026_09_27_…_add_v2_1_offer_columns_to_plan_versions`: `plan_versions.image_profile_code` (predvolene `image_standard_v1`) a
+  `meal_analysis_uses_per_period` (0). `PlanVersion::usesPerPeriod()` otvára obrázky v druhu profilu (`image_economy` alebo `image_standard`,
+  nikdy oba) a analýzy len keď ich verzia obsahuje; snímka objednávky nesie profil a počet analýz; `PlanVersion::describeUses()` je jeden
+  popis obsahu pre cenník, zhrnutie objednávky, e-mail (opravený – čítal neexistujúce kľúče snímky) a admin. `CatalogManager::newPlanVersion`
+  prijíma profil (iba predajné profily) a analýzy, `createAddon()` zakladá balík pod novým kódom ako návrh v1. `CatalogSeeder` verziu 2 plánov
+  **nevytvára**; balík `meal_analyses_100` (100 analýz, návrh 1,99 €) seeduje ako **návrh**, Economy balík vôbec (cena až po teste).
+  `.env`: `STRIPE_PRICE_MEAL_ANALYSES_100`, `STRIPE_PRICE_IMAGES_ECONOMY_20`; allowlist analytiky pozná nové kódy ponuky.
+- Granty: `UsageProvisioner` číta `usesPerPeriod()` verzie plánu platnej pre dané obdobie (nárok vzniká pri zaplatení obdobia s cenou danej
+  verzie), takže aktivácia verzie 2 bežiace obdobie nemení a nové druhy prídu až s obnovou; `StripeEventProcessor` udeľuje nové balíky rovnakou
+  cestou (`order:{id}`, `unit_kind`), `RefundService` odoberá nevyužité jednotky nových druhov. `/cennik`, zhrnutie objednávky, `/settings/usage`
+  a `/settings/subscription` zobrazujú nové druhy cez `UsageKind::label()`. Po skončení Plus zostáva denník čitateľný a opravy dostupné; nová
+  analýza vyžaduje nárok (ledger).
+- Admin: `/admin/catalog` – „Nová verzia“ plánu s profilom obrázkov a analýzami za obdobie, „Nový balík“ (kód, druh, počet, cena, Stripe ID);
+  `/admin/ai` – karta „Analýzy jedla – náklady“ (`AiUsageReport::mealAnalyses`: rozpoznané, bez jedla/nepoužiteľné, doplnenia, medián/p95 ceny
+  celej analýzy, Ø cena rozpoznaného výsledku, medián trvania – iba metadáta úloh) a „Integračné kľúče“ (OpenAI text/obrázky, USDA – stav bez
+  hodnôt). `LaunchReadiness` nové kontroly: `ai.profile_rates` (sadzba pre Economy low aj Standard medium; blokuje pri predávanom profile),
+  `ai.meal_measurement` (`kinds.meal_analysis` z `app:ai-measure`, ≥ 10 rozpoznaných s aktuálnym modelom; blokuje, keď katalóg analýzy predáva),
+  `food.usda` (kľúč), `env.meal_cleanup` (`app:meal-analysis-cleanup` zapisuje `ops.meal_analysis_cleanup_last_run_at`; > 36 h blokuje
+  v produkcii), `legal.stripe_identity` (verejné meno a descriptor 5–22 znakov); potvrdenie `image_profile` blokuje, keď je v aktívnom katalógu
+  Economy. Ručné položky „Stripe účet aktivovaný (overenie, výplaty)“ a „Daňový režim rozhodnutý (neplatiteľ / § 7a / platiteľ, OSS)“ s hintmi.
+- Právne: `LegalDocumentSeeder` má texty v2.1 (VOP: balíky analýz, kap. 4 rozpoznanie fotky, 4a výživa a denník „nie medicínske meranie ani
+  záruka alergénov“; súkromie: účel rozpoznania fotky s OpenAI ako príjemcom, retencia 24 h / 7 dní, USDA len všeobecné názvy, denník
+  súkromný a mimo analytiky, riadky tabuľky účelov, deti a hostia mimo). Čerstvá inštalácia dostane v1 s týmito textami; inštalácia so staršou
+  publikovanou verziou dostane pri `db:seed` **návrh** ďalšej verzie (značka `LegalDocumentSeeder::V21_MARKER`, idempotentne, nikdy sa
+  nepublikuje samo; placeholder publikovanie odmietne). `ConsentServiceSeeder`: OpenAI ako príjemca (nevyhnutné, bez cookies).
+- Stripe / identita: `OperatorIdentity::FIELDS` + `public_business_name`, `statement_descriptor`, `shortened_descriptor` (nepovinné, editujú sa v
+  `/admin/legal`, kontroluje checklist); `runbook-launch.md` 4b a 6.3: tabuľka vyplnenia Stripe, anglický opis podnikania a poznámka, že
+  rozpoznanie fotky sa doplní až keď je v ponuke; Stripe Tax bez rozhodnutia o režime nezapínať.
+- Testy: `tests/Feature/Billing/CatalogVersion2Test.php` – verzia 2 neudelí nič bežiacemu obdobiu a nové druhy prídu s obnovou (scenár 17,
+  staré granty nezmenené), balík analýz sa predáva až po aktivácii, webhook udelí raz, refund odoberie nevyužité; po skončení Plus denník čitateľný
+  a oprava funguje, nová analýza nedostupná; checklist blokuje bez sadzieb/merania/potvrdenia a prejde s nimi, USDA/cleanup/Stripe identita;
+  seeder vytvorí návrh v2 právnych textov a placeholder sa nepublikuje; admin UI návrhu plánu a nového balíka.
+
 ### Vstupy prevádzkovateľa (bez nich sa nič nevystavuje)
 
 - Výsledok porovnania low/medium (etapa 8) a rozhodnutie o profile nového Plus (20 Economy/mesiac, alebo ponechať
@@ -481,7 +516,7 @@ kód (pripravený a testovaný s konfigurovateľnými hodnotami) a vstupy prevá
 | 14 fotka mimo analytiky, cleanup/výmaz/export | 11, 12 | `MealAnalysisTest`, `MealDiaryTest`, `AccountErasureTest` |
 | 15 matematická oprava bez AI aj po Plus | 10, 12 | `RecipeNutritionTest`, `MealDiaryTest` |
 | 16 kalkulácia dokumentuje zdroj/hmotnosť/odhady | 10 | `RecipeNutritionTest` |
-| 17 nové limity bez migrácie katalógu nepripíšu, nároky sa nezhoršia | 13 | `Billing/CatalogVersion2Test` |
+| 17 nové limity bez migrácie katalógu nepripíšu, nároky sa nezhoršia | 13 | `Billing/CatalogVersion2Test` ✅ |
 
 ## Otvorené rozhodnutia (kap. 13) a kde blokujú
 
