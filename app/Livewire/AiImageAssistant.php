@@ -23,6 +23,7 @@ use Livewire\Component;
  * @property-read array{needs_description: bool, serving_mode: string, summary: string, prompt: string|null, auto_suggested: bool} $preview
  * @property-read string|null $unavailable
  * @property-read UsageBalance|null $balance
+ * @property-read ImageProfile $profile
  */
 class AiImageAssistant extends Component
 {

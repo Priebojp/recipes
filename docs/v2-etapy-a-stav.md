@@ -4,16 +4,17 @@ Zadanie: `moje-recepty-v2-predplatne-admin-pravne.md`. Táto stránka drží doh
 (etapa = samostatná vetva/PR) a čo je z nej hotové. Poradie sleduje kapitolu 16 zadania: najprv merateľná AI
 a bezpečná administrácia, potom ledger a Cashier, potom právne stránky, súhlas a súkromie, nakoniec Plus funkcie.
 Pokračovanie (dodatok v2.1: profily obrázkov, výživa, rozpoznanie jedla, denník) je v `v2-1-etapy-a-stav.md`, etapy 8–13.
+Stav k 27. 9. 2026: kód etáp 1–7 je zlúčený v `master`; čo ešte zostáva pred zapnutím platieb, je iba v `otvorene-ulohy.md`.
 
 | # | Etapa | Stav | Obsah |
 |---|---|---|---|
 | 1 | **Administrácia a meranie AI** | ✅ hotové (PR #1) | Rola administrátora platformy, `/admin`, MFA, audit, meranie usage a odhad nákladov AI, prepínanie modelu / reasoning effort / kvality obrázkov, kill switch, cenník sadzieb, účet `support@moje-recepty.sk` |
 | 2 | **Ledger a granty použití** | ✅ hotové (PR #2) | `UsageGrant`, `UsageReservation`, `UsageLedgerEntry`, rezervácia pod zámkom, spotreba/uvoľnenie, skúšobné granty, `reconciling`, súbežné testy (akceptačné testy 6, 7, 22, 23) |
-| 3 | **Cashier a Stripe** | ✅ hotové (vetva `v2-etapa-3-cashier`) | `BillingAccount`, katalóg `PlanVersion`/`AddonVersion`, Checkout, webhook inbox, `PaidEntitlement`, mesačné granty pri ročnej platbe, portal, refund workflow (testy 1–5, 8–12, 14) |
-| 4 | **Admin – finančné moduly** | ✅ hotové (vetva `v2-etapa-4-admin-financie`) | Dashboard MRR/inkaso/refundácie/príspevok, detail domácnosti s kompenzáciami a blokovaním, predplatné so synchronizáciou, objednávky s refund workflow, posúdenie refundácií zo Stripe, ledger použití, verzovaný katalóg, inbox Stripe udalostí (test 13, 14) |
-| 5 | **Právne stránky, cookies, súkromie** | ✅ hotové (vetva `v2-etapa-5-pravne-sukromie`) | `/vop`, `/ochrana-osobnych-udajov`, `/cookies`, `/odstupenie-od-zmluvy`, `/kontakt`, verzie a akceptácie, identita prevádzkovateľa a blokovanie checkoutu, register služieb, cookie lišta podľa kap. 10, consent receipt, zhrnutie pred platbou a e-mail s VOP, online odstúpenie, export/výmaz účtu, žiadosti (testy 15–21) |
-| 6 | **Plus funkcie** | ✅ hotové (vetva `v2-etapa-6-plus-funkcie`) | Návrh týždenného jedálnička existujúcim generátorom (bez AI), nákupný zoznam z plánu s explicitným zlučovaním, uložené skupiny a filtre výberu; gating podľa zaplateného obdobia, dáta zostávajú po skončení Plus |
-| 7 | **Staging a launch** | ✅ kód hotový (vetva `v2-etapa-7-staging-launch`) · ⏳ vstupy prevádzkovateľa | Launch checklist (`app:launch-check`, `/admin/launch`) s overením cien a webhooku v Stripe, ručné potvrdenia s auditom, prepínač platieb `RECIPES_CHECKOUT_ENABLED`, test clock simulácie (`app:billing-test-clock`), meranie 30+30 AI úloh (`app:ai-measure`), jeden zoznam Stripe udalostí pre `cashier:webhook`, runbook `runbook-launch.md` |
+| 3 | **Cashier a Stripe** | ✅ hotové (PR #3) | `BillingAccount`, katalóg `PlanVersion`/`AddonVersion`, Checkout, webhook inbox, `PaidEntitlement`, mesačné granty pri ročnej platbe, portal, refund workflow (testy 1–5, 8–12, 14) |
+| 4 | **Admin – finančné moduly** | ✅ hotové (PR #4) | Dashboard MRR/inkaso/refundácie/príspevok, detail domácnosti s kompenzáciami a blokovaním, predplatné so synchronizáciou, objednávky s refund workflow, posúdenie refundácií zo Stripe, ledger použití, verzovaný katalóg, inbox Stripe udalostí (test 13, 14) |
+| 5 | **Právne stránky, cookies, súkromie** | ✅ hotové (PR #5) | `/vop`, `/ochrana-osobnych-udajov`, `/cookies`, `/odstupenie-od-zmluvy`, `/kontakt`, verzie a akceptácie, identita prevádzkovateľa a blokovanie checkoutu, register služieb, cookie lišta podľa kap. 10, consent receipt, zhrnutie pred platbou a e-mail s VOP, online odstúpenie, export/výmaz účtu, žiadosti (testy 15–21) |
+| 6 | **Plus funkcie** | ✅ hotové (PR #6) | Návrh týždenného jedálnička existujúcim generátorom (bez AI), nákupný zoznam z plánu s explicitným zlučovaním, uložené skupiny a filtre výberu; gating podľa zaplateného obdobia, dáta zostávajú po skončení Plus |
+| 7 | **Staging a launch** | ✅ hotové (PR #7) · vstupy prevádzkovateľa → `otvorene-ulohy.md` | Launch checklist (`app:launch-check`, `/admin/launch`) s overením cien a webhooku v Stripe, ručné potvrdenia s auditom, prepínač platieb `RECIPES_CHECKOUT_ENABLED`, test clock simulácie (`app:billing-test-clock`), meranie 30+30 AI úloh (`app:ai-measure`), jeden zoznam Stripe udalostí pre `cashier:webhook`, runbook `runbook-launch.md` |
 
 ## Etapa 1 – čo je hotové
 
@@ -540,8 +541,9 @@ vlastnému grantu bez dotyku skúšobných použití, ignorovanie denných limit
 
 Bez migrácie. Do `.env` doplniť `RECIPES_CHECKOUT_ENABLED` (lokálne `true`, produkcia `false` až do launchu). Ďalej podľa `runbook-launch.md`.
 
-## Otvorené vstupy pre launch (nezmenené zo zadania, kap. 18)
+## Otvorené vstupy pre launch
 
 Prevádzkovateľ a fakturačné údaje, potvrdenie cien a limitov, výsledky nákladového merania (30 + 30 úloh na reálnom
 kľúči), analytický poskytovateľ, hosting/e-mail/zálohy/monitoring, DPH/OSS režim, právne schválenie textov. Každý vstup má
-riadok v `/admin/launch`; kým chýba, `app:launch-check` končí chybou a platby ostávajú vypnuté.
+riadok v `/admin/launch`; kým chýba, `app:launch-check` končí chybou a platby ostávajú vypnuté. Aktuálny zoznam s konkrétnymi
+krokmi je v `otvorene-ulohy.md` (§2, §4 a §5).

@@ -199,4 +199,5 @@ Zásah do AI: kill switch v `/admin/ai/settings`.
 
 Nezmenené zo zadania kap. 18: presná identita prevádzkovateľa a fakturačné údaje, potvrdenie cien a limitov, výsledok merania 30 + 30,
 analytický poskytovateľ (kým nie je, integrácia vypnutá), hosting / e-mail / zálohy / monitoring / príjemcovia dát, DPH/OSS režim,
-právne schválenie textov. Každý z nich má riadok v `/admin/launch`.
+právne schválenie textov. Každý z nich má riadok v `/admin/launch`. Aktuálny zoznam otvorených položiek vrátane krokov
+nasadenia v2.1 a rozhodnutí o ponuke je v `otvorene-ulohy.md`.

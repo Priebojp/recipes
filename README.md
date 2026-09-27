@@ -51,7 +51,8 @@ mesačný rozpočet), **Cenník AI**, domácnosti, audit. Hodnoty z administrác
 bežia so svojím pôvodným profilom. Stav etáp v2 je v `docs/v2-etapy-a-stav.md`.
 
 Launch (v2 etapa 7): platený checkout je vypnutý, kým `RECIPES_CHECKOUT_ENABLED=true` nezapne samostatné nasadenie; predtým musí
-prejsť checklist. Postup je v `docs/runbook-launch.md`.
+prejsť checklist. Postup je v `docs/runbook-launch.md`; čo ešte zostáva (nasadenie v2.1, platené merania, rozhodnutia
+prevádzkovateľa, právne a Stripe vstupy), je v `docs/otvorene-ulohy.md`.
 
 ```bash
 php artisan app:launch-check --stripe                                   # checklist; exit 1, kým niečo blokuje
