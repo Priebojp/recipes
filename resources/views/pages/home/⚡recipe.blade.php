@@ -27,7 +27,7 @@ new #[Layout('layouts::public')] class extends Component {
     }
 }; ?>
 
-<div class="mx-auto max-w-4xl space-y-8">
+<div class="mx-auto max-w-6xl space-y-8">
     @php($recipe = $this->recipe)
 
     <flux:button :href="route('home')" wire:navigate variant="ghost" icon="chevron-left" size="sm">Všetky verejné recepty</flux:button>

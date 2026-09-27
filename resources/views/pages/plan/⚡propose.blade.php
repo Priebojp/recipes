@@ -250,7 +250,7 @@ new #[Title('Návrh týždenného jedálnička')] class extends Component {
     }
 }; ?>
 
-<div class="mx-auto max-w-3xl space-y-6">
+<div class="space-y-6">
     <x-page-header title="Návrh týždenného jedálnička" :back="route('plan.index', ['week' => $week])" subtitle="Rovnaký generátor ako pri jednom jedle, len pre celý týždeň naraz. Bez AI." />
 
     @if (! $this->isPlus)

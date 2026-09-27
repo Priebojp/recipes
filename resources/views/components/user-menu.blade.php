@@ -1,4 +1,4 @@
-{{-- Shared account menu: used by the desktop sidebar and the "Viac" tab of the mobile bottom navigation. --}}
+{{-- Shared account menu: used by the avatar in the desktop header and the "Viac" tab of the mobile bottom navigation. --}}
 <flux:menu class="min-w-56">
     <div class="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
         <flux:avatar :name="auth()->user()->name" :initials="auth()->user()->initials()" color="auto" />
@@ -14,6 +14,7 @@
         <flux:menu.item :href="route('plan.history')" icon="clock" wire:navigate>História varenia</flux:menu.item>
         <flux:menu.item :href="route('household.edit')" icon="home" wire:navigate>Nastavenia domácnosti</flux:menu.item>
         <flux:menu.item :href="route('subscription.edit')" icon="credit-card" wire:navigate>Predplatné a AI použitia</flux:menu.item>
+        <flux:menu.item :href="route('home')" icon="globe-alt" wire:navigate>Verejné recepty</flux:menu.item>
     </flux:menu.group>
 
     <flux:menu.separator />

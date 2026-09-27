@@ -52,7 +52,7 @@ new #[Title('História varenia')] class extends Component {
     }
 }; ?>
 
-<div class="mx-auto max-w-3xl space-y-6">
+<div class="space-y-6">
     <x-page-header title="História varenia" :back="route('plan.index')" subtitle="Iba potvrdené varenia. Ovplyvňujú, čo generátor navrhne nabudúce." />
 
     @if ($this->filterRecipe)

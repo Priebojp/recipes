@@ -87,7 +87,7 @@ new #[Title('Recepty')] class extends Component {
     }
 }; ?>
 
-<div class="mx-auto max-w-5xl space-y-4">
+<div class="space-y-4">
     <x-page-header title="Recepty">
         <flux:button :href="route('recipes.create')" wire:navigate variant="primary" icon="plus" data-test="new-recipe">Pridať</flux:button>
     </x-page-header>

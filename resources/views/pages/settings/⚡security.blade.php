@@ -13,7 +13,7 @@ use Laravel\Passkeys\Actions\DeletePasskey;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 
-new #[Title('Security settings')] class extends Component {
+new #[Title('Zabezpečenie')] class extends Component {
     use PasswordValidationRules;
 
     public string $current_password = '';

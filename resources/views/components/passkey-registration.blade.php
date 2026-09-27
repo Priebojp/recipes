@@ -31,7 +31,7 @@
                 { pattern: /Windows/, name: 'Windows' },
             ].find(({ pattern }) => pattern.test(ua))?.name;
 
-            return [browser, os].filter(Boolean).join(' on ') || '';
+            return [browser, os].filter(Boolean).join(' – ') || '';
         },
         init() {
             this.name = this.getDefaultPasskeyName();

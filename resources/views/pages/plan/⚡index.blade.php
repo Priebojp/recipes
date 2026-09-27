@@ -147,7 +147,7 @@ new #[Title('Plán')] class extends Component {
     }
 }; ?>
 
-<div class="mx-auto max-w-3xl space-y-6">
+<div class="space-y-6">
     <x-page-header title="Plán">
         <flux:button :href="route('plan.history')" wire:navigate variant="ghost" icon="clock" size="sm">História</flux:button>
     </x-page-header>

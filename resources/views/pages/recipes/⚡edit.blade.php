@@ -287,7 +287,7 @@ new class extends Component {
     }
 }; ?>
 
-<div class="mx-auto max-w-3xl space-y-8" x-data="{ dirty: false }" x-init="window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } })" @input="dirty = true" @recipe-saved.window="dirty = false">
+<div class="space-y-8" x-data="{ dirty: false }" x-init="window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } })" @input="dirty = true" @recipe-saved.window="dirty = false">
     @php($recipe = $this->recipe)
     <x-page-header title="Upraviť recept" :back="route('recipes.show', $recipe)" />
 

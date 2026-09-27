@@ -113,7 +113,7 @@ new #[Title('Rodina')] class extends Component {
     }
 }; ?>
 
-<div class="mx-auto max-w-2xl space-y-6">
+<div class="space-y-6">
     <x-page-header title="Rodina a hostia" subtitle="Stravníci nepotrebujú vlastný účet. Dvaja ľudia môžu mať rovnaké meno.">
         <flux:button :href="route('household.edit')" wire:navigate variant="ghost" icon="cog-6-tooth" size="sm">Domácnosť</flux:button>
     </x-page-header>

@@ -157,7 +157,7 @@ new class extends Component {
     }
 }; ?>
 
-<div class="mx-auto max-w-3xl space-y-6">
+<div class="space-y-6">
     @php($recipe = $this->recipe)
     @php($liked = $this->activePerson && $recipe->preferences->contains(fn ($p) => $p->person_id === $this->activePerson->id && $p->preference === Preference::Favorite))
     @php($canEdit = auth()->user()->can('update', $recipe))

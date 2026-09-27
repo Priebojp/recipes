@@ -11,43 +11,45 @@
                 ['route' => 'plan.index', 'label' => 'Plán', 'icon' => 'calendar-days', 'match' => 'plan.*'],
                 ['route' => 'family.index', 'label' => 'Rodina', 'icon' => 'users', 'match' => 'family.*'],
             ];
+            $accountActive = request()->routeIs('household.edit', 'plan.history', 'profile.edit', 'security.edit', 'appearance.edit', 'subscription.edit', 'usage.index', 'privacy.edit');
         @endphp
 
-        {{-- Desktop: the sidebar is the only menu. --}}
-        <flux:sidebar sticky collapsible="mobile" class="max-lg:hidden border-e border-zinc-200/70 bg-paper dark:border-zinc-800 dark:bg-zinc-900">
-            <flux:sidebar.header>
-                <x-app-logo :sidebar="true" href="{{ route('cook.index') }}" wire:navigate />
-            </flux:sidebar.header>
+        {{-- Desktop: one slim top bar with the same pill tabs as the phone bottom bar; the account menu sits under the avatar. --}}
+        <header class="sticky top-0 z-30 hidden [grid-area:header] border-b border-zinc-200/70 bg-paper/90 backdrop-blur lg:block">
+            <div class="mx-auto flex h-16 max-w-6xl items-center gap-3 px-6 lg:px-8">
+                <a href="{{ route('cook.index') }}" wire:navigate class="me-3 flex shrink-0 items-center gap-2.5" aria-label="{{ config('app.name') }}">
+                    <span class="flex size-9 items-center justify-center rounded-xl bg-accent text-accent-foreground shadow-sm">
+                        <x-app-logo-icon class="size-5" />
+                    </span>
+                    <span class="font-display text-lg font-semibold text-zinc-900 dark:text-white">{{ config('app.name') }}</span>
+                </a>
 
-            <flux:sidebar.nav>
-                @foreach ($nav as $item)
-                    <flux:sidebar.item :icon="$item['icon']" :href="route($item['route'])" :current="request()->routeIs($item['match'])" wire:navigate>
-                        {{ $item['label'] }}
-                    </flux:sidebar.item>
-                @endforeach
-            </flux:sidebar.nav>
+                <nav class="flex flex-1 items-center justify-center gap-1" aria-label="Hlavná navigácia">
+                    @foreach ($nav as $item)
+                        @php($active = request()->routeIs($item['match']))
+                        <a href="{{ route($item['route']) }}" wire:navigate
+                           class="flex items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium transition {{ $active ? 'bg-accent/10 text-accent' : 'text-zinc-600 hover:bg-zinc-900/5 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white' }}"
+                           @if($active) aria-current="page" @endif>
+                            <flux:icon :name="$item['icon']" :variant="$active ? 'solid' : 'outline'" class="size-5" />
+                            <span>{{ $item['label'] }}</span>
+                        </a>
+                    @endforeach
+                </nav>
 
-            <flux:spacer />
-
-            <flux:sidebar.nav>
-                <flux:sidebar.item icon="plus" :href="route('recipes.create')" :current="request()->routeIs('recipes.create')" wire:navigate>
+                <flux:button :href="route('recipes.create')" wire:navigate variant="filled" icon="plus" size="sm" class="shrink-0 rounded-full" data-test="header-new-recipe">
                     Nový recept
-                </flux:sidebar.item>
-                <flux:sidebar.item icon="globe-alt" :href="route('home')" wire:navigate>
-                    Verejné recepty
-                </flux:sidebar.item>
-            </flux:sidebar.nav>
+                </flux:button>
 
-            <flux:dropdown position="top" align="start" class="max-lg:hidden">
-                <flux:sidebar.profile
-                    :name="auth()->user()->name"
-                    :initials="auth()->user()->initials()"
-                    icon:trailing="chevrons-up-down"
-                    data-test="sidebar-menu-button"
-                />
-                <x-user-menu />
-            </flux:dropdown>
-        </flux:sidebar>
+                <flux:dropdown position="bottom" align="end">
+                    <button type="button"
+                            class="flex shrink-0 items-center rounded-full p-0.5 transition ring-offset-2 ring-offset-paper focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent {{ $accountActive ? 'ring-2 ring-accent' : 'hover:bg-zinc-900/5 dark:hover:bg-white/5' }}"
+                            aria-label="Účet a nastavenia" data-test="desktop-menu-button">
+                        <flux:avatar :name="auth()->user()->name" :initials="auth()->user()->initials()" size="sm" color="auto" />
+                    </button>
+                    <x-user-menu />
+                </flux:dropdown>
+            </div>
+        </header>
 
         {{-- Mobile: a slim title bar; all navigation lives in the bottom bar. --}}
         <flux:header class="sticky top-0 z-30 h-14 items-center gap-3 border-b border-zinc-200/70 bg-paper/90 !px-4 backdrop-blur lg:hidden dark:border-zinc-800 dark:bg-zinc-900/90">
@@ -77,7 +79,7 @@
                 @endforeach
 
                 <flux:dropdown position="top" align="end">
-                    <button type="button" class="flex w-full flex-col items-center gap-0.5 py-2 text-[11px] font-medium {{ request()->routeIs('household.edit', 'plan.history', 'profile.edit', 'security.edit', 'appearance.edit') ? 'text-accent' : 'text-zinc-500 dark:text-zinc-400' }}" data-test="mobile-menu-button">
+                    <button type="button" class="flex w-full flex-col items-center gap-0.5 py-2 text-[11px] font-medium {{ $accountActive ? 'text-accent' : 'text-zinc-500 dark:text-zinc-400' }}" data-test="mobile-menu-button">
                         <span class="flex h-7 w-12 items-center justify-center">
                             <flux:avatar :name="auth()->user()->name" :initials="auth()->user()->initials()" size="xs" color="auto" />
                         </span>

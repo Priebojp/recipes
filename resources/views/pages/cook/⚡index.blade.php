@@ -62,7 +62,7 @@ new #[Title('Čo variť')] class extends Component {
     }
 }; ?>
 
-<div class="mx-auto max-w-3xl space-y-8">
+<div class="space-y-8">
     <x-page-header title="Čo dnes navarím?" :subtitle="app(App\Support\CurrentHousehold::class)->get()->name" />
 
     @if ($this->recipeCount === 0)

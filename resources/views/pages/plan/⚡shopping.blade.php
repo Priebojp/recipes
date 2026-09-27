@@ -155,7 +155,7 @@ new #[Title('Nákupný zoznam')] class extends Component {
     }
 }; ?>
 
-<div class="mx-auto max-w-3xl space-y-6">
+<div class="space-y-6">
     <x-page-header title="Nákupný zoznam" :back="route('plan.index', ['week' => $week])" subtitle="Suroviny naplánovaných jedál v týždni, prepočítané na porcie." />
 
     <div class="flex items-center justify-between">
