@@ -126,6 +126,11 @@
             @endforeach
         </div>
 
+        <div class="flex flex-wrap items-center gap-2">
+            <flux:button size="sm" variant="ghost" icon="clipboard-document-list" :href="route('diary.index', ['recept' => $recipeId])" wire:navigate data-test="nutrition-log-meal">{{ __('Zapísať, čo som zjedol(a)') }}</flux:button>
+            <span class="text-xs text-zinc-500">{{ __('do súkromného denníka; podiel porcie sa prepočíta bez AI') }}</span>
+        </div>
+
         @if ($calculation->missing !== [])
             <div class="text-sm" data-test="nutrition-missing">
                 <div class="font-medium">{{ __('Chýba v súčte') }}</div>

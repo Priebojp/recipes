@@ -286,11 +286,12 @@
                 @endif
 
                 <div class="flex flex-wrap items-center gap-3 border-t border-zinc-100 pt-4 dark:border-zinc-700">
+                    <flux:button variant="primary" icon="clipboard-document-list" :href="route('diary.index', ['analyza' => $analysis->id])" wire:navigate data-test="meal-log">{{ __('Zjedol som') }}</flux:button>
                     <flux:button variant="ghost" icon="pencil-square" wire:click="edit" data-test="meal-edit">{{ __('Upraviť zložky') }}</flux:button>
                     <flux:button variant="ghost" icon="camera" wire:click="startNew" data-test="meal-new">{{ __('Nová fotka') }}</flux:button>
                     <flux:button variant="ghost" wire:click="discard" data-test="meal-discard">{{ __('Zahodiť') }}</flux:button>
                 </div>
-                <flux:text class="text-xs text-zinc-500">{{ __('Orientačný výpočet z databázy potravín (USDA FoodData Central, CC0) podľa potvrdených zložiek a gramáží; odhady sú označené. Nie je to medicínske meranie ani záruka zloženia či alergénov. Zápis do denníka „Zjedol som“ príde v ďalšej etape.') }}</flux:text>
+                <flux:text class="text-xs text-zinc-500">{{ __('Orientačný výpočet z databázy potravín (USDA FoodData Central, CC0) podľa potvrdených zložiek a gramáží; odhady sú označené. Nie je to medicínske meranie ani záruka zloženia či alergénov. „Zjedol som“ zapíše do súkromného denníka, koľko si z jedla naozaj zjedol(a).') }}</flux:text>
             @endif
         </flux:card>
     @endif

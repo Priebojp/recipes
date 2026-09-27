@@ -54,6 +54,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::livewire('jedlo/analyza', 'pages::meals.analyze')->name('meals.analyze');
     Route::get('jedlo/analyza/{analysis}/foto', MealPhotoController::class)->name('meals.photo');
 
+    // Private diary "Zjedol som" (v2.1 stage 12): entries belong to the signed-in person, never to the household.
+    Route::livewire('dennik', 'pages::diary.index')->name('diary.index');
+
     Route::livewire('settings/household', 'pages::settings.household')->name('household.edit');
 
     Route::get('export', ExportController::class)->name('export');
