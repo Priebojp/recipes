@@ -260,6 +260,13 @@ new class extends Component {
         </flux:card>
     @endif
 
+    @if ($recipe->ingredients->isNotEmpty())
+        <flux:card class="space-y-3">
+            <flux:heading size="lg" class="font-display">{{ __('Výživové hodnoty') }}</flux:heading>
+            <livewire:nutrition-panel :recipe-id="$recipe->id" :key="'nutrition-'.$recipe->id" />
+        </flux:card>
+    @endif
+
     @if ($recipe->steps->isNotEmpty())
         <section class="space-y-4">
             <flux:heading size="lg" class="font-display">{{ __('Postup') }}</flux:heading>

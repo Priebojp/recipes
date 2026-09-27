@@ -67,6 +67,50 @@ class FoodMappingService
     }
 
     /**
+     * Confirmed mappings whose grams came from the recipe amount follow the amount when it changes (300 g instead
+     * of 250 g). Typed or estimated grams are a person's word and stay. A line whose amount no longer converts
+     * (unit changed to "podľa chuti") keeps its food but becomes unresolved with the reason.
+     *
+     * @return int number of mappings changed
+     */
+    public function refreshRecipeAmounts(Recipe $recipe): int
+    {
+        $recipe->loadMissing('ingredients.foodMapping.record.conversions');
+        $changed = 0;
+
+        foreach ($recipe->ingredients as $line) {
+            $mapping = $line->foodMapping;
+            if ($mapping === null || $mapping->record === null || $mapping->status === FoodMappingStatus::Rejected) {
+                continue;
+            }
+            if ($mapping->grams !== null && $mapping->grams_origin !== FoodGramsOrigin::UnitConversion) {
+                continue;
+            }
+
+            $resolved = $this->matcher->resolveGrams($line, $mapping->record);
+            $attributes = [
+                'grams' => $resolved['grams'],
+                'grams_origin' => $resolved['origin'],
+                'conversion_id' => $resolved['conversion']?->id,
+                'unresolved_reason' => $resolved['reason'],
+                'status' => match (true) {
+                    $resolved['grams'] === null => FoodMappingStatus::Unresolved,
+                    $mapping->confirmed_at !== null => FoodMappingStatus::Confirmed,
+                    default => FoodMappingStatus::Suggested,
+                },
+            ];
+
+            $mapping->fill($attributes);
+            if ($mapping->isDirty()) {
+                $mapping->save();
+                $changed++;
+            }
+        }
+
+        return $changed;
+    }
+
+    /**
      * A person chose the food and its state. Grams come from the recipe amount (through a mass unit or a confirmed
      * conversion) unless they typed or estimated them; without either the mapping stays unresolved.
      */

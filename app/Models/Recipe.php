@@ -144,6 +144,12 @@ class Recipe extends Model implements HasMedia
         return $this->hasMany(AiJob::class);
     }
 
+    /** @return HasMany<NutritionCalculation, $this> newest first */
+    public function nutritionCalculations(): HasMany
+    {
+        return $this->hasMany(NutritionCalculation::class)->orderByDesc('id');
+    }
+
     /** @return BelongsTo<Media, $this> */
     public function cover(): BelongsTo
     {

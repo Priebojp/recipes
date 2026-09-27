@@ -119,7 +119,8 @@ return [
 
     'export' => [
         // 2: selection_presets and shopping_lists added (v2 stage 6); older keys are unchanged.
-        'schema_version' => 2,
+        // 3: ingredients[].food_mapping and recipes[].nutrition_calculations added (v2.1 stage 10).
+        'schema_version' => 3,
     ],
 
     /*
