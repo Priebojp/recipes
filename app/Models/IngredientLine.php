@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Services\IngredientAmountParser;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * @property int $id
@@ -23,6 +24,12 @@ class IngredientLine extends Model
     protected function casts(): array
     {
         return ['numeric_amount' => 'decimal:3'];
+    }
+
+    /** @return HasOne<IngredientFoodMapping, $this> */
+    public function foodMapping(): HasOne
+    {
+        return $this->hasOne(IngredientFoodMapping::class);
     }
 
     public function hasNumericAmount(): bool

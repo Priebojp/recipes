@@ -11,6 +11,8 @@ use App\Services\Billing\Gateway\CashierStripeTestClocks;
 use App\Services\Billing\Gateway\StripeGateway;
 use App\Services\Billing\Gateway\StripeInspector;
 use App\Services\Billing\Gateway\StripeTestClocks;
+use App\Services\Food\FoodDataSource;
+use App\Services\Food\UsdaFoodDataCentral;
 use App\Services\Selection\SelectionConfig;
 use App\Support\CurrentHousehold;
 use Carbon\CarbonImmutable;
@@ -34,6 +36,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(StripeGateway::class, CashierStripeGateway::class);
         $this->app->bind(StripeInspector::class, CashierStripeInspector::class);
         $this->app->bind(StripeTestClocks::class, CashierStripeTestClocks::class);
+        // v2.1 stage 9: USDA FoodData Central is the only nutrition source for now; swap the binding for another provider.
+        $this->app->bind(FoodDataSource::class, UsdaFoodDataCentral::class);
 
         // The webhook route is registered by the application (routes/web.php) with an inbox in front of Cashier.
         Cashier::ignoreRoutes();

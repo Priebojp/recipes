@@ -30,6 +30,7 @@ Route::middleware(['auth', 'verified', 'platform-admin', 'throttle:60,1'])
             Route::livewire('ai/rates', 'pages::admin.ai-rates')->name('ai.rates');
             Route::livewire('ai/comparisons/{run}', 'pages::admin.ai-comparison')->name('ai.comparison');
             Route::get('ai/comparisons/{run}/media/{media}/{conversion?}', ComparisonMediaController::class)->name('ai.comparison.media');
+            Route::livewire('food', 'pages::admin.food')->name('food');
             Route::livewire('legal', 'pages::admin.legal')->name('legal');
             Route::livewire('legal/{version}', 'pages::admin.legal-document')->name('legal.document');
             Route::livewire('services', 'pages::admin.services')->name('services');
