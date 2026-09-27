@@ -11,26 +11,61 @@ use Illuminate\Database\Seeder;
  * Working texts of the legal pages (specification chapter 10) as *drafts*. Placeholders in [BRACKETS] must be
  * replaced by the operator's real data and the texts legally reviewed before an administrator publishes them.
  * Nothing here is a finished legal document. Idempotent: existing types are left untouched.
+ *
+ * v2.1 (stage 13): the privacy information and the terms gained the new purposes – photo analysis of a meal,
+ * nutrition calculation, the optional private diary, OpenAI as the recipient of photos, photo retention, the new
+ * packs and "not a medical measurement". An installation whose published text predates them gets a *draft* of
+ * the next version; publishing stays the operator's decision after legal review.
  */
 class LegalDocumentSeeder extends Seeder
 {
+    /** A sentence only the v2.1 texts contain; its absence in the latest version means the upgrade draft is due. */
+    public const V21_MARKER = 'Rozpoznanie jedla z fotografie';
+
     public function run(): void
     {
         foreach (self::texts() as $type => [$title, $content]) {
             $type = LegalDocumentType::from($type);
-            if (LegalDocumentVersion::query()->where('type', $type)->exists()) {
+            if (! LegalDocumentVersion::query()->where('type', $type)->exists()) {
+                LegalDocumentVersion::create([
+                    'type' => $type,
+                    'version' => 1,
+                    'title' => $title,
+                    'content' => $content,
+                    'checksum' => LegalDocumentVersion::checksumOf($content),
+                    'change_summary' => 'Pracovný návrh zo zadania v2, kapitola 10, a dodatku v2.1, kapitola 10.',
+                    'state' => LegalDocumentState::Draft,
+                ]);
+
                 continue;
             }
-            LegalDocumentVersion::create([
-                'type' => $type,
-                'version' => 1,
-                'title' => $title,
-                'content' => $content,
-                'checksum' => LegalDocumentVersion::checksumOf($content),
-                'change_summary' => 'Pracovný návrh zo zadania v2, kapitola 10.',
-                'state' => LegalDocumentState::Draft,
-            ]);
+
+            if (in_array($type, [LegalDocumentType::Privacy, LegalDocumentType::Terms], true)) {
+                $this->upgradeToV21($type, $title, $content);
+            }
         }
+    }
+
+    /**
+     * A draft of the next version with the v2.1 text when the newest version predates the new purposes and no draft
+     * is open. The published version keeps applying until the operator publishes the draft.
+     */
+    private function upgradeToV21(LegalDocumentType $type, string $title, string $content): void
+    {
+        $latest = LegalDocumentVersion::query()->where('type', $type)->orderByDesc('version')->first();
+        if ($latest === null || str_contains($latest->content, self::V21_MARKER) || $latest->state === LegalDocumentState::Draft) {
+            return;
+        }
+
+        LegalDocumentVersion::create([
+            'type' => $type,
+            'version' => $latest->version + 1,
+            'title' => $title,
+            'content' => $content,
+            'checksum' => LegalDocumentVersion::checksumOf($content),
+            'change_summary' => 'v2.1: analýza fotografie jedla, výživové hodnoty, voliteľný denník, OpenAI ako príjemca fotiek, retencia fotiek, nové balíky, upozornenie „nie je medicínske meranie“. Návrh na právnu kontrolu.',
+            'state' => LegalDocumentState::Draft,
+        ]);
     }
 
     /** @return array<string, array{0: string, 1: string}> */
@@ -57,7 +92,7 @@ Program Free je bezplatný: vlastné recepty a fotografie, rodinné profily, ná
 
 Program Plus je určený pre jednu domácnosť. Cena je 2,49 € za mesačné obdobie alebo 24 € za ročné obdobie [POTVRDIŤ KONEČNÉ CENY A DAŇOVÚ INFORMÁCIU]. Predplatné sa automaticky obnovuje v zvolenom intervale. Obnovovanie môžete vypnúť v nastaveniach fakturácie; program zostane dostupný do konca zaplateného obdobia.
 
-Program obsahuje 30 textových AI použití a 5 Standard obrázkov za mesačné obdobie. Pri ročnej platbe sa použitia dopĺňajú mesačne. Nevyužité zahrnuté použitia sa neprenášajú. Jednorazovo dokúpené použitia sa evidujú oddelene, neobnovujú sa automaticky a zostávajú použiteľné aj po skončení Plus počas prevádzky služby.
+Program obsahuje 30 textových AI použití a 5 Standard obrázkov za mesačné obdobie [AKTUALIZOVAŤ PODĽA AKTÍVNEJ VERZIE KATALÓGU: profil obrázkov Economy/Standard, počet analýz jedla]. Pri ročnej platbe sa použitia dopĺňajú mesačne. Nevyužité zahrnuté použitia sa neprenášajú. Jednorazovo dokúpené použitia (balíky textových operácií, obrázkov alebo analýz jedla z fotografie) sa evidujú oddelene, neobnovujú sa automaticky a zostávajú použiteľné aj po skončení Plus počas prevádzky služby. Obsah a cena každého balíka sú uvedené pri objednávke.
 
 ## 3. Vznik zmluvy, ceny a platby
 
@@ -66,6 +101,12 @@ Zmluva o bezplatnom používaní vzniká registráciou. Zmluva o platenom progra
 ## 4. AI funkcie
 
 Nový úspešne doručený návrh alebo obrázok spotrebuje použitie aj vtedy, ak si ho neuložíte ako aktívny. Pri technickom zlyhaní bez doručeného výsledku sa použitie neodpočíta. AI návrhy môžu obsahovať chyby; pred použitím skontrolujte suroviny a postup. Obrázky vytvorené AI sú ilustrácie. Tým nie sú obmedzené vaše zákonné práva.
+
+Rozpoznanie jedla z fotografie spotrebuje jednu analýzu za jednu fotografiu s doručeným rozpoznaným návrhom zložiek; fotografia, na ktorej sa jedlo nedá určiť, sa neúčtuje a krátke doplnenia v tej istej relácii sú bez ďalšieho odpočtu. Rozpoznané zložky a odhadované množstvá sú návrh, ktorý pred výpočtom skontrolujete a upravíte.
+
+## 4a. Výživové hodnoty a denník
+
+Výživové hodnoty receptov a jedál počítame z verejnej databázy potravín podľa vami potvrdených zložiek a množstiev; každé číslo má uvedený zdroj a odhady sú označené. Ide o orientačný výpočet, nie o medicínske meranie ani o dietetické alebo zdravotné odporúčanie. Nezaručujeme presnosť kalórií ani neprítomnosť alergénov podľa fotografie. Súkromný denník „Zjedol som“ je voliteľný; jeho záznamy a opravy sú čistý výpočet bez AI a zostávajú prístupné aj po skončení Plus.
 
 ## 5. Používateľský obsah a dostupnosť
 
@@ -96,6 +137,12 @@ Prevádzkovateľom vašich osobných údajov je [IDENTITA A KONTAKT]. Spracúvam
 
 Ak použijete AI funkciu, potrebný obsah receptu odošleme poskytovateľovi OpenAI. Mená členov domácnosti a ich osobné profily do požiadavky zámerne nezahŕňame. Do textu receptu preto nevkladajte osobné údaje, ktoré na túto funkciu nie sú potrebné. Platby spracúva Stripe; v aplikácii neukladáme celé číslo vašej platobnej karty.
 
+## Rozpoznanie jedla z fotografie, výživové hodnoty a denník
+
+Ak odfotíte jedlo a požiadate o rozpoznanie, fotografiu (zmenšenú, bez EXIF údajov a polohy) a vašu krátku poznámku odošleme poskytovateľovi OpenAI; pred prvým odoslaním vás na to upozorníme. Neposielame vašu identitu, profil domácnosti ani zdravotné údaje. Fotografia je pracovný materiál: pracovnú kópiu mažeme do 24 hodín po dokončení alebo zlyhaní analýzy, ak si ju výslovne neponecháte pri zázname; nepotvrdené návrhy mažeme po 7 dňoch [POTVRDIŤ RETENCIU PODĽA INFRAŠTRUKTÚRY A ZÁLOH]. Výživové hodnoty počítame z databázy potravín USDA FoodData Central, ktorej posielame iba všeobecný názov alebo identifikátor potraviny – nikdy fotografiu ani denník.
+
+Denník „Zjedol som“ je voliteľný a súkromný: vidí ho iba prihlásený používateľ, ktorý ho vedie, nie ostatní členovia domácnosti ani prevádzkovateľ v bežnej správe. Záznamy denníka môžu v kontexte vypovedať o zdraví; preto neponúkame ciele, diéty ani zdravotné vyhodnotenie a údaje denníka nepoužívame na iný účel než jeho vedenie. Fotografie, jedlá, gramáže a kalórie sa nikdy neodosielajú analytike. Denník aj analýzy sú súčasťou exportu účtu a mažú sa s účtom.
+
 ## Analytika
 
 Voliteľná analytika sa spustí podľa vašej voľby v nastaveniach cookies. Túto voľbu môžete neskôr zmeniť. S otázkami a žiadosťami týkajúcimi sa údajov nás kontaktujte na [PRIVACY EMAIL].
@@ -111,11 +158,14 @@ Voliteľná analytika sa spustí podľa vašej voľby v nastaveniach cookies. T�
 | Voliteľná analytika | súhlas | najkratšia použiteľná, návrh 2 mesiace detailných udalostí |
 | Mená a chute osôb bez účtu | oprávnený záujem – informovať dotknuté osoby | do odstránenia profilu; odporúčame prezývku |
 | AI vstupy a výstupy | súčasť vyžiadanej služby | trvalo iba prijaté receptové dáta |
+| Fotografia jedla na rozpoznanie | plnenie zmluvy (vyžiadaná funkcia) | pracovná kópia do 24 h po dokončení, ponechaná fotografia do výmazu záznamu; nepotvrdený návrh 7 dní |
+| Rozpoznané zložky a výživové hodnoty | plnenie zmluvy | do výmazu záznamu alebo účtu |
+| Denník „Zjedol som“ | plnenie zmluvy (voliteľná funkcia) | do výmazu záznamu alebo účtu; bez ďalšieho použitia |
 | Doklad o akceptácii a súhlase | evidencia právneho úkonu | podľa schválenej retenčnej politiky |
 
 ## Príjemcovia
 
-Hosting [DOPLNIŤ], e-mail [DOPLNIŤ], Stripe (platby), OpenAI (AI funkcie), analytika (iba po súhlase) [DOPLNIŤ]. Prenosy mimo EHP a ich záruky [DOPLNIŤ PO OVERENÍ ZMLÚV].
+Hosting [DOPLNIŤ], e-mail [DOPLNIŤ], Stripe (platby), OpenAI (AI funkcie vrátane fotografií jedla na rozpoznanie), USDA FoodData Central (iba všeobecné názvy potravín, bez osobných údajov), analytika (iba po súhlase) [DOPLNIŤ]. Prenosy mimo EHP a ich záruky [DOPLNIŤ PO OVERENÍ ZMLÚV].
 
 ## Vaše práva
 
@@ -123,7 +173,7 @@ Prístup, oprava, výmaz, obmedzenie, prenosnosť a námietka. Export údajov a 
 
 ## Rodina a deti
 
-Účet a nákup sú určené pre dospelého správcu. Členovia domácnosti majú iba profily bez vlastných účtov; nezbierame dátum narodenia ani plné meno, ak nie je potrebné. Zdravotné údaje nevyžadujeme; do poznámok k chutiam nevkladajte diagnózy.
+Účet a nákup sú určené pre dospelého správcu. Členovia domácnosti majú iba profily bez vlastných účtov; nezbierame dátum narodenia ani plné meno, ak nie je potrebné. Zdravotné údaje nevyžadujeme; do poznámok k chutiam nevkladajte diagnózy. Výživové hodnoty a denník neponúkame pre detské profily ani pre hostí bez vlastného účtu.
 MD;
     }
 

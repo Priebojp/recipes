@@ -16,6 +16,8 @@ class AnalyticsEvents
         'checkout_started' => ['offer'],
         'subscription_started' => ['offer'],
         'addon_purchased' => ['offer'],
+        // v2.1 stage 12: the diary reports only that something was logged – never the meal, grams, kcal or a photo.
+        'meal_logged' => [],
     ];
 
     /** @var array<string, list<string>> property => allowed string values (numbers and booleans always pass) */
@@ -23,7 +25,7 @@ class AnalyticsEvents
         'source' => ['manual', 'ai', 'import'],
         'term' => ['today', 'tomorrow', 'week'],
         'mode' => ['day', 'week'],
-        'offer' => ['plus_monthly', 'plus_yearly', 'images_20_standard', 'text_100'],
+        'offer' => ['plus_monthly', 'plus_yearly', 'images_20_standard', 'text_100', 'meal_analyses_100', 'images_economy_20'],
     ];
 
     /**

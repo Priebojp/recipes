@@ -137,10 +137,10 @@ new #[Title('Súkromie')] class extends Component {
 
             <flux:card class="space-y-2" data-test="privacy-export">
                 <flux:heading size="lg" class="font-display">{{ __('Export údajov') }}</flux:heading>
-                <flux:text class="text-sm">{{ __('Domácnosť: ZIP s receptami, pôvodnými textami, chuťami, plánmi, históriou a obrázkami. Účet: JSON s profilom, členstvami, akceptáciami, voľbami cookies a žiadosťami.') }}</flux:text>
+                <flux:text class="text-sm">{{ __('Domácnosť: ZIP s receptami, pôvodnými textami, chuťami, plánmi, históriou a obrázkami. Účet: ZIP s profilom, členstvami, akceptáciami, voľbami cookies, žiadosťami, tvojimi analýzami jedla (s ponechanými fotkami) a denníkom „Zjedol som“.') }}</flux:text>
                 <div class="flex flex-wrap gap-2">
                     <flux:button :href="route('export')" icon="arrow-down-tray" size="sm">{{ __('Export domácnosti (ZIP)') }}</flux:button>
-                    <flux:button :href="route('privacy.export')" icon="arrow-down-tray" size="sm" variant="ghost">{{ __('Export účtu (JSON)') }}</flux:button>
+                    <flux:button :href="route('privacy.export')" icon="arrow-down-tray" size="sm" variant="ghost">{{ __('Export účtu (ZIP)') }}</flux:button>
                 </div>
             </flux:card>
 

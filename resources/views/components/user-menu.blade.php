@@ -12,6 +12,7 @@
 
     <flux:menu.group :heading="__('Domácnosť')">
         <flux:menu.item :href="route('plan.history')" icon="clock" wire:navigate>{{ __('História varenia') }}</flux:menu.item>
+        <flux:menu.item :href="route('diary.index')" icon="clipboard-document-list" wire:navigate data-test="diary-link">{{ __('Denník „Zjedol som“') }}</flux:menu.item>
         <flux:menu.item :href="route('household.edit')" icon="home" wire:navigate>{{ __('Nastavenia domácnosti') }}</flux:menu.item>
         <flux:menu.item :href="route('subscription.edit')" icon="credit-card" wire:navigate>{{ __('Predplatné a AI použitia') }}</flux:menu.item>
         <flux:menu.item :href="route('home')" icon="globe-alt" wire:navigate>{{ __('Verejné recepty') }}</flux:menu.item>

@@ -13,6 +13,7 @@ use App\Models\Household;
 use App\Models\HouseholdInvitation;
 use App\Models\HouseholdMembership;
 use App\Models\MealAnalysis;
+use App\Models\MealConsumption;
 use App\Models\MealPlan;
 use App\Models\Person;
 use App\Models\PrivacyRequest;
@@ -192,12 +193,14 @@ class AccountErasure
     {
         return $household->recipes()->exists() || $household->people()->exists() || $household->mealPlans()->exists()
             || $household->cookingEvents()->exists() || AiJob::query()->where('household_id', $household->id)->exists()
-            || MealAnalysis::query()->where('household_id', $household->id)->exists();
+            || MealAnalysis::query()->where('household_id', $household->id)->exists()
+            || MealConsumption::query()->withTrashed()->where('household_id', $household->id)->exists();
     }
 
     private function leaveHousehold(User $user, Household $household): string
     {
-        // Photo analyses are the person's own records: they go with them, not with the household.
+        // Photo analyses and the diary are the person's own records: they go with them, not with the household.
+        MealConsumption::query()->withTrashed()->where('household_id', $household->id)->where('user_id', $user->id)->forceDelete();
         $this->purgeMealAnalyses(MealAnalysis::query()->where('household_id', $household->id)->where('user_id', $user->id));
         Person::query()->where('household_id', $household->id)->where('user_id', $user->id)
             ->update(['name' => 'Bývalý člen', 'user_id' => null, 'archived_at' => now(), 'updated_at' => now()]);
@@ -218,8 +221,9 @@ class AccountErasure
 
     private function purgeHouseholdContent(Household $household): string
     {
-        $counts = ['recipes' => 0, 'people' => 0, 'ai_jobs' => 0, 'meal_analyses' => 0];
+        $counts = ['recipes' => 0, 'people' => 0, 'ai_jobs' => 0, 'meal_analyses' => 0, 'meal_consumptions' => 0];
 
+        $counts['meal_consumptions'] = MealConsumption::query()->withTrashed()->where('household_id', $household->id)->forceDelete();
         $counts['meal_analyses'] = $this->purgeMealAnalyses(MealAnalysis::query()->where('household_id', $household->id));
 
         foreach (Recipe::query()->where('household_id', $household->id)->get() as $recipe) {
@@ -241,7 +245,7 @@ class AccountErasure
         $counts['people'] = Person::query()->where('household_id', $household->id)->delete();
         HouseholdMembership::query()->where('household_id', $household->id)->delete();
 
-        return "Domácnosť #{$household->id}: zmazaných {$counts['recipes']} receptov s obrázkami, {$counts['people']} profilov, {$counts['ai_jobs']} AI úloh, {$counts['meal_analyses']} analýz jedla s fotkami, plány, história, pozvánky a členstvá.";
+        return "Domácnosť #{$household->id}: zmazaných {$counts['recipes']} receptov s obrázkami, {$counts['people']} profilov, {$counts['ai_jobs']} AI úloh, {$counts['meal_analyses']} analýz jedla s fotkami, {$counts['meal_consumptions']} záznamov denníka, plány, história, pozvánky a členstvá.";
     }
 
     /**

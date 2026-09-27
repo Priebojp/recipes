@@ -12,7 +12,7 @@
                 ['route' => 'family.index', 'label' => __('Rodina'), 'icon' => 'users', 'match' => 'family.*'],
                 ['route' => 'meals.analyze', 'label' => __('Jedlo'), 'icon' => 'camera', 'match' => 'meals.*'],
             ];
-            $accountActive = request()->routeIs('household.edit', 'plan.history', 'profile.edit', 'security.edit', 'appearance.edit', 'subscription.edit', 'usage.index', 'privacy.edit');
+            $accountActive = request()->routeIs('household.edit', 'plan.history', 'diary.index', 'profile.edit', 'security.edit', 'appearance.edit', 'subscription.edit', 'usage.index', 'privacy.edit');
         @endphp
 
         {{-- Desktop: one slim top bar with the same pill tabs as the phone bottom bar; the account menu sits under the avatar. --}}

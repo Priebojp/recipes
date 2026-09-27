@@ -24,16 +24,16 @@ class LaunchSignoffs
             'hint' => '2,49 €/mes., 24 €/rok, 30 textov a 5 obrázkov Standard za obdobie; 20 obrázkov 3,99 €, 100 textov 1,99 € (zadanie kap. 18). Zmena = nová verzia katalógu.',
         ],
         'stripe_account' => [
-            'label' => 'Stripe účet aktivovaný a vyplnený',
-            'hint' => 'Overená identita a výplaty, presné obchodné meno, verejné meno „Moje recepty“, statement descriptor, funkčný support e-mail (dodatok v2.1 kap. 11). Stripe Tax nezapnuté.',
+            'label' => 'Stripe účet aktivovaný (overenie, výplaty) a vyplnený',
+            'hint' => 'Overená identita a výplaty, presné obchodné meno zo živnostenského registra, verejné meno „Moje recepty“, statement descriptor a support e-mail zapísané aj v identite prevádzkovateľa (/admin/legal); opis podnikania z runbooku (dodatok v2.1 kap. 11). Stripe Tax nezapnuté.',
         ],
         'invoices' => [
             'label' => 'Doklady zo Stripe overené s účtovníkom',
             'hint' => 'Náležitosti, číslovanie, text o DPH, dobropisy pri refundácii; jeden autoritatívny proces vystavovania dokladov (zadanie kap. 7).',
         ],
         'tax' => [
-            'label' => 'DPH / OSS režim rozhodnutý',
-            'hint' => 'Neplatiteľ / § 7a / platiteľ, cieľové krajiny a miesto dodania elektronickej služby; zapísať do identity prevádzkovateľa (pole „daňový režim“).',
+            'label' => 'Daňový režim rozhodnutý (neplatiteľ / § 7a / platiteľ, OSS)',
+            'hint' => 'Neplatiteľ / § 7a / platiteľ, cieľové krajiny a miesto dodania elektronickej služby; zapísať do identity prevádzkovateľa (pole „daňový režim“). Stripe Tax nezapínať bez tohto rozhodnutia.',
         ],
         'legal_review' => [
             'label' => 'Právne texty schválené právnikom',
@@ -53,7 +53,7 @@ class LaunchSignoffs
         ],
         'image_profile' => [
             'label' => 'Porovnanie obrázkov low/medium vyhodnotené (v2.1)',
-            'hint' => 'php artisan app:ai-compare-images <domácnosť> --yes, hodnotenie v /admin/ai/comparisons/{beh}: aspoň 18 z 20 Economy prijateľných a žiadna systematická zámena → rozhodnutie o profile novej ponuky (etapa 13). Neblokuje launch v2.',
+            'hint' => 'php artisan app:ai-compare-images <domácnosť> --yes, hodnotenie v /admin/ai/comparisons/{beh}: aspoň 18 z 20 Economy prijateľných a žiadna systematická zámena → rozhodnutie o profile novej ponuky (etapa 13). Neblokuje launch v2; blokuje, keď je v aktívnom katalógu Economy.',
             'optional' => true,
         ],
     ];

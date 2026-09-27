@@ -29,6 +29,8 @@
                     </div>
                 </div>
 
+                {{-- Cooking is not eating: the diary entry is a separate, personal step the person takes themselves (v2.1 stage 12). --}}
+                <flux:button :href="route('diary.index', ['recept' => $this->recipe->id])" wire:navigate variant="ghost" icon="clipboard-document-list" class="w-full" data-test="cooked-log-meal">{{ __('Zapísať, čo som zjedol(a)') }}</flux:button>
                 <flux:button variant="primary" wire:click="close" class="w-full" data-test="cooked-done">{{ __('Hotovo') }}</flux:button>
             @else
                 <form wire:submit="save" class="space-y-4">

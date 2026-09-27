@@ -28,7 +28,11 @@ class OperatorIdentity
         'phone' => ['label' => 'Telefón', 'required' => false, 'hint' => 'ak platné povinnosti vyžadujú'],
         'ars_body' => ['label' => 'Subjekt alternatívneho riešenia sporov (ARS)', 'required' => true, 'hint' => 'názov a kontakt aktuálne príslušného orgánu – overiť'],
         'countries' => ['label' => 'Cieľové krajiny', 'required' => true, 'hint' => 'napr. Slovensko'],
-        'tax_regime' => ['label' => 'Daňový režim', 'required' => false, 'hint' => 'neplatiteľ DPH / platiteľ / OSS – po rozhodnutí'],
+        'tax_regime' => ['label' => 'Daňový režim', 'required' => false, 'hint' => 'neplatiteľ DPH / § 7a / platiteľ / OSS – po rozhodnutí'],
+        // Stripe public data (v2.1 addendum chapter 11): what customers see, apart from the legal identity above.
+        'public_business_name' => ['label' => 'Verejné obchodné meno / značka (Stripe)', 'required' => false, 'hint' => 'návrh „Moje recepty“; oficiálny dodávateľ na dokladoch zostáva obchodné meno vyššie'],
+        'statement_descriptor' => ['label' => 'Statement descriptor (Stripe)', 'required' => false, 'hint' => 'návrh MOJE-RECEPTY.SK – 5 až 22 znakov, overiť prijatie v Stripe; banky ho môžu zobraziť inak'],
+        'shortened_descriptor' => ['label' => 'Skrátený descriptor (Stripe)', 'required' => false, 'hint' => 'voliteľný návrh MOJERECEPT (max. 10 znakov)'],
     ];
 
     public function __construct(private AppSettings $settings, private AdminAuditor $audit) {}

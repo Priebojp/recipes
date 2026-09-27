@@ -72,6 +72,18 @@ class ConsentServiceSeeder extends Seeder
                 'enabled' => true,
             ],
             [
+                // v2.1 stage 13: a recipient, not a cookie – listed so the register and the privacy text agree.
+                'key' => 'openai',
+                'name' => 'OpenAI (AI funkcie)',
+                'provider' => 'OpenAI',
+                'category' => ConsentCategory::Necessary,
+                'purpose' => 'Na vašu žiadosť: textové návrhy k receptu, ilustračné obrázky a rozpoznanie jedla z fotografie (fotografia bez EXIF a polohy + vaša poznámka). Bez identity, profilov domácnosti a zdravotných údajov; na našich stránkach sa žiadny skript OpenAI nenačítava.',
+                'retention' => 'podľa zmluvných podmienok OpenAI pre API (bez použitia na trénovanie)',
+                'location' => 'OpenAI (USA; záruky prenosu podľa zmluvy)',
+                'storage' => [],
+                'enabled' => true,
+            ],
+            [
                 'key' => 'ga4',
                 'name' => 'Google Analytics 4',
                 'provider' => 'Google Ireland Ltd.',

@@ -22,8 +22,8 @@ pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->in('Feature');
 
-// Selection and nutrition unit tests do not need a database, but the reasons and assumptions they assert go through the translator.
-pest()->extend(TestCase::class)->in('Unit/Selection', 'Unit/Nutrition');
+// Selection, nutrition and diary unit tests do not need a database, but the reasons and assumptions they assert go through the translator.
+pest()->extend(TestCase::class)->in('Unit/Selection', 'Unit/Nutrition', 'Unit/Diary');
 
 /*
 |--------------------------------------------------------------------------

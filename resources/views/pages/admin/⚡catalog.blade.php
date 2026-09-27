@@ -1,9 +1,11 @@
 <?php
 
 use App\Enums\CatalogState;
+use App\Enums\UsageKind;
 use App\Models\AddonVersion;
 use App\Models\PlanVersion;
 use App\Services\Billing\Catalog;
+use App\Services\Ai\ImageProfile;
 use App\Services\Billing\CatalogManager;
 use App\Support\Money;
 use Flux\Flux;
@@ -33,11 +35,32 @@ new #[Layout('layouts::admin')] #[Title('Katalóg')] class extends Component {
 
     public string $draft_image_uses = '';
 
+    public string $draft_image_profile = '';
+
+    public string $draft_meal_analyses = '';
+
     public string $draft_unit_count = '';
 
     public string $draft_reason = '';
 
     public string $reason = '';
+
+    /** "Nový balík" (v2.1 stage 13): a pack under a new code, e.g. photo analyses or Economy images. */
+    public bool $creating = false;
+
+    public string $new_code = '';
+
+    public string $new_name = '';
+
+    public string $new_kind = '';
+
+    public string $new_unit_count = '';
+
+    public string $new_price = '';
+
+    public string $new_stripe_price_id = '';
+
+    public string $new_reason = '';
 
     #[Computed]
     public function plans(): Collection
@@ -62,6 +85,8 @@ new #[Layout('layouts::admin')] #[Title('Katalóg')] class extends Component {
         $this->draft_stripe_price_id = (string) $base->stripe_price_id;
         $this->draft_text_uses = $type === 'plan' ? (string) $base->text_uses_per_period : '';
         $this->draft_image_uses = $type === 'plan' ? (string) $base->image_uses_per_period : '';
+        $this->draft_image_profile = $type === 'plan' ? $base->imageProfile()->value : '';
+        $this->draft_meal_analyses = $type === 'plan' ? (string) $base->meal_analysis_uses_per_period : '';
         $this->draft_unit_count = $type === 'addon' ? (string) $base->unit_count : '';
         $this->draft_reason = '';
         $this->resetErrorBag();
@@ -71,6 +96,51 @@ new #[Layout('layouts::admin')] #[Title('Katalóg')] class extends Component {
     {
         $this->draft_type = '';
         $this->draft_base = 0;
+    }
+
+    public function startCreate(): void
+    {
+        $this->reset('new_code', 'new_name', 'new_kind', 'new_unit_count', 'new_price', 'new_stripe_price_id', 'new_reason');
+        $this->resetErrorBag();
+        $this->creating = true;
+    }
+
+    public function cancelCreate(): void
+    {
+        $this->creating = false;
+    }
+
+    public function createAddon(CatalogManager $manager): void
+    {
+        $this->authorize('platform-admin');
+        $validated = $this->validate([
+            'new_code' => ['required', 'string', 'max:50', 'regex:/^[a-z][a-z0-9_]{2,49}$/'],
+            'new_name' => ['required', 'string', 'max:100'],
+            'new_kind' => ['required', 'in:'.implode(',', array_map(fn (UsageKind $k) => $k->value, UsageKind::cases()))],
+            'new_unit_count' => ['required', 'integer', 'min:1', 'max:10000'],
+            'new_price' => ['required', 'string', 'max:20'],
+            'new_stripe_price_id' => ['nullable', 'string', 'max:100', 'regex:/^(price_[A-Za-z0-9_]+)?$/'],
+            'new_reason' => ['required', 'string', 'min:5', 'max:500'],
+        ]);
+
+        $cents = Money::parseEurToCents($validated['new_price']);
+        if ($cents === null || $cents < 1) {
+            $this->addError('new_price', __('Zadaj konečnú cenu v eurách, napr. 1,99.'));
+
+            return;
+        }
+
+        try {
+            $version = $manager->createAddon($validated['new_code'], $validated['new_name'], UsageKind::from($validated['new_kind']), (int) $validated['new_unit_count'], $cents, $validated['new_stripe_price_id'] ?: null, $validated['new_reason'], auth()->user());
+        } catch (InvalidArgumentException $e) {
+            $this->addError('new_code', $e->getMessage());
+
+            return;
+        }
+
+        $this->creating = false;
+        unset($this->addons);
+        Flux::toast(variant: 'success', text: __('Balík :code v1 je založený ako návrh. Predáva sa až po aktivácii.', ['code' => $version->code]));
     }
 
     public function saveDraft(CatalogManager $manager): void
@@ -84,6 +154,8 @@ new #[Layout('layouts::admin')] #[Title('Katalóg')] class extends Component {
             'draft_stripe_price_id' => ['nullable', 'string', 'max:100', 'regex:/^(price_[A-Za-z0-9_]+)?$/'],
             'draft_text_uses' => [$isPlan ? 'required' : 'nullable', 'integer', 'min:0', 'max:10000'],
             'draft_image_uses' => [$isPlan ? 'required' : 'nullable', 'integer', 'min:0', 'max:10000'],
+            'draft_image_profile' => [$isPlan ? 'required' : 'nullable', 'in:'.implode(',', array_map(fn (ImageProfile $p) => $p->value, ImageProfile::selectable()))],
+            'draft_meal_analyses' => [$isPlan ? 'required' : 'nullable', 'integer', 'min:0', 'max:10000'],
             'draft_unit_count' => [$isPlan ? 'nullable' : 'required', 'integer', 'min:1', 'max:10000'],
             'draft_reason' => ['required', 'string', 'min:5', 'max:500'],
         ]);
@@ -103,6 +175,8 @@ new #[Layout('layouts::admin')] #[Title('Katalóg')] class extends Component {
                 'stripe_price_id' => $validated['draft_stripe_price_id'] ?: null,
                 'text_uses_per_period' => (int) $validated['draft_text_uses'],
                 'image_uses_per_period' => (int) $validated['draft_image_uses'],
+                'image_profile_code' => $validated['draft_image_profile'],
+                'meal_analysis_uses_per_period' => (int) $validated['draft_meal_analyses'],
             ], $validated['draft_reason'], auth()->user());
         } else {
             $base = AddonVersion::query()->findOrFail($this->draft_base);
@@ -169,7 +243,7 @@ new #[Layout('layouts::admin')] #[Title('Katalóg')] class extends Component {
                             <td class="py-1.5 pe-2">v{{ $plan->version }}</td>
                             <td class="py-1.5 pe-2">{{ $plan->name }} <span class="text-xs text-zinc-500">({{ $plan->interval->label() }})</span></td>
                             <td class="py-1.5 pe-2 text-right tabular-nums">{{ Catalog::formatCents($plan->final_price_cents, $plan->currency) }}</td>
-                            <td class="py-1.5 pe-2">{{ __(':count textov', ['count' => $plan->text_uses_per_period]) }} · {{ __(':count obrázkov', ['count' => $plan->image_uses_per_period]) }}</td>
+                            <td class="py-1.5 pe-2">{{ __(':count textov', ['count' => $plan->text_uses_per_period]) }} · {{ __(':count obrázkov :profile', ['count' => $plan->image_uses_per_period, 'profile' => $plan->imageProfile()->label()]) }}@if ($plan->meal_analysis_uses_per_period > 0) · {{ __(':count analýz jedla', ['count' => $plan->meal_analysis_uses_per_period]) }}@endif</td>
                             <td class="py-1.5 pe-2 font-mono text-xs">{{ $plan->stripe_price_id ?? __('— (nepredajné)') }}</td>
                             <td class="py-1.5 pe-2"><flux:badge size="sm" :color="$plan->state->badgeColor()">{{ $plan->state->label() }}</flux:badge>@if ($plan->effective_from)<div class="text-xs text-zinc-500">{{ __('od :date', ['date' => $plan->effective_from->setTimezone(config('recipes.default_timezone'))->format('d.m.Y')]) }}</div>@endif</td>
                             <td class="py-1.5 whitespace-nowrap text-right">
@@ -185,7 +259,10 @@ new #[Layout('layouts::admin')] #[Title('Katalóg')] class extends Component {
     </flux:card>
 
     <flux:card class="space-y-3 overflow-x-auto" data-test="catalog-addons">
-        <flux:heading size="lg" class="font-display">{{ __('Balíky') }}</flux:heading>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <flux:heading size="lg" class="font-display">{{ __('Balíky') }}</flux:heading>
+            <flux:button size="xs" variant="ghost" icon="plus" wire:click="startCreate" data-test="catalog-new-addon">{{ __('Nový balík') }}</flux:button>
+        </div>
         <table class="w-full text-sm">
             <thead class="text-left text-xs uppercase text-zinc-500"><tr><th class="py-1 pe-2">{{ __('Kód') }}</th><th class="py-1 pe-2">{{ __('Verzia') }}</th><th class="py-1 pe-2">{{ __('Názov') }}</th><th class="py-1 pe-2 text-right">{{ __('Cena') }}</th><th class="py-1 pe-2">{{ __('Obsah') }}</th><th class="py-1 pe-2">{{ __('Stripe price') }}</th><th class="py-1 pe-2">{{ __('Stav') }}</th><th class="py-1"></th></tr></thead>
             <tbody class="divide-y divide-zinc-200/70 dark:divide-zinc-800">
@@ -223,6 +300,12 @@ new #[Layout('layouts::admin')] #[Title('Katalóg')] class extends Component {
                     @if ($draft_type === 'plan')
                         <flux:input wire:model="draft_text_uses" type="number" min="0" :label="__('Textových operácií / obdobie')" />
                         <flux:input wire:model="draft_image_uses" type="number" min="0" :label="__('Obrázkov / obdobie')" />
+                        <flux:select wire:model="draft_image_profile" :label="__('Profil obrázkov')" :description="__('Economy až po vyhodnotení porovnania low/medium (etapa 8); existujúce granty sa nemenia.')" data-test="draft-image-profile">
+                            @foreach (ImageProfile::selectable() as $profile)
+                                <flux:select.option value="{{ $profile->value }}">{{ $profile->label() }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
+                        <flux:input wire:model="draft_meal_analyses" type="number" min="0" :label="__('Analýz jedla / obdobie')" :description="__('0 = plán analýzy neobsahuje')" data-test="draft-meal-analyses" />
                     @else
                         <flux:input wire:model="draft_unit_count" type="number" min="1" :label="__('Počet jednotiek')" />
                     @endif
@@ -231,6 +314,32 @@ new #[Layout('layouts::admin')] #[Title('Katalóg')] class extends Component {
                 <div class="flex gap-2">
                     <flux:button type="submit" variant="primary" size="sm">{{ __('Uložiť návrh') }}</flux:button>
                     <flux:button size="sm" variant="ghost" wire:click="cancelDraft">{{ __('Zrušiť') }}</flux:button>
+                </div>
+            </form>
+        </flux:card>
+    @endif
+
+    @if ($creating)
+        <flux:card class="space-y-3" data-test="new-addon-form">
+            <form wire:submit="createAddon" class="space-y-3">
+                <flux:heading size="lg" class="font-display">{{ __('Nový balík') }}</flux:heading>
+                <flux:text class="text-xs">{{ __('Balík pod novým kódom (napr. meal_analyses_100, images_economy_20) vznikne ako návrh v1; predáva sa až po aktivácii. Economy balík nacení až výsledok porovnania – nezakladaj ho s neurčenou cenou.') }}</flux:text>
+                <div class="grid gap-3 sm:grid-cols-3">
+                    <flux:input wire:model="new_code" :label="__('Kód')" placeholder="meal_analyses_100" data-test="new-code" />
+                    <flux:input wire:model="new_name" :label="__('Názov')" data-test="new-name" />
+                    <flux:select wire:model="new_kind" :label="__('Druh použitia')" :placeholder="__('vyber')" data-test="new-kind">
+                        @foreach (UsageKind::cases() as $kind)
+                            <flux:select.option value="{{ $kind->value }}">{{ $kind->label() }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                    <flux:input wire:model="new_unit_count" type="number" min="1" :label="__('Počet jednotiek')" data-test="new-count" />
+                    <flux:input wire:model="new_price" :label="__('Konečná cena (EUR)')" placeholder="1,99" data-test="new-price" />
+                    <flux:input wire:model="new_stripe_price_id" :label="__('Stripe price ID')" placeholder="price_…" />
+                </div>
+                <flux:textarea wire:model="new_reason" rows="2" :label="__('Dôvod (ide do auditu)')" data-test="new-reason" />
+                <div class="flex gap-2">
+                    <flux:button type="submit" variant="primary" size="sm" data-test="new-addon-save">{{ __('Založiť návrh') }}</flux:button>
+                    <flux:button size="sm" variant="ghost" wire:click="cancelCreate">{{ __('Zrušiť') }}</flux:button>
                 </div>
             </form>
         </flux:card>

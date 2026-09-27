@@ -32,7 +32,11 @@ it('erases the right household: content and account go, accounting records stay 
     $this->actingAs($h['user']);
     $email = $h['user']->email;
     $this->get(route('privacy.edit'))->assertOk()->assertSee('Vymazanie účtu')->assertSee('Nevyužité dokúpené použitia: 100')->assertSee('Účtovné doklady');
-    $this->get(route('privacy.export'))->assertOk()->assertHeader('content-disposition')->assertJsonPath('account.email', $h['user']->email);
+    $export = $this->get(route('privacy.export'))->assertOk()->assertHeader('content-disposition')->assertDownload();
+    $zip = new ZipArchive;
+    $zip->open($export->getFile()->getPathname());
+    expect(json_decode((string) $zip->getFromName('ucet.json'), true)['account']['email'])->toBe($h['user']->email);
+    $zip->close();
 
     Livewire::test('pages::settings.privacy')
         ->set('password', 'wrong')->call('erase')->assertHasErrors(['password'])
